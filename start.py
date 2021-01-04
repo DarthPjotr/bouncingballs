@@ -4,7 +4,6 @@ Test
 import itertools
 import numpy
 import random
-import keyboard
 import time
 import pygame
 
