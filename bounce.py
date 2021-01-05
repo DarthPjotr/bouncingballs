@@ -22,7 +22,7 @@ GREEN = (0, 255,0)
 VMAX = 5
 RADIUS = 50
 MASS = 10
-NBALLS = 0
+NBALLS = 20
 
 class Box:
     def __init__(self, box_sizes) -> None:
@@ -60,10 +60,16 @@ class Box:
         if position == None:
             position = [random.randrange(radius, x - radius)*1.0 for x in self.box_sizes]
 
-        if speed ==None:
+        if speed == None:
             speed = [random.randrange(-VMAX,VMAX)*1.0 for dummy in range(self.dimensions)]
         particle = Particle(mass, radius, position, speed)
         self.particles.append(particle)
+
+    def resize(self, new_sizes):
+        self.box_sizes[0:len(new_sizes)] = new_sizes
+        self._get_vertices()
+        self._get_edges()
+
     
     def go(self):
         for i, p in enumerate(self.particles):
@@ -88,13 +94,16 @@ class Particle:
         distance2 = dpos.dot(dpos)
 
         # only collide if particles are moving towards each other, so check next position
-        dpos2 = (self.position + self.speed) - (p2.position + p2.speed)
-        d2 = dpos2.dot(dpos2)
+        #dpos2 = (self.position + self.speed) - (p2.position + p2.speed)
+        #d2 = dpos2.dot(dpos2)
 
         dmin = (self.radius + p2.radius)
-        if distance2 > 0 and distance2 < dmin*dmin and d2 < distance2:
+        if distance2 > 0 and distance2 < dmin*dmin: # and d2 < distance2:
             dspeed = self.speed - p2.speed
-            s = dspeed.dot(dpos)*dpos/distance2
+            dot = dspeed.dot(dpos)
+            if dot > 0:
+                return False
+            s = dot*dpos/distance2
             #s1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * dspeed.dot(dpos)*(dpos)/distance2
             s1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * s
             #s2 = p2.speed - (2*self.mass/(self.mass+p2.mass)) * -dspeed.dot(-dpos)*(-dpos)/distance2
@@ -122,7 +131,15 @@ class Particle:
     def __str__(self) -> str:
         pstr = ""
         pstr = "particle:\n radius: {}\nposition: {}\nspeed: {}".format(self.radius, self.position, self.speed)
-        return pstr     
+        return pstr 
+
+def getcolors(steps):
+    colors = []
+    for i in range(0,255, round(255/steps)):
+        color = (255-i,0,i)
+        colors.append(color)
+    return colors
+       
 
 def paint():
     """
@@ -132,9 +149,10 @@ def paint():
 
     # Set the height and width of the screen
     size = [SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_DEPTH, 100]
-    screen = pygame.display.set_mode(size[:2])
+    screen = pygame.display.set_mode(size[:2], pygame.RESIZABLE)
 
     pygame.display.set_caption("Bouncing Balls")
+    #colors = getcolors(NBALLS)
 
     # Loop until the user clicks the close button.
     done = False
@@ -151,8 +169,8 @@ def paint():
     # ball in border
     #box.add_particle(MASS, RADIUS, [-5,size[1]/2], [-1,0])
     # ball overlap
-    box.add_particle(MASS, RADIUS, [size[0]/2,size[1]/2], [1,0])
-    box.add_particle(MASS, RADIUS, [size[0]/2+RADIUS/2,size[1]/2], [-1,0])
+    #box.add_particle(MASS, RADIUS, [size[0]/2,size[1]/2], [1,0])
+    #box.add_particle(MASS, RADIUS, [size[0]/2+RADIUS/2,size[1]/2], [-1,1])
     for i in range(NBALLS):
         #mass = MASS*random.random()+1
         #radius = mass*5
@@ -174,11 +192,14 @@ def paint():
                     pause = not pause
                 elif event.key == pygame.K_q:
                     done = True
+            if event.type == pygame.VIDEORESIZE:
+                screen = pygame.display.set_mode([event.w, event.h],
+                                              pygame.RESIZABLE)
+                box.resize([event.w, event.h])
 
         if not pause:
             # --- Logic
             for i, ball in enumerate(box.particles):
-                print(ball.speed)
                 # Move the ball's center
                 ball.move()
                 # Bounce the ball if needed
@@ -202,8 +223,12 @@ def paint():
                 color = WHITE
                 if i == 0:
                     color = RED
-                if i == box.dimensions-1:
+                elif i == box.dimensions-1:
                     color = GREEN
+                elif False:
+                    idx = round(ball.speed.dot(ball.speed)) % len(colors)
+                    #print(idx, ball.speed.dot(ball.speed))
+                    color = colors[idx]
 
                 pygame.draw.circle(screen, color, ball.position[:2], radius)
                 pygame.draw.line(screen, BLUE, ball.position[:2], (ball.position + 5*ball.speed)[:2], width=2)
