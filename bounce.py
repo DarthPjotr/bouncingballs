@@ -20,9 +20,9 @@ RED = (255, 0 ,0)
 GREEN = (0, 255,0)
 
 VMAX = 5
-RADIUS = 50
+RADIUS = 10
 MASS = 10
-NBALLS = 20
+NBALLS = 30
 
 class Box:
     def __init__(self, box_sizes) -> None:
@@ -51,7 +51,6 @@ class Box:
                         c +=1
                 if c==self.dimensions-1:
                     self.egdes.append((i,j))
-                    #print(v1, v2, "edge")
 
     def __str__(self) -> str:
         return str(self.box_sizes)
@@ -89,25 +88,24 @@ class Particle:
         self.position += self.speed
     
     def collide(self, p2):
+        """
+        Based on angle free representation from: https://en.wikipedia.org/wiki/Elastic_collision#Two-dimensional_collision_with_two_moving_objects
+        """
         collided = False
         dpos = self.position - p2.position
         distance2 = dpos.dot(dpos)
 
-        # only collide if particles are moving towards each other, so check next position
-        #dpos2 = (self.position + self.speed) - (p2.position + p2.speed)
-        #d2 = dpos2.dot(dpos2)
+        # only collide if particles are moving towards each other: dot product of speed difference and position different < 0
+        dspeed = self.speed - p2.speed
+        dot = dspeed.dot(dpos)
 
         dmin = (self.radius + p2.radius)
-        if distance2 > 0 and distance2 < dmin*dmin: # and d2 < distance2:
-            dspeed = self.speed - p2.speed
-            dot = dspeed.dot(dpos)
-            if dot > 0:
-                return False
-            s = dot*dpos/distance2
+        if distance2 > 0 and distance2 < dmin*dmin and dot < 0: # and d2 < distance2:
+            ds = dot*dpos/distance2
             #s1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * dspeed.dot(dpos)*(dpos)/distance2
-            s1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * s
             #s2 = p2.speed - (2*self.mass/(self.mass+p2.mass)) * -dspeed.dot(-dpos)*(-dpos)/distance2
-            s2 = p2.speed - (2*self.mass/(self.mass+p2.mass)) * -s
+            s1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * ds
+            s2 = p2.speed - (2*self.mass/(self.mass+p2.mass)) * -ds
             self.speed = s1
             p2.speed = s2
             collided = True
