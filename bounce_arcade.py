@@ -8,6 +8,8 @@ python -m arcade.examples.bouncing_balls
 
 import arcade
 import random
+
+from pyglet.window.key import P
 from gas import *
 
 # --- Set up the constants
@@ -22,8 +24,11 @@ class MyGame(arcade.Window):
     """ Main application class. """
 
     def __init__(self):
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True)
         self.box = Box([SCREEN_WIDTH, SCREEN_HEIGHT])
+        self.pause = False
+        self.sound = arcade.load_sound(".\\sounds\\c_bang1.wav")
+        self.bounced = False
 
     def on_draw(self):
         """
@@ -43,16 +48,40 @@ class MyGame(arcade.Window):
         output = "Balls: {}".format(len(self.box.particles))
         arcade.draw_text(output, 10, 20, arcade.color.WHITE, 14)
 
+        #play sound
+        if self.bounced:
+            arcade.play_sound(self.sound, 0.1)
+
     def on_update(self, delta_time):
         """ Movement and game logic """
-        self.box.go()
+        if not(self.pause):
+            self.bounced = self.box.go()
 
     def on_mouse_press(self, x, y, button, modifiers):
         """
         Called whenever the mouse button is clicked.
         """
-        mass = random.randrange(5, 50)
-        self.box.add_particle(mass=mass, radius=mass, position=[x,y])
+        if button == arcade.MOUSE_BUTTON_LEFT:
+            mass = random.randrange(5, 50)
+            self.box.add_particle(mass=mass, radius=mass, position=[x,y])
+        elif button == arcade.MOUSE_BUTTON_RIGHT:
+            for i, ball in enumerate(self.box.particles):
+                if ball.check_inside([x,y]):
+                    self.box.particles.pop(i)
+                    return
+
+            if len(self.box.particles) > 0:
+                self.box.particles.pop(random.randrange(0, len(self.box.particles)))
+    
+    def on_key_press(self, symbol: int, modifiers: int):
+        if symbol == arcade.key.P:
+            self.pause = not(self.pause)
+        return super().on_key_press(symbol, modifiers)
+
+    def on_resize(self, width: float, height: float):
+        self.box.resize([width,height])
+        return super().on_resize(width, height)
+
 
 def main():
     MyGame()

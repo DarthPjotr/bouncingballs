@@ -62,6 +62,7 @@ class Box:
             color = [random.randrange(256), random.randrange(256), random.randrange(256)]
         particle = Particle(mass, radius, position, speed, color)
         self.particles.append(particle)
+        return particle
 
     def resize(self, new_sizes):
         self.box_sizes[0:len(new_sizes)] = new_sizes
@@ -69,6 +70,7 @@ class Box:
         self._get_edges()
     
     def go(self):
+        bounced = False
         for i, ball in enumerate(self.particles):
             # Move the ball's center
             ball.move()
@@ -76,7 +78,8 @@ class Box:
             ball.bounce(self)
         for i, ball in enumerate(self.particles):
             for ball2 in self.particles[i:]:
-                ball.collide(ball2)
+                if ball.collide(ball2): bounced = True
+        return bounced
 
 
 class Particle:
@@ -86,6 +89,7 @@ class Particle:
         self.position = 1.0*numpy.array(position)
         self.speed = 1.0*numpy.array(speed)
         self.color = color
+        self.object = None
     
     def move(self):
         self.position += self.speed
@@ -125,6 +129,14 @@ class Particle:
                 self.speed[i] = -abs(self.speed[i])
                 bounced = True
         return bounced
+    
+    def check_inside(self, coords):
+        inside = False
+
+        for i, x in enumerate(coords):
+            if x > self.position[i] - self.radius and x < self.position[i] + self.radius:
+                inside = True
+        return inside
 
     def energy(self):
         return self.mass * self.speed.dot(self.speed) 
