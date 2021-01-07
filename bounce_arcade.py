@@ -51,7 +51,7 @@ class MyGame(arcade.Window):
         """
         Called whenever the mouse button is clicked.
         """
-        mass = random.randrange(5, 20)
+        mass = random.randrange(5, 50)
         self.box.add_particle(mass=mass, radius=mass, position=[x,y])
 
 def main():
