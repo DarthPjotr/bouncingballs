@@ -31,6 +31,10 @@ class Box:
         self._get_vertices()
         self._get_edges()
         self.particles = []
+        self.unitvector = numpy.array([1.0]*self.dimensions)
+        self.nullvector = self.unitvector * 0
+        self.impuls = self.nullvector.copy()
+        self.vectorfield = None
 
     def _get_vertices(self):
         # get unit cube coordinates for dimensions of box
@@ -53,6 +57,11 @@ class Box:
     def __str__(self) -> str:
         return str(self.box_sizes)
 
+    def resize(self, new_sizes):
+        self.box_sizes[0:len(new_sizes)] = new_sizes
+        self._get_vertices()
+        self._get_edges()
+    
     def add_particle(self,mass=MASS, radius=RADIUS, position=None, speed=None, color=None):
         if position == None:
             position = [random.randrange(radius, x - radius)*1.0 for x in self.box_sizes]
@@ -64,14 +73,17 @@ class Box:
         self.particles.append(particle)
         return particle
 
-    def resize(self, new_sizes):
-        self.box_sizes[0:len(new_sizes)] = new_sizes
-        self._get_vertices()
-        self._get_edges()
+    def applyfield(self, particle):
+        dspeed = self.nullvector
+        if self.vectorfield is not None:
+            dspeed = self.vectorfield(self, particle.mass, particle.position, particle.speed)
+        return dspeed
     
     def go(self):
         bounced = False
         for i, ball in enumerate(self.particles):
+            dspeed = self.applyfield(ball)
+            ball.speed += dspeed
             # Move the ball's center
             ball.move()
             # Bounce the ball if needed
@@ -90,6 +102,7 @@ class Particle:
         self.speed = 1.0*numpy.array(speed)
         self.color = color
         self.object = None
+        self.impuls = self.mass * self.speed
     
     def move(self):
         self.position += self.speed
@@ -109,25 +122,32 @@ class Particle:
         dmin = (self.radius + p2.radius)
         if distance2 > 0 and distance2 < dmin*dmin and dot < 0: # and d2 < distance2:
             ds = dot*dpos/distance2
-            #s1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * dspeed.dot(dpos)*(dpos)/distance2
-            #s2 = p2.speed - (2*self.mass/(self.mass+p2.mass)) * -dspeed.dot(-dpos)*(-dpos)/distance2
+            # s1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * dspeed.dot(dpos)*(dpos)/distance2
+            # s2 = p2.speed - (2*self.mass/(self.mass+p2.mass)) * -dspeed.dot(-dpos)*(-dpos)/distance2
             s1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * ds
             s2 = p2.speed - (2*self.mass/(self.mass+p2.mass)) * -ds
             self.speed = s1
             p2.speed = s2
             collided = True
+        
+        self.impuls = self.mass * self.speed
         return collided
         
     def bounce(self, box):
         bounced = False
-        for i, x in enumerate(len(box.box_sizes)*[0]):
+        old_speed = self.speed.copy()
+        for i, x in enumerate(box.nullvector):
             if self.position[i] < x + self.radius: # and self.speed[i] < 0:
                 self.speed[i] = abs(self.speed[i])
+                self.position[i] = x + self.radius
                 bounced = True
         for i, x in enumerate(box.box_sizes):
             if self.position[i] > x - self.radius: # and self.speed[i] > 0:
                 self.speed[i] = -abs(self.speed[i])
+                self.position[i] = x - self.radius
                 bounced = True
+        self.impuls = self.mass * self.speed
+        box.impuls += self.mass * (old_speed - self.speed)
         return bounced
     
     def check_inside(self, coords):
