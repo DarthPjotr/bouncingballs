@@ -4,6 +4,7 @@ Test
 import itertools
 import numpy
 import random
+import math
 
 SCREEN_WIDTH = 700
 SCREEN_HEIGHT = 500
@@ -22,9 +23,89 @@ RADIUS = 10
 MASS = 10
 NBALLS = 30
 
+
+class VectorField:
+    def __init__(self, box) -> None:
+        self.box = box
+        self.field = self.nofield
+        super().__init__()
+    
+    def apply(self, particle):
+        (vector, effect) = self.field(particle.mass, particle.position, particle.speed)
+        if effect == "add":
+            particle.speed += vector
+        elif effect == "flow":
+            particle.speed = math.sqrt(particle.speed.dot(particle.speed)) * vector
+        elif effect == "mul":
+            particle.speed = particle.speed * vector
+        elif effect == "rot":
+            particle.speed = numpy.matmul(vector, particle.speed)
+        else:
+            pass
+        return particle.speed
+    
+    def getvalue(self, position):
+        (vector, effect) = self.field(0, position, self.box.nullvector)
+        return vector
+
+    def nofield(self, mass, position, speed):
+        effect = "add"
+        position = self.box.nullvector
+        speed = self.box.nullvector
+        return (self.box.nullvector, effect)
+
+    def gravity(self, mass, position, speed):
+        effect = "add"
+        dspeed = self.box.nullvector
+        dspeed[1] = -0.1
+        return (dspeed, effect)
+
+    def rotate_flow(self, mass, position, speed):
+        effect = "flow"
+        center = self.box.box_sizes / 2
+        v0 = position - center
+        
+        u0 = v0/math.sqrt(v0.dot(v0))
+        dspeed = numpy.array([u0[1], -u0[0]])
+        return (dspeed, effect)
+    
+    def rotate(self, mass, position, speed):
+        effect = "rot"
+        theta = math.radians(5)
+        c = math.cos(theta)
+        s = math.sin(theta)
+        M = numpy.array(((c, -s), (s, c)))
+ 
+        return (M, effect)
+
+    def sinkR(self, mass, position, speed):
+        effect = "add"
+        dspeed = self.box.nullvector
+        center = self.box.box_sizes / 2
+        r = 20
+        v0 = position - center
+        v0dot = v0.dot(v0)
+        if abs(v0dot) > r*r:
+            u0 = v0/math.sqrt(v0dot)
+            dspeed = -50*u0/math.sqrt(v0dot)
+        return (dspeed, effect)
+
+    def sinkRR(self, mass, position, speed):
+        effect = "add"
+        dspeed = self.box.nullvector
+        center = self.box.box_sizes / 2
+        r = 20
+        v0 = position - centerl
+        v0dot = v0.dot(v0)
+        if abs(v0dot) > r*r:
+            u0 = v0/math.sqrt(v0dot)
+            dspeed = -2000*u0/v0dot
+        return (dspeed, effect)
+
+
 class Box:
     def __init__(self, box_sizes) -> None:
-        self.box_sizes = box_sizes
+        self.box_sizes = numpy.array(box_sizes, dtype=float)
         self.dimensions = len(self.box_sizes)
         self.vertices = []
         self.egdes = []
@@ -73,17 +154,12 @@ class Box:
         self.particles.append(particle)
         return particle
 
-    def applyfield(self, particle):
-        dspeed = self.nullvector
-        if self.vectorfield is not None:
-            dspeed = self.vectorfield(self, particle.mass, particle.position, particle.speed)
-        return dspeed
-    
     def go(self):
         bounced = False
         for i, ball in enumerate(self.particles):
-            dspeed = self.applyfield(ball)
-            ball.speed += dspeed
+            #dspeed = self.applyfield(ball)
+            #ball.speed += dspeed
+            self.vectorfield.apply(ball)
             # Move the ball's center
             ball.move()
             # Bounce the ball if needed
