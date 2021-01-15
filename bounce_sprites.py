@@ -30,12 +30,13 @@ class MyGame(arcade.Window):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True)
         self.box = Box([SCREEN_WIDTH, SCREEN_HEIGHT])
         self.box.vectorfield = VectorField(self.box)
-        self.box.vectorfield.field = self.box.vectorfield.rotate
+        self.box.vectorfield.field = self.box.vectorfield.nofield
         self.pause = False
         self.sound = arcade.load_sound(".\\sounds\\c_bang1.wav")
         self.bounced = False
         self.quiet = False
         self.background = None
+        self.sprite_list = arcade.SpriteList()
     
     def draw_field(self):
         if self.background is not None:
@@ -67,13 +68,19 @@ class MyGame(arcade.Window):
         # This command has to happen before we start drawing
         arcade.start_render()
 
-        self.draw_field()
+        # self.draw_field()
 
         for ball in self.box.particles:
-            arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
+            #arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
             end = ball.position + 5*ball.speed
-            arcade.draw_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 1)
+            arcade.draw_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
+            ball.object.center_x = ball.position[0]
+            ball.object.center_y = ball.position[1]
+            #ball.object.draw()
         
+        self.sprite_list.draw()
+        #self.sprite_list.draw_hit_boxes((255,255,255), 2)
+
         #self.impulses.draw()
 
         # Put the text on the screen.
@@ -98,25 +105,30 @@ class MyGame(arcade.Window):
         """
         if button == arcade.MOUSE_BUTTON_LEFT:
             mass = random.randrange(5, 50)
-            self.box.add_particle(mass=mass, radius=mass, position=[x,y])
+            ball = self.box.add_particle(mass=mass, radius=mass, position=[x,y])
+            ball.object = arcade.SpriteCircle(ball.radius+15, ball.color, True)
+            self.sprite_list.append(ball.object)
         elif button == arcade.MOUSE_BUTTON_RIGHT:
             for i, ball in enumerate(self.box.particles):
                 if ball.check_inside([x,y]):
                     self.box.particles.pop(i)
+                    #self.sprite_list.remove(ball.object)
+                    ball.object.kill()
                     return
 
             if len(self.box.particles) > 0:
-                self.box.particles.pop(random.randrange(0, len(self.box.particles)))
-            
-        
-        # self.impulses.vectors = [ball.impuls for ball in self.box.particles]
-        # self.impulses.vectors.append(self.box.impuls)
+                ball = self.box.particles.pop(random.randrange(0, len(self.box.particles)))
+                #self.sprite_list.remove(ball.object)
+                ball.object.kill()
+                
     
     def on_key_press(self, symbol: int, modifiers: int):
         if symbol == arcade.key.P:
             self.pause = not(self.pause)
         elif symbol == arcade.key.S:
             self.quiet = not(self.quiet)
+        elif symbol == arcade.key.Q:
+            self.close()
         return super().on_key_press(symbol, modifiers)
 
     def on_resize(self, width: float, height: float):

@@ -46,6 +46,8 @@ class VectorField:
     
     def getvalue(self, position):
         (vector, effect) = self.field(0, position, self.box.nullvector)
+        if effect == "rot":
+            vector = numpy.matmul(vector, self.box.nullvector)
         return vector
 
     def nofield(self, mass, position, speed):
@@ -71,7 +73,7 @@ class VectorField:
     
     def rotate(self, mass, position, speed):
         effect = "rot"
-        theta = math.radians(5)
+        theta = math.radians(mass*speed.dot(speed)/100)
         c = math.cos(theta)
         s = math.sin(theta)
         M = numpy.array(((c, -s), (s, c)))
@@ -95,7 +97,7 @@ class VectorField:
         dspeed = self.box.nullvector
         center = self.box.box_sizes / 2
         r = 20
-        v0 = position - centerl
+        v0 = position - center
         v0dot = v0.dot(v0)
         if abs(v0dot) > r*r:
             u0 = v0/math.sqrt(v0dot)
@@ -149,7 +151,7 @@ class Box:
         if speed == None:
             speed = [random.randrange(-VMAX,VMAX)*1.0 for dummy in range(self.dimensions)]
         if color == None:
-            color = [random.randrange(256), random.randrange(256), random.randrange(256)]
+            color = (random.randrange(256), random.randrange(256), random.randrange(256))
         particle = Particle(mass, radius, position, speed, color)
         self.particles.append(particle)
         return particle
