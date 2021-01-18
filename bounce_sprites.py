@@ -20,6 +20,7 @@ from gas import *
 (w,h) = arcade.get_display_size()
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 600
+DEPTH = 200
 SCREEN_TITLE = "Bouncing Balls Example"
 
 
@@ -29,14 +30,17 @@ class MyGame(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True)
         self.box = Box([SCREEN_WIDTH, SCREEN_HEIGHT])
-        self.box.vectorfield = VectorField(self.box)
-        self.box.vectorfield.field = self.box.vectorfield.nofield
+        self.box.field = Field(self.box)
+        self.box.field.field = self.box.field.nofield
         self.pause = False
         self.sound = arcade.load_sound(".\\sounds\\c_bang1.wav")
         self.bounced = False
         self.quiet = False
         self.background = None
         self.sprite_list = arcade.SpriteList()
+    
+    def setup(self):
+        pass
     
     def draw_field(self):
         if self.background is not None:
@@ -45,13 +49,13 @@ class MyGame(arcade.Window):
                                             self.background)
         else:
             arcade.cleanup_texture_cache()
-            if self.box.vectorfield == None:
+            if self.box.field == None:
                 return
             gx = numpy.arange(0, self.box.box_sizes[0], 80)
             gy = numpy.arange(0, self.box.box_sizes[1], 80)
             for x in gx:
                 for y in gy:
-                    speed = 100*self.box.vectorfield.getvalue([x,y])
+                    speed = 100*self.box.field.getvalue([x,y])
                     try:
                         arcade.draw_line(x, y, x+speed[0], y+speed[1], [255,255,255], 1)
                         arcade.draw_circle_filled(x+speed[0], y+speed[1], 2, [255,255,255])
@@ -76,12 +80,13 @@ class MyGame(arcade.Window):
             arcade.draw_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
             ball.object.center_x = ball.position[0]
             ball.object.center_y = ball.position[1]
-            #ball.object.draw()
+            if self.box.dimensions > 2:
+                ball.object.scale = ball.position[2]/self.box.box_sizes[2]
+            if self.box.dimensions > 3:
+                ball.object.alpha = 255*(ball.position[3]/self.box.box_sizes[3]) % 255
         
         self.sprite_list.draw()
         #self.sprite_list.draw_hit_boxes((255,255,255), 2)
-
-        #self.impulses.draw()
 
         # Put the text on the screen.
         output = "Balls: {}".format(len(self.box.particles))
@@ -112,13 +117,11 @@ class MyGame(arcade.Window):
             for i, ball in enumerate(self.box.particles):
                 if ball.check_inside([x,y]):
                     self.box.particles.pop(i)
-                    #self.sprite_list.remove(ball.object)
                     ball.object.kill()
                     return
 
             if len(self.box.particles) > 0:
                 ball = self.box.particles.pop(random.randrange(0, len(self.box.particles)))
-                #self.sprite_list.remove(ball.object)
                 ball.object.kill()
                 
     
@@ -138,7 +141,8 @@ class MyGame(arcade.Window):
 
 
 def main():
-    MyGame()
+    window = MyGame()
+    window.setup()
     arcade.run()
 
 

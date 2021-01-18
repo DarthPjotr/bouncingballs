@@ -24,37 +24,39 @@ MASS = 10
 NBALLS = 30
 
 
-class VectorField:
+class Field:
     def __init__(self, box) -> None:
         self.box = box
         self.field = self.nofield
         super().__init__()
     
     def apply(self, particle):
-        (vector, effect) = self.field(particle.mass, particle.position, particle.speed)
+        (value, effect) = self.field(particle.mass, particle.position, particle.speed)
         if effect == "add":
-            particle.speed += vector
+            particle.speed += value
         elif effect == "flow":
-            particle.speed = math.sqrt(particle.speed.dot(particle.speed)) * vector
+            particle.speed = math.sqrt(particle.speed.dot(particle.speed)) * value
         elif effect == "mul":
-            particle.speed = particle.speed * vector
+            particle.speed = particle.speed * value
         elif effect == "rot":
-            particle.speed = numpy.matmul(vector, particle.speed)
+            particle.speed = numpy.matmul(value, particle.speed)
+        elif effect == "replace":
+            particle.speed = value
         else:
             pass
         return particle.speed
     
     def getvalue(self, position):
-        (vector, effect) = self.field(0, position, self.box.nullvector)
+        (value, effect) = self.field(0, position, self.box.nullvector)
         if effect == "rot":
-            vector = numpy.matmul(vector, self.box.nullvector)
-        return vector
+            value = numpy.matmul(value, self.box.nullvector)
+        return value
 
     def nofield(self, mass, position, speed):
         effect = "add"
         position = self.box.nullvector
         speed = self.box.nullvector
-        return (self.box.nullvector, effect)
+        return (speed, effect)
 
     def gravity(self, mass, position, speed):
         effect = "add"
@@ -103,6 +105,11 @@ class VectorField:
             u0 = v0/math.sqrt(v0dot)
             dspeed = -2000*u0/v0dot
         return (dspeed, effect)
+    
+    def friction(self, mass, position, speed):
+        effect = "replace"
+        speed -= speed * 0.01
+        return (speed, effect)
 
 
 class Box:
@@ -117,7 +124,7 @@ class Box:
         self.unitvector = numpy.array([1.0]*self.dimensions)
         self.nullvector = self.unitvector * 0
         self.impuls = self.nullvector.copy()
-        self.vectorfield = None
+        self.field = None
 
     def _get_vertices(self):
         # get unit cube coordinates for dimensions of box
@@ -147,7 +154,10 @@ class Box:
     
     def add_particle(self,mass=MASS, radius=RADIUS, position=None, speed=None, color=None):
         if position == None:
-            position = [random.randrange(radius, x - radius)*1.0 for x in self.box_sizes]
+            position = []
+        rands = [random.randrange(radius, x - radius)*1.0 for x in self.box_sizes]
+        position.extend(rands[len(position)-1:-1])
+
         if speed == None:
             speed = [random.randrange(-VMAX,VMAX)*1.0 for dummy in range(self.dimensions)]
         if color == None:
@@ -161,7 +171,8 @@ class Box:
         for i, ball in enumerate(self.particles):
             #dspeed = self.applyfield(ball)
             #ball.speed += dspeed
-            self.vectorfield.apply(ball)
+            if self.field is not None:
+                self.field.apply(ball)
             # Move the ball's center
             ball.move()
             # Bounce the ball if needed
