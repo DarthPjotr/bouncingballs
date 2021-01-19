@@ -120,11 +120,15 @@ class Box:
         self.egdes = []
         self._get_vertices()
         self._get_edges()
+        self.torus = False
         self.particles = []
         self.unitvector = numpy.array([1.0]*self.dimensions)
         self.nullvector = self.unitvector * 0
         self.impuls = self.nullvector.copy()
         self.field = None
+        self.gravity = self.nullvector.copy()
+        self.friction = 0.0
+        self.interaction = 0.0
 
     def _get_vertices(self):
         # get unit cube coordinates for dimensions of box
@@ -152,7 +156,7 @@ class Box:
         self._get_vertices()
         self._get_edges()
     
-    def add_particle(self,mass=MASS, radius=RADIUS, position=None, speed=None, color=None):
+    def add_particle(self,mass=MASS, radius=RADIUS, position=None, speed=None, charge=0, color=None):
         if position == None:
             position = []
         rands = [random.randrange(radius, x - radius)*1.0 for x in self.box_sizes]
@@ -162,21 +166,70 @@ class Box:
             speed = [random.randrange(-VMAX,VMAX)*1.0 for dummy in range(self.dimensions)]
         if color == None:
             color = (random.randrange(256), random.randrange(256), random.randrange(256))
-        particle = Particle(mass, radius, position, speed, color)
+        particle = Particle(mass, radius, position, speed, charge, color)
         self.particles.append(particle)
         return particle
+    
+    def set_gravity(self, strength, direction=None):
+        if direction is None:
+            direction = self.nullvector.copy()
+            direction[1]=-1
+        self.gravity = strength * direction
+        return self.gravity
+    
+    def fall(self, particle):
+        particle.speed += self.gravity
+        return particle
+
+    def set_friction(self, friction):
+        self.friction = friction
+        return self.friction
+    
+    def slide(self, particle):
+        particle.speed -= particle.speed*self.friction
+        return particle
+
+    # def interact(self, particle):
+    #     dspeed = self.nullvector.copy()
+    #     for p in self.particles:
+    #         if p == particle:
+    #             continue
+    #         dpos = particle.position - p.position
+    #         distance2 = dpos.dot(dpos)
+    #         charge = particle.charge*p.charge
+    #         if distance2 < (particle.radius+p.radius)*(particle.radius+p.radius):
+    #             charge = abs(charge)
+    #         N = dpos/math.sqrt(distance2)/particle.mass
+    #         dspeed += charge*self.interaction*N/distance2
+        
+    #     particle.speed += dspeed
+    #     return particle.speed
+    
+    def set_interaction(self, interaction):
+        self.interaction = interaction
+        return self.interaction
 
     def go(self):
         bounced = False
         for i, ball in enumerate(self.particles):
-            #dspeed = self.applyfield(ball)
-            #ball.speed += dspeed
+            # gravity
+            self.fall(ball)
+            # friction
+            self.slide(ball)
+            # interaction with all balls
+            ball.interact(self)
+            # apply field
             if self.field is not None:
                 self.field.apply(ball)
             # Move the ball's center
             ball.move()
-            # Bounce the ball if needed
-            ball.bounce(self)
+            # Bounce of wrap the ball if needed
+            if self.torus:
+                ball.wrap(self)
+            else:
+                ball.bounce(self)
+        
+        # bounce the ball of each other
         for i, ball in enumerate(self.particles):
             for ball2 in self.particles[i:]:
                 if ball.collide(ball2): bounced = True
@@ -184,11 +237,12 @@ class Box:
 
 
 class Particle:
-    def __init__(self, mass, radius, position, speed, color) -> None:
+    def __init__(self, mass, radius, position, speed, charge, color) -> None:
         self.mass = mass
         self.radius = radius
         self.position = 1.0*numpy.array(position)
         self.speed = 1.0*numpy.array(speed)
+        self.charge = charge
         self.color = color
         self.object = None
         self.impuls = self.mass * self.speed
@@ -199,6 +253,7 @@ class Particle:
     def collide(self, p2):
         """
         Based on angle free representation from: https://en.wikipedia.org/wiki/Elastic_collision#Two-dimensional_collision_with_two_moving_objects
+        using vectors generalizes to any number of dimensions
         """
         collided = False
         dpos = self.position - p2.position
@@ -238,6 +293,37 @@ class Particle:
         self.impuls = self.mass * self.speed
         box.impuls += self.mass * (old_speed - self.speed)
         return bounced
+
+    def wrap(self, box):
+        wrapped = False
+        for i, x in enumerate(box.nullvector):
+            if self.position[i] < x:
+                self.position[i] = box.box_sizes[i] + self.position[i]
+                wrapped = True
+        for i, x in enumerate(box.box_sizes):
+            if self.position[i] > x:
+                self.position[i] = self.position[i] - box.box_sizes[i]
+                wrapped = True
+        return wrapped
+    
+    def interact(self, box):
+        if box.interaction == 0:
+            return self.speed
+        dspeed = box.nullvector.copy()
+        for p in box.particles:
+            if p == self:
+                continue
+            dpos = self.position - p.position
+            distance2 = dpos.dot(dpos)
+            charge = self.charge*p.charge
+            if distance2 < (self.radius+p.radius)*(self.radius+p.radius):
+                charge = abs(charge)
+            if distance2 > 0:
+                N = dpos/math.sqrt(distance2)/self.mass
+                dspeed += charge*box.interaction*N/distance2
+        
+        self.speed += dspeed
+        return self.speed
     
     def check_inside(self, coords):
         inside = False

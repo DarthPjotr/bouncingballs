@@ -17,30 +17,44 @@ from gas import *
 # --- Set up the constants
 
 # Size of the screen
-(w,h) = arcade.get_display_size()
-SCREEN_WIDTH = 600
+(DISPLAY_WIDTH, DISPLAY_HEIGHT) = arcade.get_display_size()
+SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 DEPTH = 200
 SCREEN_TITLE = "Bouncing Balls Example"
+
+# Physical contants
+
+GRAVITY = 0.0
+FRICTION = 0.0
+INTERACTION = 0.0
+TORUS = False
 
 
 class MyGame(arcade.Window):
     """ Main application class. """
 
     def __init__(self):
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True)
-        self.box = Box([SCREEN_WIDTH, SCREEN_HEIGHT])
-        self.box.field = Field(self.box)
-        self.box.field.field = self.box.field.nofield
-        self.pause = False
+        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True, visible=False)  
+        self.center_window()
+        self.background = None
         self.sound = arcade.load_sound(".\\sounds\\c_bang1.wav")
+        self.sprite_list = arcade.SpriteList()
+        self.set_visible()
+
+        self.box = None
+        self.pause = False
         self.bounced = False
         self.quiet = False
-        self.background = None
-        self.sprite_list = arcade.SpriteList()
-    
+              
     def setup(self):
-        pass
+        self.box = Box([SCREEN_WIDTH, SCREEN_HEIGHT])
+        self.box.set_gravity(GRAVITY)
+        self.box.set_friction(FRICTION)
+        self.box.set_interaction(INTERACTION)
+        self.box.torus = TORUS
+        self.box.field = Field(self.box)
+        self.box.field.field = self.box.field.nofield
     
     def draw_field(self):
         if self.background is not None:
@@ -110,7 +124,9 @@ class MyGame(arcade.Window):
         """
         if button == arcade.MOUSE_BUTTON_LEFT:
             mass = random.randrange(5, 50)
-            ball = self.box.add_particle(mass=mass, radius=mass, position=[x,y])
+            charge = random.choice([-1,1])
+            charge = 1
+            ball = self.box.add_particle(mass=mass, radius=mass, position=[x,y], charge=charge)
             ball.object = arcade.SpriteCircle(ball.radius+15, ball.color, True)
             self.sprite_list.append(ball.object)
         elif button == arcade.MOUSE_BUTTON_RIGHT:
