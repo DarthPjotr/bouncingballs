@@ -157,14 +157,14 @@ class Box:
         self._get_edges()
     
     def add_particle(self,mass=MASS, radius=RADIUS, position=None, speed=None, charge=0, color=None):
-        if position == None:
+        if position is None:
             position = []
         rands = [random.randrange(radius, x - radius)*1.0 for x in self.box_sizes]
         position.extend(rands[len(position)-1:-1])
 
-        if speed == None:
+        if speed is None:
             speed = [random.randrange(-VMAX,VMAX)*1.0 for dummy in range(self.dimensions)]
-        if color == None:
+        if color is None:
             color = (random.randrange(256), random.randrange(256), random.randrange(256))
         particle = Particle(mass, radius, position, speed, charge, color)
         self.particles.append(particle)
@@ -208,31 +208,51 @@ class Box:
     def set_interaction(self, interaction):
         self.interaction = interaction
         return self.interaction
+    
+    def avg_impuls(self):
+        if len(self.particles) == 0:
+            return self.nullvector
+        tot_impuls = sum([ball.impuls for ball in self.particles]) + self.impuls
+        return tot_impuls/len(self.particles)
+
+    def avg_position(self):
+        if len(self.particles) == 0:
+            return self.nullvector
+        tot_position = sum([ball.position for ball in self.particles])
+        return tot_position/len(self.particles)
 
     def go(self):
         bounced = False
+
+        # first calculate speed
         for i, ball in enumerate(self.particles):
+            # interaction
+            ball.interact(self)
             # gravity
             self.fall(ball)
             # friction
             self.slide(ball)
-            # interaction with all balls
-            ball.interact(self)
             # apply field
             if self.field is not None:
                 self.field.apply(ball)
-            # Move the ball's center
-            ball.move()
             # Bounce of wrap the ball if needed
             if self.torus:
                 ball.wrap(self)
             else:
                 ball.bounce(self)
-        
-        # bounce the ball of each other
-        for i, ball in enumerate(self.particles):
+            # collide the balls
             for ball2 in self.particles[i:]:
                 if ball.collide(ball2): bounced = True
+            # Move the ball's center
+        
+        # move all balls
+        for ball in self.particles:
+            ball.move()
+        
+        # # bounce the ball of each other
+        # for i, ball in enumerate(self.particles):
+        #     for ball2 in self.particles[i:]:
+        #         if ball.collide(ball2): bounced = True
         return bounced
 
 
@@ -245,7 +265,7 @@ class Particle:
         self.charge = charge
         self.color = color
         self.object = None
-        self.impuls = self.mass * self.speed
+        # self.impuls = self.mass * self.speed
     
     def move(self):
         self.position += self.speed
@@ -274,7 +294,7 @@ class Particle:
             p2.speed = s2
             collided = True
         
-        self.impuls = self.mass * self.speed
+        # self.impuls = self.mass * self.speed
         return collided
         
     def bounce(self, box):
@@ -290,7 +310,7 @@ class Particle:
                 self.speed[i] = -abs(self.speed[i])
                 self.position[i] = x - self.radius
                 bounced = True
-        self.impuls = self.mass * self.speed
+        # self.impuls = self.mass * self.speed
         box.impuls += self.mass * (old_speed - self.speed)
         return bounced
 
@@ -319,8 +339,8 @@ class Particle:
             if distance2 < (self.radius+p.radius)*(self.radius+p.radius):
                 charge = abs(charge)
             if distance2 > 0:
-                N = dpos/math.sqrt(distance2)/self.mass
-                dspeed += charge*box.interaction*N/distance2
+                N = dpos/math.sqrt(distance2)
+                dspeed += charge*box.interaction*N/(self.mass*distance2)
         
         self.speed += dspeed
         return self.speed
@@ -333,10 +353,15 @@ class Particle:
                 inside = True
         return inside
 
+    @property
     def energy(self):
         return self.mass * self.speed.dot(self.speed) 
+    
+    @property
+    def impuls(self):
+        return self.mass * self.speed
 
     def __str__(self) -> str:
         pstr = ""
-        pstr = "particle:\n radius: {}\nposition: {}\nspeed: {}".format(self.radius, self.position, self.speed)
+        pstr = "particle:\n mass: {}\n radius: {}\n position: {}\n speed: {}".format(self.mass, self.radius, self.position, self.speed)
         return pstr 
