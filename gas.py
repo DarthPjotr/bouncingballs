@@ -120,6 +120,8 @@ class Box:
         self.egdes = []
         self._get_vertices()
         self._get_edges()
+        self.center = sum(self.vertices)/len(self.vertices)
+        self.wall = None
         self.torus = False
         self.particles = []
         self.unitvector = numpy.array([1.0]*self.dimensions)
@@ -129,6 +131,7 @@ class Box:
         self.gravity = self.nullvector.copy()
         self.friction = 0.0
         self.interaction = 0.0
+        self.ticks = 0
 
     def _get_vertices(self):
         # get unit cube coordinates for dimensions of box
@@ -144,8 +147,8 @@ class Box:
                 c = 0
                 for k in range(len(v1)):
                     if v1[k] == v2[k]:
-                        c +=1
-                if c==self.dimensions-1:
+                        c += 1
+                if c == self.dimensions-1:
                     self.egdes.append((i,j))
 
     def __str__(self) -> str:
@@ -156,14 +159,26 @@ class Box:
         self._get_vertices()
         self._get_edges()
     
+    def volume(self):
+        V = numpy.product(self.box_sizes)
+        return V
+    
+    def area(self):
+        V = numpy.product(self.box_sizes)
+        A = 2*sum([V/s for s in self.box_sizes])
+        return A
+    
     def add_particle(self,mass=MASS, radius=RADIUS, position=None, speed=None, charge=0, color=None):
         if position is None:
             position = []
-        rands = [random.randrange(radius, x - radius)*1.0 for x in self.box_sizes]
-        position.extend(rands[len(position)-1:-1])
+        rpos = [random.randrange(radius, x - radius)*1.0 for x in self.box_sizes]
+        position.extend(rpos[len(position):])
 
         if speed is None:
-            speed = [random.randrange(-VMAX,VMAX)*1.0 for dummy in range(self.dimensions)]
+            speed = []
+        rspeed = [random.randrange(-VMAX,VMAX)*1.0 for dummy in range(self.dimensions)]
+        speed.extend(rspeed[len(speed):])
+
         if color is None:
             color = (random.randrange(256), random.randrange(256), random.randrange(256))
         particle = Particle(mass, radius, position, speed, charge, color)
@@ -188,22 +203,6 @@ class Box:
     def slide(self, particle):
         particle.speed -= particle.speed*self.friction
         return particle
-
-    # def interact(self, particle):
-    #     dspeed = self.nullvector.copy()
-    #     for p in self.particles:
-    #         if p == particle:
-    #             continue
-    #         dpos = particle.position - p.position
-    #         distance2 = dpos.dot(dpos)
-    #         charge = particle.charge*p.charge
-    #         if distance2 < (particle.radius+p.radius)*(particle.radius+p.radius):
-    #             charge = abs(charge)
-    #         N = dpos/math.sqrt(distance2)/particle.mass
-    #         dspeed += charge*self.interaction*N/distance2
-        
-    #     particle.speed += dspeed
-    #     return particle.speed
     
     def set_interaction(self, interaction):
         self.interaction = interaction
@@ -223,6 +222,7 @@ class Box:
 
     def go(self):
         bounced = False
+        self.ticks += 1
 
         # first calculate speed
         for i, ball in enumerate(self.particles):
@@ -235,24 +235,61 @@ class Box:
             # apply field
             if self.field is not None:
                 self.field.apply(ball)
-            # Bounce of wrap the ball if needed
+            # Bounce or wrap the ball if needed
             if self.torus:
                 ball.wrap(self)
             else:
-                ball.bounce(self)
+                ball.bounce(self)      
+            #hit the wall:
+            if self.wall is not None:
+                ball.hit(self.wall)
             # collide the balls
             for ball2 in self.particles[i:]:
                 if ball.collide(ball2): bounced = True
-            # Move the ball's center
         
         # move all balls
         for ball in self.particles:
             ball.move()
         
-        # # bounce the ball of each other
-        # for i, ball in enumerate(self.particles):
-        #     for ball2 in self.particles[i:]:
-        #         if ball.collide(ball2): bounced = True
+        return bounced
+
+
+class Wall:
+    def __init__(self, box: Box, rpos: int, dimension: int) -> None:
+        self.box = box
+        if rpos < 0 or rpos > 1:
+            raise ValueError("rpos must be between 0 and 1")
+        self.dimension = dimension
+        self.rpos = rpos
+        self._properties()
+    
+    def _properties(self):
+        self._vector = self.box.unitvector.copy()
+        self._vector[self.dimension] *= self.rpos
+        self.position = self.box.box_sizes * self._vector
+        self.vertices = numpy.array([vertix*self._vector for vertix in self.box.vertices if vertix[self.dimension] != 0]) 
+        self.center = sum(self.vertices)/len(self.vertices)
+    
+    def __str__(self) -> str:
+        return str(self.vertices)
+
+    def move(self, new_rpos):
+        self.rpos = new_rpos
+        self._properties()
+
+
+    def hit(self, ball):
+        bounced = False
+        dwall = ball.position[self.dimension] - self.position[self.dimension]
+        new_pos = dwall + ball.speed[self.dimension]
+        #print(ball, dwall, new_pos, (dwall < 0 and new_pos > 0) or (dwall > 0 and new_pos < 0))
+        if (dwall <= 0 and new_pos > 0) or (dwall >= 0 and new_pos < 0):
+            old_speed = ball.speed.copy()
+            ball.speed[self.dimension] = -ball.speed[self.dimension]
+            ball.position += ball.speed
+            self.box.impuls += ball.mass * (old_speed - ball.speed)
+            bounced = True
+        
         return bounced
 
 
@@ -260,8 +297,8 @@ class Particle:
     def __init__(self, mass, radius, position, speed, charge, color) -> None:
         self.mass = mass
         self.radius = radius
-        self.position = 1.0*numpy.array(position)
-        self.speed = 1.0*numpy.array(speed)
+        self.position = numpy.array(position, dtype=float)
+        self.speed = numpy.array(speed, dtype=float)
         self.charge = charge
         self.color = color
         self.object = None
@@ -269,6 +306,18 @@ class Particle:
     
     def move(self):
         self.position += self.speed
+
+    def fast_collision_check(self, p2):
+        min_distance = self.radius + p2.radius
+        dposition = abs(self.position - p2.position)
+
+        for dpos in dposition:
+            if dpos > min_distance:
+                return False
+        
+        if (sum(dposition) > min_distance*min_distance):
+            return False
+        return True
     
     def collide(self, p2):
         """
@@ -276,22 +325,28 @@ class Particle:
         using vectors generalizes to any number of dimensions
         """
         collided = False
-        dpos = self.position - p2.position
-        distance2 = dpos.dot(dpos)
 
-        # only collide if particles are moving towards each other: dot product of speed difference and position different < 0
+        if not self.fast_collision_check(p2):
+            collided = False
+            return collided
+
+        dposition = self.position - p2.position
+        distance2 = dposition.dot(dposition)
+
+        # only collide if particles are moving towards each other: 
+        # dot product of speed difference and position different < 0
         dspeed = self.speed - p2.speed
-        dot = dspeed.dot(dpos)
+        dot_speed_pos = dspeed.dot(dposition)
 
-        dmin = (self.radius + p2.radius)
-        if distance2 > 0 and distance2 < dmin*dmin and dot < 0: # and d2 < distance2:
-            ds = dot*dpos/distance2
-            # s1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * dspeed.dot(dpos)*(dpos)/distance2
-            # s2 = p2.speed - (2*self.mass/(self.mass+p2.mass)) * -dspeed.dot(-dpos)*(-dpos)/distance2
-            s1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * ds
-            s2 = p2.speed - (2*self.mass/(self.mass+p2.mass)) * -ds
-            self.speed = s1
-            p2.speed = s2
+        dmin = self.radius + p2.radius
+        if distance2 > 0 and distance2 < dmin*dmin and dot_speed_pos < 0: # and d2 < distance2:
+            dspeed_new = dot_speed_pos*dposition/distance2
+            # speed1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * dspeed.dot(dpos)*(dpos)/distance2
+            # speed2 = p2.speed - (2*self.mass/(self.mass+p2.mass)) * -dspeed.dot(-dpos)*(-dpos)/distance2
+            speed1 = self.speed - (2*p2.mass/(self.mass + p2.mass)) * dspeed_new
+            speed2 = p2.speed - (2*self.mass/(self.mass + p2.mass)) * -dspeed_new
+            self.speed = speed1
+            p2.speed = speed2
             collided = True
         
         # self.impuls = self.mass * self.speed
@@ -325,6 +380,20 @@ class Particle:
                 self.position[i] = self.position[i] - box.box_sizes[i]
                 wrapped = True
         return wrapped
+
+    def hit(self, wall):
+        bounced = False
+        dwall = self.position[wall.dimension] - wall.position[wall.dimension]
+        new_pos = dwall + self.speed[wall.dimension]
+        #print(ball, dwall, new_pos, (dwall < 0 and new_pos > 0) or (dwall > 0 and new_pos < 0))
+        if (dwall <= 0 and new_pos > 0) or (dwall >= 0 and new_pos < 0):
+            old_speed = self.speed.copy()
+            self.speed[wall.dimension] = -self.speed[wall.dimension]
+            self.position += self.speed
+            wall.box.impuls += self.mass * (old_speed - self.speed)
+            bounced = True
+        
+        return bounced
     
     def interact(self, box):
         if box.interaction == 0:
@@ -365,3 +434,44 @@ class Particle:
         pstr = ""
         pstr = "particle:\n mass: {}\n radius: {}\n position: {}\n speed: {}".format(self.mass, self.radius, self.position, self.speed)
         return pstr 
+
+
+def test_wall():
+    D = 1
+    box = Box([10,20,30])
+    print(box.vertices)
+    print(box.egdes)
+    print()
+    wall = Wall(box, 0.5, D)
+    print(box.box_sizes)
+    print(wall._vector, wall.position)
+    print("wall: ", wall)
+    center = sum(wall.vertices)/len(wall.vertices)
+    coords = [[vertix[0],vertix[1]] for vertix in wall.vertices]
+    print("coords: ", coords)
+    size = numpy.array(max(coords))
+
+    print("center: ", center)
+
+    try:
+        size[D] = -1
+    except IndexError:
+        pass
+    print("size: ", size)
+
+    print()
+    print(wall.vertices.mean(axis=D))
+    pass
+
+def test_box():
+    box = Box([10,20,30])
+    print(box.vertices)
+    print(box.egdes)
+    print(box.volume())
+    print(box.area())
+
+
+
+if __name__ == "__main__":
+    # test_wall()
+    test_box()
