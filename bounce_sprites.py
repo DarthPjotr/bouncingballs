@@ -35,14 +35,14 @@ DSIZE = 3
 
 # Physical contants
 BOX_DIMENSIONS = [SCREEN_WIDTH, SCREEN_HEIGHT, DEPTH, D4, D5]
-BALLS = 20
+BALLS = 6
 GRAVITY = 0.0
 FRICTION = 0.000
-INTERACTION = 0000.0
+INTERACTION = 1000.0
 TORUS = False
-DIMENSIONS = 2
+DIMENSIONS = 3
 # HEIGHT = 30
-SPEED = 3
+SPEED = 6
 
 # because it looks better with soft SpriteCircle add bit to sprite radius
 D_SPRITE_RADIUS = 15
@@ -69,6 +69,7 @@ class MyGame(arcade.Window):
         self.pause = False
         self.bounced = False
         self.quiet = False
+        self.text = True
         self.left_mouse_down = False
         self.mouse_dx = 0
         self.mouse_dy = 0
@@ -154,7 +155,7 @@ class MyGame(arcade.Window):
         
         self.pause = True
     
-    def test_springs(self):
+    def test_spring_box(self):
         sizes = self.box.box_sizes/4
         center = self.box.box_sizes/2
         box = Box(sizes)
@@ -167,14 +168,14 @@ class MyGame(arcade.Window):
             ball = self.add_ball(1, 10, pos, speed, 1)
             balls.append(ball)
         
-        balls[0].speed = 3 * self.box.unitvector.copy()
-        balls[-1].speed = -3 * self.box.unitvector.copy()
+        balls[0].speed = 5 * self.box.unitvector.copy()
+        balls[-1].speed = -5 * self.box.unitvector.copy()
         l = sum(box.box_sizes)/box.dimensions
         for edge in box.egdes:
             spring = Spring(l, 0.01, 0.05, balls[edge[0]], balls[edge[1]])
             self.box.springs.append(spring)
     
-    def test_simplex(self):
+    def test_spring_simplex(self):
         center = self.box.box_sizes/2
         balls = []
         for i in range(self.box.dimensions+1):
@@ -193,11 +194,46 @@ class MyGame(arcade.Window):
                     spring = Spring(200, 0.01, 0.01, b1, b2)
                     self.box.springs.append(spring)
     
+    def test_dimers(self):
+        radius = 5
+        lspring = 30
+        for i in range(round(BALLS/2)):
+        # for i in range(10):
+            pos1 = self.box.random_position()
+            speed = self.box.random() * VMAX * random.random()
+            b1 = self.add_ball(1 ,radius ,pos1 ,speed ,1)
+            pos2 = pos1 + self.box.random() * lspring
+            b2 = self.add_ball(1 ,radius ,pos2 ,speed ,1)
+            spring = Spring(lspring, 0.003, 0, b1, b2)
+            self.box.springs.append(spring)
+        
+        self.pause = True
+
+    def test_n_mers(self, n=2, star=True):
+        radius = 5
+        lspring = 80
+        for i in range(round(BALLS/n)):
+            pos1 = self.box.random_position()
+            speed = self.box.random() * VMAX * random.random()
+            b1 = self.add_ball(20 , 20+radius ,pos1 ,speed ,0)
+            if n > 1:
+                for i in range(n-1):
+                    pos2 = pos1 + self.box.random() * (lspring + 10)
+                    speed2 = speed + self.box.random()
+                    b2 = self.add_ball(1 ,radius ,pos2 ,speed2 ,1)
+                    spring = Spring(lspring, 0.003, 0, b1, b2)
+                    self.box.springs.append(spring)
+                    if not star:
+                        b1 = b2
+        
+        self.pause = True
+    
     def place_balls(self):
         # self._random_balls()
         # self._set_balls()
-        #self.test_springs()
-        self.test_simplex()
+        # self.test_spring_box()
+        # self.test_spring_simplex()
+        self.test_n_mers(3)
 
     def add_ball(self, mass, radius, position=None, speed=None, charge=0, color=None):
         ball = self.box.add_particle(mass, radius, position, speed, charge, color)
@@ -242,8 +278,6 @@ class MyGame(arcade.Window):
 
         # draw wall
         for wall in self.box.walls:
-            #arcade.draw_line(*(self.box.wall.start[:2]), *(self.box.wall.end[:2]), (50,50,50), 5)
-            #coords = [[vertix[0],vertix[1]] for vertix in self.box.wall.vertices]
             coords = [[vertix[0],vertix[1]] for vertix in wall.vertices]
             size = numpy.array(max(coords))
             center = wall.center[:2]
@@ -256,9 +290,6 @@ class MyGame(arcade.Window):
             # arcade.draw_rectangle_filled(*center, *size,  (150,150,150))
             wall_ = arcade.create_rectangle_filled(*center, *size,  (150,150,150))
             wall_.draw()
-            # self.wall_points = arcade.get_rectangle_points(*center, *size)
-            # arcade.is_point_in_polygon
-            # arcade.draw_lrtb_rectangle_filled()
         
         # draw avg impuls vector
         start = self.box.box_sizes/2
@@ -290,46 +321,44 @@ class MyGame(arcade.Window):
             if self.box.dimensions > DALPHA:
                 ball.object.alpha = 255*(ball.position[DALPHA]/self.box.box_sizes[DALPHA]) % 255
 
-
+        # draw springs
         for i, spring in enumerate(self.box.springs):
             v = MAXCOLOR + 1/((spring.dlength()/10000) - INVMAXCOLOR)
             color = self.getcolor(v, 0, 255)
-            # print(i, spring.dlength(), v, color)
             arcade.draw_line(*spring.p1.position[:2], *spring.p2.position[:2], color=color, line_width=1)
-
-        
-        #print(sum([s.dlength() for s in self.box.springs])/len(self.box.springs))
 
         # if len(self.arrow_list) > 0:
         #     self.arrow_list.draw()
         self.ball_list.draw()
         #self.sprite_list.draw_hit_boxes((255,255,255), 2)
 
-        # Put the text on the screen.
-        output = "Balls: {}".format(len(self.box.particles))
-        arcade.draw_text(output, 10, 20, arcade.color.WHITE, 14)
+    
+        if self.text:
+            # Put the text on the screen.
+            output = "Balls: {}".format(len(self.box.particles))
+            arcade.draw_text(output, 10, 20, arcade.color.WHITE, 14)
 
-        E = sum([ball.energy for ball in self.box.particles])
-        E += sum([s.energy for s in self.box.springs])
-        output = "Energy: {:.2f}".format(E)
-        arcade.draw_text(output, 10, 50, arcade.color.WHITE, 14)
+            E = sum([ball.energy for ball in self.box.particles])
+            E += sum([s.energy for s in self.box.springs])
+            output = "Energy: {:.2f}".format(E)
+            arcade.draw_text(output, 10, 50, arcade.color.WHITE, 14)
 
-        output = "Avg Impuls: {}".format(self.box.avg_momentum())
-        arcade.draw_text(output, 10, 80, arcade.color.WHITE, 14)
-        
-        P = self.box.pressure()
-        output = "pressure: {:}".format(P)
-        arcade.draw_text(output, 10, 110, arcade.color.WHITE, 14)
+            output = "Avg Impuls: {}".format(self.box.avg_momentum())
+            arcade.draw_text(output, 10, 80, arcade.color.WHITE, 14)
+            
+            P = self.box.pressure()
+            output = "pressure: {:}".format(P)
+            arcade.draw_text(output, 10, 110, arcade.color.WHITE, 14)
 
-        PV = self.box.pressure() * self.box.volume()
-        output = "PV: {:.2f}".format(PV)
-        arcade.draw_text(output, 10, 150, arcade.color.WHITE, 14)
+            PV = self.box.pressure() * self.box.volume()
+            output = "PV: {:.2f}".format(PV)
+            arcade.draw_text(output, 10, 150, arcade.color.WHITE, 14)
 
-        try:
-            output = "PV/nE: {}".format(PV/(E*len(self.box.particles)))
-            arcade.draw_text(output, 10, 180, arcade.color.WHITE, 14)
-        except:
-            raise
+            try:
+                output = "PV/nE: {}".format(PV/(E*len(self.box.particles)))
+                arcade.draw_text(output, 10, 180, arcade.color.WHITE, 14)
+            except:
+                raise
 
         # output = "Avg position: {}".format(self.box.avg_position())
         # arcade.draw_text(output, 10, 110, arcade.color.WHITE, 14)
@@ -423,6 +452,8 @@ class MyGame(arcade.Window):
             if self.fps < 1:
                 self.fps = 1
             self.set_update_rate(1/self.fps)
+        elif symbol == arcade.key.T:
+            self.text = not(self.text)
         elif symbol == arcade.key.Q:
             self.close()
         return super().on_key_press(symbol, modifiers)

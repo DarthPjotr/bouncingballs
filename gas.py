@@ -128,17 +128,19 @@ class Box:
         """
         self.box_sizes = numpy.array(box_sizes, dtype=float)
         self.dimensions = len(self.box_sizes)
+        self.unitvector = numpy.array([1.0]*self.dimensions)
+        self.nullvector = self.unitvector * 0
         self.vertices = []
         self.egdes = []
+        self.axis = []
         self._get_vertices()
         self._get_edges()
+        self._get_axis()
         self.center = sum(self.vertices)/len(self.vertices)
         self.walls = []
         self.torus = False
         self.particles = []
         self.springs = []
-        self.unitvector = numpy.array([1.0]*self.dimensions)
-        self.nullvector = self.unitvector * 0
         self.momentum = self.nullvector.copy()
         self.field = None
         self.gravity = self.nullvector.copy()
@@ -170,6 +172,15 @@ class Box:
                         c += 1
                 if c == self.dimensions-1:
                     self.egdes.append((i,j))
+    
+    def _get_axis(self):
+        self.axis = []
+        for i, size in enumerate(self.box_sizes):
+            _axis = self.nullvector.copy()
+            _axis[i] = size
+            self.axis.append(_axis)
+        
+        return self.axis
 
     def __str__(self) -> str:
         return str(self.box_sizes)
@@ -178,17 +189,15 @@ class Box:
         V = []
         for max in self.box_sizes:
             V.append(max*random.random())
-        position = numpy(V)
+        position = numpy.array(V)
         return position
-
-    
+   
     def random(self, size=1):
-        V = numpy.array([random.random() for d_ in self.box_sizes])
+        V = numpy.array([random.random()-0.5 for d_ in self.box_sizes])
         L = math.sqrt(V.dot(V))
         vector = size*V/L
         return vector
         
-
     def resize(self, new_sizes):
         """
         Resizes the box
@@ -199,6 +208,7 @@ class Box:
         self.box_sizes[0:len(new_sizes)] = new_sizes
         self._get_vertices()
         self._get_edges()
+        self._get_axis()
         self.ticks = 1
         self._normal_momentum = 0
     
@@ -254,9 +264,40 @@ class Box:
 
         if color is None:
             color = (random.randrange(256), random.randrange(256), random.randrange(256))
-        particle = Particle(mass, radius, position, speed, charge, color)
+        particle = Particle(self, mass, radius, position, speed, charge, color)
         self.particles.append(particle)
         return particle
+    
+    def displacement(self, pos1, pos2):
+        """
+        Calculates displacement vector between two position vectors. 
+        Accounts for wrapping around if self.torus == True.
+
+        Args:
+            pos1 (numpy.array): position 1
+            pos2 (numpy.array): position 2
+
+        Returns:
+            numpy.array: minimum vector from position 1 to 2
+        """        
+        if self.torus == False:
+            return pos1 - pos2
+        else:
+            dpos = pos1 - pos2
+            # P1 = [pos1 - s for s in self.axis] + [pos1 + s for s in self.axis]
+            P1 = [pos1 + s for s in self.vertices]
+            P2 = [pos2 + s for s in self.vertices]
+            # print(P1)
+        
+            dpos_dot = dpos.dot(dpos)
+            for p1 in P1:
+                for p2 in P2:
+                    dpos2 = p1 - p2
+                    dpos_dot2 = dpos2.dot(dpos2)
+                    if dpos_dot2 < dpos_dot:
+                        dpos = dpos2
+                        dpos_dot = dpos_dot2
+            return dpos
     
     def set_gravity(self, strength, direction=None):
         """
@@ -386,7 +427,7 @@ class Box:
         # calculate speeds
         for i, ball in enumerate(self.particles):
             # interaction
-            ball.interact(self)
+            ball.interact()
             # gravity
             self.fall(ball)
             # friction
@@ -396,9 +437,9 @@ class Box:
                 self.field.apply(ball)
             # Bounce or wrap the ball if needed
             if self.torus:
-                ball.wrap(self)
+                ball.wrap()
             else:
-                ball.bounce(self)      
+                ball.bounce()      
             #hit the wall:
             for wall in self.walls:
                 ball.hit(wall)
@@ -464,11 +505,12 @@ class Particle:
     """
     Particle
     """
-    def __init__(self, mass, radius, position, speed, charge, color) -> None:
+    def __init__(self, box: Box, mass: float, radius: float, position: list, speed: list, charge: float, color: list) -> None:
         """
         Creates particle 
 
         Args:
+            box (Box): box particle is contained in
             mass (float): mass
             radius (float): radius
             position (list of float): position vector
@@ -476,6 +518,7 @@ class Particle:
             charge (int): charge
             color (tuple RGB value): color
         """
+        self.box = box
         self.mass = mass
         self.radius = radius
         self.position = numpy.array(position, dtype=float)
@@ -502,7 +545,8 @@ class Particle:
             boolean: True when possible collision occured
         """
         min_distance = self.radius + p2.radius
-        dposition = abs(self.position - p2.position)
+        dposition = abs(self.displacement(p2.position))
+        #dposition = abs(self.position - p2.position)
 
         for dpos in dposition:
             if dpos > min_distance:
@@ -531,7 +575,8 @@ class Particle:
             collided = False
             return collided
 
-        dposition = self.position - p2.position
+        # dposition = self.position - p2.position
+        dposition = self.displacement(p2.position)
         distance2 = dposition.dot(dposition)
 
         # only collide if particles are moving towards each other: 
@@ -553,7 +598,7 @@ class Particle:
         # self.impuls = self.mass * self.speed
         return collided
         
-    def bounce(self, box):
+    def bounce(self):
         """
         Check and handles particle hitting the box walls
 
@@ -566,13 +611,13 @@ class Particle:
         bounced = False
         old_speed = self.speed.copy()
         index = 0
-        for i, x in enumerate(box.nullvector):
+        for i, x in enumerate(self.box.nullvector):
             if self.position[i] < x + self.radius: # and self.speed[i] < 0:
                 self.speed[i] = abs(self.speed[i])
                 self.position[i] = x + self.radius
                 index = i
                 bounced = True
-        for i, x in enumerate(box.box_sizes):
+        for i, x in enumerate(self.box.box_sizes):
             if self.position[i] > x - self.radius: # and self.speed[i] > 0:
                 self.speed[i] = -abs(self.speed[i])
                 self.position[i] = x - self.radius
@@ -581,11 +626,24 @@ class Particle:
         # self.impuls = self.mass * self.speed
 
         momentum = self.mass * (old_speed - self.speed)
-        box.momentum += momentum
-        box._normal_momentum += abs(momentum[index])
+        self.box.momentum += momentum
+        self.box._normal_momentum += abs(momentum[index])
         return bounced
+    
+    def displacement(self, position):
+        """
+        Calculates displacement vector between this particle and a position vectors. 
+        Accounts for wrapping around if self.torus == True.
 
-    def wrap(self, box):
+        Args:
+            position (numpy.array): position
+
+        Returns:
+            numpy.array: minimum vector from particle to position
+        """      
+        return self.box.displacement(self.position, position)
+
+    def wrap(self):
         """
         Handles particle wrapping around the box pacman style.
 
@@ -596,13 +654,13 @@ class Particle:
             boolean: True when wrapped
         """
         wrapped = False
-        for i, x in enumerate(box.nullvector):
+        for i, x in enumerate(self.box.nullvector):
             if self.position[i] < x:
-                self.position[i] = box.box_sizes[i] + self.position[i]
+                self.position[i] = self.box.box_sizes[i] + self.position[i]
                 wrapped = True
-        for i, x in enumerate(box.box_sizes):
+        for i, x in enumerate(self.box.box_sizes):
             if self.position[i] > x:
-                self.position[i] = self.position[i] - box.box_sizes[i]
+                self.position[i] = self.position[i] - self.box.box_sizes[i]
                 wrapped = True
         return wrapped
 
@@ -629,7 +687,7 @@ class Particle:
         
         return bounced
     
-    def interact(self, box):
+    def interact(self):
         """
         Handles particle, particle interaction, when particles have charge and the box interaction is set
         Uses inverse square
@@ -640,10 +698,10 @@ class Particle:
         Returns:
             list: new speed vector
         """
-        if box.interaction == 0:
+        if self.box.interaction == 0:
             return self.speed
-        dspeed = box.nullvector.copy()
-        for p in box.particles:
+        dspeed = self.box.nullvector.copy()
+        for p in self.box.particles:
             if p == self:
                 continue
             dpos = self.position - p.position
@@ -653,7 +711,7 @@ class Particle:
                 charge = abs(charge)
             if distance2 > 0:
                 N = dpos/math.sqrt(distance2)
-                dspeed += charge*box.interaction*N/(self.mass*distance2)
+                dspeed += charge*self.box.interaction*N/(self.mass*distance2)
         
         self.speed += dspeed
         return self.speed
@@ -701,16 +759,35 @@ class Particle:
         return pstr 
 
 class Spring:
+    """
+    Spring between particles
+    """
     def __init__(self, length: float, strength: float, damping: float, p1: Particle, p2: Particle) -> None:
+        """
+        Creates spring betrween two Particles
+
+        Args:
+            length (float): Rest length of spring
+            strength (float): Spring constant
+            damping (float): Damping constant
+            p1 (Particle): First particle
+            p2 (Particle): Second particle
+        """
         self.length = length
         self.strength = strength
         self.damping = damping
         self.p1 = p1
         self.p2 = p2
     
-
     def dlength(self):
-        dpos = self.p1.position - self.p2.position
+        """
+        Calculates how far spring is stretched or compressed
+
+        Returns:
+            float: length
+        """
+        #dpos = self.p1.position - self.p2.position
+        dpos = self.p1.displacement(self.p2.position)
         length2 = dpos.dot(dpos)
         length = math.sqrt(length2)
         dlength = self.length - length
@@ -718,14 +795,23 @@ class Spring:
 
     @property
     def energy(self):
+        """
+        Kinetic energy of spring
+
+        Returns:
+            float: kinetic energy
+        """
         dlength = self.dlength()
         return 0.5 * self.strength * dlength * dlength
 
     def pull(self):
         """
-        F = -kx: Hooks law
+        Uses Hooks law including damping to calculate new particle speeds
+        https://en.wikipedia.org/wiki/Harmonic_oscillator
+        F = -kx - c(dx/dt)
         """
-        dpos = self.p1.position - self.p2.position
+        #dpos = self.p1.position - self.p2.position
+        dpos = self.p1.displacement(self.p2.position)
         length2 = dpos.dot(dpos)
         length = math.sqrt(length2)
         dlength = self.length - length
@@ -777,6 +863,7 @@ def test_box():
     print(box.egdes)
     print(box.volume())
     print(box.area())
+    print(box.axis)
 
 
 def test():
@@ -809,8 +896,22 @@ def test():
             print("user interupted")
             break
 
+def test_displacement():
+    box = Box([10, 20])
+    p1 = numpy.array([1,2])
+    p2 = numpy.array([2,19])  
+    p3 = numpy.array([9,19])
+    box.torus = True
+
+    d = box.displacement(p1, p2)
+    print(d, p1 - p2)
+
+    d = box.displacement(p1, p3)
+    print(d, p1 - p3)
+
 
 if __name__ == "__main__":
     # test_wall()
-    test_box()
+    # test_box()
     # test()
+    test_displacement()
