@@ -42,7 +42,7 @@ INTERACTION = 1000.0
 TORUS = False
 DIMENSIONS = 3
 # HEIGHT = 30
-SPEED = 6
+SPEED = 3
 
 # because it looks better with soft SpriteCircle add bit to sprite radius
 D_SPRITE_RADIUS = 15
@@ -84,8 +84,10 @@ class MyGame(arcade.Window):
         self.box.set_friction(FRICTION)
         self.box.set_interaction(INTERACTION)
         self.box.torus = TORUS
-        self.box.field = Field(self.box)
-        self.box.field.field = self.box.field.nofield
+
+        # self.box.field = Field(self.box)
+        # self.box.field.equation = self.box.field.nofield
+
         # wall = Wall(self.box, 0.4, 0)
         # self.box.walls.append(wall)
         # wall = Wall(self.box, 0.6, 1)
@@ -110,6 +112,8 @@ class MyGame(arcade.Window):
             else:
                 speed = SPEED
             self.add_ball(1, 1, None, speed, 0, None)
+        
+        self.pause = True
 
     def _set_balls(self):
         center = self.box.box_sizes/2
@@ -155,7 +159,7 @@ class MyGame(arcade.Window):
         
         self.pause = True
     
-    def test_spring_box(self):
+    def test_spring_box(self, dpos=None):
         sizes = self.box.box_sizes/4
         center = self.box.box_sizes/2
         box = Box(sizes)
@@ -170,6 +174,8 @@ class MyGame(arcade.Window):
         
         balls[0].speed = 5 * self.box.unitvector.copy()
         balls[-1].speed = -5 * self.box.unitvector.copy()
+    
+
         l = sum(box.box_sizes)/box.dimensions
         for edge in box.egdes:
             spring = Spring(l, 0.01, 0.05, balls[edge[0]], balls[edge[1]])
@@ -182,7 +188,7 @@ class MyGame(arcade.Window):
             pos = center + self.box.random(50)
             speed = self.box.nullvector.copy()
             # speed = self.box.random(4)
-            ball = self.add_ball(1, 10, pos, speed, 1)
+            ball = self.add_ball(1, 10, pos, speed, -1)
             balls.append(ball)
         
         #balls[0].speed = 3 * self.box.unitvector.copy()
@@ -203,7 +209,7 @@ class MyGame(arcade.Window):
             speed = self.box.random() * VMAX * random.random()
             b1 = self.add_ball(1 ,radius ,pos1 ,speed ,1)
             pos2 = pos1 + self.box.random() * lspring
-            b2 = self.add_ball(1 ,radius ,pos2 ,speed ,1)
+            b2 = self.add_ball(1, radius, pos2, speed, 1)
             spring = Spring(lspring, 0.003, 0, b1, b2)
             self.box.springs.append(spring)
         
@@ -215,12 +221,12 @@ class MyGame(arcade.Window):
         for i in range(round(BALLS/n)):
             pos1 = self.box.random_position()
             speed = self.box.random() * VMAX * random.random()
-            b1 = self.add_ball(20 , 20+radius ,pos1 ,speed ,0)
+            b1 = self.add_ball(20, 20+radius, pos1, speed, 0)
             if n > 1:
                 for i in range(n-1):
                     pos2 = pos1 + self.box.random() * (lspring + 10)
                     speed2 = speed + self.box.random()
-                    b2 = self.add_ball(1 ,radius ,pos2 ,speed2 ,1)
+                    b2 = self.add_ball(1, radius, pos2, speed2, 1)
                     spring = Spring(lspring, 0.003, 0, b1, b2)
                     self.box.springs.append(spring)
                     if not star:
@@ -232,8 +238,36 @@ class MyGame(arcade.Window):
         # self._random_balls()
         # self._set_balls()
         # self.test_spring_box()
+        # self.test_spring_box()
         # self.test_spring_simplex()
-        self.test_n_mers(3)
+        # self.test_n_mers(3)
+
+        fillings = FillBox(self.box)
+        # balls = fillings.random_balls(20, 10)
+        # balls = fillings.create_simplex(180, None, 1, 5)
+        # self.add_balls(balls)
+
+        balls = fillings.create_n_mer(4, 4, False, 1)
+        self.add_balls(balls)
+
+        balls = fillings.create_n_mer(4, 4, False, 0)
+        self.add_balls(balls)
+
+        balls = fillings.create_n_mer(4, 4, False, -1)
+        self.add_balls(balls)
+
+        # balls = fillings.create_simplex(80, self.box.random_position(), 0)
+        # self.add_balls(balls)
+
+        # balls = fillings.create_box(100, self.box.random_position(), 1)
+        # self.add_balls(balls)
+
+        self.text = False
+
+    def add_balls(self, balls=list):
+        for ball in balls:
+            ball.object = arcade.SpriteCircle(ball.radius+D_SPRITE_RADIUS, ball.color, True)
+            self.ball_list.append(ball.object)
 
     def add_ball(self, mass, radius, position=None, speed=None, charge=0, color=None):
         ball = self.box.add_particle(mass, radius, position, speed, charge, color)
@@ -255,7 +289,8 @@ class MyGame(arcade.Window):
             gy = numpy.arange(0, self.box.box_sizes[1], 80)
             for x in gx:
                 for y in gy:
-                    speed = 100*self.box.field.getvalue([x,y])
+                    speed = 100*self.box.field.equation(position=numpy.array([x,y]))
+                    print(speed)
                     try:
                         arcade.draw_line(x, y, x+speed[0], y+speed[1], [255,255,255], 1)
                         arcade.draw_circle_filled(x+speed[0], y+speed[1], 2, [255,255,255])
@@ -272,7 +307,9 @@ class MyGame(arcade.Window):
         # This command has to happen before we start drawing
         arcade.start_render()
 
-        # self.draw_field()
+        if self.box.dimensions == 2 and self.box.field is not None and self.box.field.equation != self.box.field.nofield:
+            self.draw_field()
+        
         if self.left_mouse_down:
             arcade.draw_line(self.mouse_x, self.mouse_y, self.mouse_dx, self.mouse_dy, arcade.color.WHITE, 1)
 

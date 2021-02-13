@@ -24,7 +24,7 @@ MASS = 1
 NBALLS = 20
 
 
-class Field:
+class OldField:
     """
     Ugly
     """
@@ -60,12 +60,6 @@ class Field:
         position = self.box.nullvector
         speed = self.box.nullvector
         return (speed, effect)
-
-    def gravity(self, mass, position, speed):
-        effect = "add"
-        dspeed = self.box.nullvector
-        dspeed[1] = -0.1
-        return (dspeed, effect)
 
     def rotate_flow(self, mass, position, speed):
         effect = "flow"
@@ -108,12 +102,159 @@ class Field:
             u0 = v0/math.sqrt(v0dot)
             dspeed = -2000*u0/v0dot
         return (dspeed, effect)
-    
-    def friction(self, mass, position, speed):
-        effect = "replace"
-        speed -= speed * 0.01
-        return (speed, effect)
 
+class Field:
+    """
+    Different field equation. 
+
+    A field equation changes the particles speed based on position in the box 
+    and optionaly other parameters of the particle.
+    """    
+    def __init__(self, box) -> None:
+        """
+        Creates field
+
+        Args:
+            box (Box): the box
+        """        
+        self.box = box
+        position = self.box.nullvector.copy()
+        speed = self.box.nullvector.copy()
+        self.dummy_ball = Particle(self.box, 1, 1, position, speed, 1, [0,0,0])
+        self.equation = self.nofield
+
+    def _template(self, position=None, ball=None):
+        """
+        Template field equation. Affects the balls speed based on its position
+
+        The position parameter can be used to calculate the effect at the position.
+        This can be used to display the field. The dummy particle can be used in the calculation.
+
+        Args:
+            position (numpy.array, optional): position. Defaults to None.
+            ball (Particle, optional): A particle in the box. Defaults to None.
+    
+        Returns:
+            numpy.array: the effect of the field, usually the speed difference, but can also be an other vector or matrix
+        """        
+        if ball is None:
+            ball = self.dummy_ball
+        if position is None:
+            position = ball.position
+
+        dspeed = self.box.nullvector
+        if ball is not self.dummy_ball:
+            ball.speed += dspeed
+        return dspeed
+
+    def nofield(self, position=None, ball=None):
+        """
+        Dummy field equation, has no effect
+
+        Args:
+            position (numpy.array, optional): position. Defaults to None.
+            ball (Particle, optional): A particle in the box. Defaults to None.
+
+        Returns:
+            numpy.array: change in speed, in this case the zero vector, so no change
+        """        
+        if ball is None:
+            ball = self.dummy_ball
+        if position is None:
+            position = ball.position
+
+        dspeed = self.box.nullvector
+        if ball is not self.dummy_ball:
+            ball.speed += dspeed
+        return dspeed
+
+    def rotate(self, position=None, ball=None):
+        """
+        Applies matrix rotation to the particles speed
+
+        Args:
+            position (numpy.array, optional): position. Defaults to None.
+            ball (Particle, optional): A particle in the box. Defaults to None.
+
+        Raises:
+            ValueError: Currently only works for a bo with two dimensions
+
+        Returns:
+            numpy.array: change in speed
+        """        
+        if ball is None:
+            ball = self.dummy_ball
+        if position is None:
+            position = ball.position
+        
+        if self.box.dimensions > 2:
+            raise ValueError("Box dimensions must be 2 to use the rotation field")
+
+        theta = math.radians(ball.mass*ball.speed.dot(ball.speed)/10)
+        # theta = math.radians(5)
+        c = math.cos(theta)
+        s = math.sin(theta)
+        M = numpy.array(((c, -s), (s, c)))
+        
+        dspeed = numpy.matmul(M, ball.speed)
+        if ball is not self.dummy_ball:
+            ball.speed = dspeed
+        return dspeed
+    
+    def sinkR(self, position=None, ball=None):
+        if ball is None:
+            ball = self.dummy_ball
+        if position is None:
+            position = ball.position
+
+        dspeed = self.box.nullvector
+        center = self.box.box_sizes / 2
+        r = 20
+        v0 = position - center
+        v0dot = v0.dot(v0)
+        if abs(v0dot) > r*r:
+            u0 = v0/math.sqrt(v0dot)
+            dspeed = -50*u0/math.sqrt(v0dot)
+
+        if ball is not self.dummy_ball:
+            ball.speed += dspeed
+        return dspeed
+
+    def sinkRR(self, position=None, ball=None):
+        if ball is None:
+            ball = self.dummy_ball
+        if position is None:
+            position = ball.position
+
+        dspeed = self.box.nullvector
+        center = self.box.box_sizes / 2
+        r = 20
+        v0 = position - center
+        v0dot = v0.dot(v0)
+        if abs(v0dot) > r*r:
+            u0 = v0/math.sqrt(v0dot)
+            dspeed = -2000*u0/v0dot
+
+        if ball is not self.dummy_ball:
+            ball.speed += dspeed
+        return dspeed
+    
+    def rotate_flow(self, position=None, ball=None):
+        if ball is None:
+            ball = self.dummy_ball
+        if position is None:
+            position = ball.position
+
+        center = self.box.box_sizes / 2
+        v0 = position - center
+        
+        u0 = v0/math.sqrt(v0.dot(v0))
+        vector = numpy.array([u0[1], -u0[0]])
+
+        dspeed = math.sqrt(ball.speed.dot(ball.speed)) * vector
+        if ball is not self.dummy_ball:
+            ball.speed = dspeed
+        return vector
 
 class Box:
     """
@@ -240,10 +381,10 @@ class Box:
         Args:
             mass (float, optional): mass. Defaults to MASS.
             radius (float, optional): radius. Defaults to RADIUS.
-            position (list of float, optional): position. Defaults to None.
-            speed (list of float, optional): speed. Defaults to None.
+            position (list of float, optional): position. Defaults to None for random position
+            speed (list of float, optional): speed. Defaults to None for random speed
             charge (int, optional): charge. Defaults to 0.
-            color (tuple RGB value, optional): color. Defaults to None.
+            color (tuple RGB value, optional): color. Defaults to None for random color
 
         Returns:
             Particle: particle in the box
@@ -426,15 +567,18 @@ class Box:
 
         # calculate speeds
         for i, ball in enumerate(self.particles):
-            # interaction
-            ball.interact()
+            # interaction based on charge
+            if self.interaction != 0:
+                ball.interact()
             # gravity
-            self.fall(ball)
+            if self.gravity.any() != 0:
+                self.fall(ball)
             # friction
-            self.slide(ball)
+            if self.friction != 0:
+                self.slide(ball)
             # apply field
             if self.field is not None:
-                self.field.apply(ball)
+                self.field.equation(ball=ball)
             # Bounce or wrap the ball if needed
             if self.torus:
                 ball.wrap()
@@ -698,11 +842,11 @@ class Particle:
         Returns:
             list: new speed vector
         """
-        if self.box.interaction == 0:
+        if self.box.interaction == 0 or self.charge == 0:
             return self.speed
         dspeed = self.box.nullvector.copy()
         for p in self.box.particles:
-            if p == self:
+            if p == self or p.charge == 0:
                 continue
             dpos = self.position - p.position
             distance2 = dpos.dot(dpos)
@@ -829,6 +973,97 @@ class Spring:
         self.p1.speed += dv1
         self.p2.speed += dv2
 
+class FillBox:
+    def __init__(self, box: Box) -> None:
+        self.box = box
+
+    def random_balls(self, nballs: int, mass=None, radius=None, max_speed=VMAX):
+        if mass is None:
+            mass = random.randrange(0,10) * 1.0
+        if radius is None:
+            radius =  mass
+        balls = []
+        for i in range(nballs):
+            speed = self.box.random(max_speed)
+            ball = self.box.add_particle(mass, radius, None, speed, 0, None)
+            balls.append(ball)
+
+        return balls
+    
+    def create_simplex(self, size=200, position=None, charge=0, nedges=None):
+        if position is None:
+            center = self.box.center
+        else:
+            center = position
+
+        if nedges is None:
+            nedges = self.box.dimensions+1
+
+        balls = []
+        for i in range(nedges):
+            pos = center + self.box.random(size)
+            speed = self.box.nullvector.copy()
+            ball = self.box.add_particle(1, 10, pos, speed, charge)
+            balls.append(ball)
+
+        balls[0].speed = 5 * self.box.unitvector.copy()
+        balls[-1].speed = -5 * self.box.unitvector.copy()
+
+        for i, b1 in enumerate(balls):
+            for b2 in balls[i:]:
+                if b1 != b2:               
+                    spring = Spring(size, 0.01, 0.01, b1, b2)
+                    self.box.springs.append(spring)
+        return balls
+
+    def create_box(self, size, position=None, charge=0):
+        ratio = max(self.box.box_sizes)/size
+        sizes = self.box.box_sizes/ratio
+        if position is None:
+            center = self.box.box_sizes/2
+        else:
+            center = position
+        box = Box(sizes)
+        speed = self.box.nullvector.copy()
+
+        balls = []
+        for vertix in box.vertices:
+            pos = center - (box.box_sizes/2) + vertix
+            speed = self.box.nullvector.copy()
+            ball = self.box.add_particle(1, 10, pos, speed, charge)
+            balls.append(ball)
+        
+        balls[0].speed = 5 * self.box.unitvector.copy()
+        balls[-1].speed = -5 * self.box.unitvector.copy()
+
+        l = sum(box.box_sizes)/box.dimensions
+        for edge in box.egdes:
+            spring = Spring(l, 0.01, 0.01, balls[edge[0]], balls[edge[1]])
+            self.box.springs.append(spring)
+        
+        return balls
+
+    def create_n_mer(self, nballs, n=2, star=True, charge=0):
+        radius = 5
+        lspring = 20
+        balls = []
+        for i in range(round(nballs/n)):
+            pos1 = self.box.random_position()
+            speed = self.box.random() * VMAX * random.random()
+            b1 = self.box.add_particle(1, radius, pos1, speed, charge)
+            balls.append(b1)
+            if n > 1:
+                for i in range(n-1):
+                    pos2 = pos1 + self.box.random() * (lspring + 10)
+                    speed2 = speed + self.box.random()
+                    b2 = self.box.add_particle(1, radius, pos2, speed2, charge)
+                    balls.append(b2)
+                    spring = Spring(lspring, 0.01, 0, b1, b2)
+                    self.box.springs.append(spring)
+                    if not star:
+                        b1 = b2
+        
+        return balls
 
 def test_wall():
     D = 1
@@ -876,14 +1111,17 @@ def test():
     DIMENSIONS = 3
     SPEED = VMAX
     box = Box(BOX_DIMENSIONS[:DIMENSIONS])
-    for i in range(NBALLS):
-        if SPEED is not None:
-            speed = numpy.array([2*random.random()-1 for r in range(DIMENSIONS)])
-            speed = SPEED * speed / math.sqrt(speed.dot(speed))
-            speed = list(speed)
-        else:
-            speed = SPEED
-        box.add_particle(1, 1, None, speed)
+    # for i in range(NBALLS):
+    #     if SPEED is not None:
+    #         speed = numpy.array([2*random.random()-1 for r in range(DIMENSIONS)])
+    #         speed = SPEED * speed / math.sqrt(speed.dot(speed))
+    #         speed = list(speed)
+    #     else:
+    #         speed = SPEED
+    #     box.add_particle(1, 1, None, speed)
+
+    filling = FillBox(box)
+    filling.random_balls(10, 10)
 
     for i in range(1000):
         try:
@@ -910,8 +1148,12 @@ def test_displacement():
     print(d, p1 - p3)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
+    print("START")
+    
     # test_wall()
     # test_box()
-    # test()
-    test_displacement()
+    test()
+    # test_displacement()
+
+    print("END")
