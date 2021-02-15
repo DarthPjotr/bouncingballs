@@ -15,7 +15,7 @@ from palettable.scientific.diverging import Roma_20_r as colormap
 
 from gas import *
 
-# --- Set up the constants
+# Set up the constants
 
 UPDATE_RATE = 1/60
 
@@ -79,11 +79,11 @@ class MyGame(arcade.Window):
         self._MAX = 0
               
     def setup(self):
-        self.box = Box(BOX_DIMENSIONS[:DIMENSIONS])
+        self.box = Box(BOX_DIMENSIONS[:DIMENSIONS], TORUS)
         self.box.set_gravity(GRAVITY)
         self.box.set_friction(FRICTION)
         self.box.set_interaction(INTERACTION)
-        self.box.torus = TORUS
+        # self.box.torus = TORUS
 
         # self.box.field = Field(self.box)
         # self.box.field.equation = self.box.field.nofield
@@ -102,166 +102,48 @@ class MyGame(arcade.Window):
         V = V*255
         color = [round(c) for c in V]
         return color
-    
-    def _random_balls(self):
-        for i in range(BALLS):
-            if SPEED is not None:
-                speed = numpy.array([2*random.random()-1 for r in range(DIMENSIONS)])
-                speed = SPEED * speed / math.sqrt(speed.dot(speed))
-                speed = list(speed)
-            else:
-                speed = SPEED
-            self.add_ball(1, 1, None, speed, 0, None)
-        
-        self.pause = True
 
-    def _set_balls(self):
-        center = self.box.box_sizes/2
-
-        dpos = self.box.nullvector.copy()
-        dpos[1] = 120
-        pos = center + dpos
-        speed = self.box.nullvector.copy()
-        speed[0] = 0
-        #speed[1] = 1
-        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=-1)
-        ball.object = arcade.SpriteCircle(ball.radius+15, ball.color, True)
-        self.ball_list.append(ball.object)
-        b1 = ball
-
-        dpos = self.box.nullvector.copy()
-        dpos[0] = -20
-        pos = center + dpos
-        speed[0] = -0
-        #speed[1] = -1/6
-        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=1)
-        ball.object = arcade.SpriteCircle(ball.radius+15, ball.color, True)
-        self.ball_list.append(ball.object)
-        b2 = ball
-
-        dpos = self.box.nullvector.copy()
-        dpos[0] = 50
-        dpos[1] = 50
-        pos = center + dpos
-        speed[0] = -0
-        #speed[1] = -1/6
-        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=1)
-        ball.object = arcade.SpriteCircle(ball.radius+15, ball.color, True)
-        self.ball_list.append(ball.object)
-        b3 = ball
-
-        spring = Spring(150, 0.03, 0.001, b1, b2)
-        self.box.springs.append(spring)
-        spring = Spring(150, 0.03, 0.001, b2, b3)
-        self.box.springs.append(spring)
-        spring = Spring(190, 0.02, 0.001, b1, b3)
-        self.box.springs.append(spring)
-        
-        self.pause = True
-    
-    def test_spring_box(self, dpos=None):
-        sizes = self.box.box_sizes/4
-        center = self.box.box_sizes/2
-        box = Box(sizes)
-        speed = self.box.nullvector.copy()
-
-        balls = []
-        for vertix in box.vertices:
-            pos = center - (box.box_sizes/2) + vertix
-            speed = self.box.nullvector.copy()
-            ball = self.add_ball(1, 10, pos, speed, 1)
-            balls.append(ball)
-        
-        balls[0].speed = 5 * self.box.unitvector.copy()
-        balls[-1].speed = -5 * self.box.unitvector.copy()
-    
-
-        l = sum(box.box_sizes)/box.dimensions
-        for edge in box.egdes:
-            spring = Spring(l, 0.01, 0.05, balls[edge[0]], balls[edge[1]])
-            self.box.springs.append(spring)
-    
-    def test_spring_simplex(self):
-        center = self.box.box_sizes/2
-        balls = []
-        for i in range(self.box.dimensions+1):
-            pos = center + self.box.random(50)
-            speed = self.box.nullvector.copy()
-            # speed = self.box.random(4)
-            ball = self.add_ball(1, 10, pos, speed, -1)
-            balls.append(ball)
-        
-        #balls[0].speed = 3 * self.box.unitvector.copy()
-        #balls[-1].speed = -3 * self.box.unitvector.copy()  
-
-        for i, b1 in enumerate(balls):
-            for b2 in balls[i:]:
-                if b1 != b2:               
-                    spring = Spring(200, 0.01, 0.01, b1, b2)
-                    self.box.springs.append(spring)
-    
-    def test_dimers(self):
-        radius = 5
-        lspring = 30
-        for i in range(round(BALLS/2)):
-        # for i in range(10):
-            pos1 = self.box.random_position()
-            speed = self.box.random() * VMAX * random.random()
-            b1 = self.add_ball(1 ,radius ,pos1 ,speed ,1)
-            pos2 = pos1 + self.box.random() * lspring
-            b2 = self.add_ball(1, radius, pos2, speed, 1)
-            spring = Spring(lspring, 0.003, 0, b1, b2)
-            self.box.springs.append(spring)
-        
-        self.pause = True
-
-    def test_n_mers(self, n=2, star=True):
-        radius = 5
-        lspring = 80
-        for i in range(round(BALLS/n)):
-            pos1 = self.box.random_position()
-            speed = self.box.random() * VMAX * random.random()
-            b1 = self.add_ball(20, 20+radius, pos1, speed, 0)
-            if n > 1:
-                for i in range(n-1):
-                    pos2 = pos1 + self.box.random() * (lspring + 10)
-                    speed2 = speed + self.box.random()
-                    b2 = self.add_ball(1, radius, pos2, speed2, 1)
-                    spring = Spring(lspring, 0.003, 0, b1, b2)
-                    self.box.springs.append(spring)
-                    if not star:
-                        b1 = b2
-        
-        self.pause = True
-    
     def place_balls(self):
-        # self._random_balls()
-        # self._set_balls()
-        # self.test_spring_box()
-        # self.test_spring_box()
-        # self.test_spring_simplex()
-        # self.test_n_mers(3)
 
-        fillings = FillBox(self.box)
+        arrangement = ArrangeParticles(self.box)
+
+        # balls = arrangement.test_springs(10000)
+        # self.add_balls(balls)
+
+        # balls = arrangement.test_interaction(10000)
+        # self.add_balls(balls)
+
         # balls = fillings.random_balls(20, 10)
         # balls = fillings.create_simplex(180, None, 1, 5)
         # self.add_balls(balls)
 
-        balls = fillings.create_n_mer(4, 4, False, 1)
-        self.add_balls(balls)
-
-        balls = fillings.create_n_mer(4, 4, False, 0)
-        self.add_balls(balls)
-
-        balls = fillings.create_n_mer(4, 4, False, -1)
-        self.add_balls(balls)
-
-        # balls = fillings.create_simplex(80, self.box.random_position(), 0)
+        # balls = arrangement.create_n_mer(4, 4, False, True, 1)
         # self.add_balls(balls)
 
-        # balls = fillings.create_box(100, self.box.random_position(), 1)
+        # balls = arrangement.create_n_mer(4, 4, False, True, 0)
         # self.add_balls(balls)
 
+        # balls = arrangement.create_n_mer(4, 4, False, True, -1)
+        # self.add_balls(balls)
+
+        self.box.torus = True
+        S = 3
+        balls = arrangement.create_simplex(50, self.box.center, 1)
+        for ball in balls:
+            ball.speed[0] = -S/len(balls)
+        
+        self.add_balls(balls)
+
+        pos = self.box.center.copy()
+        pos[1] += 250
+        speed = self.box.nullvector.copy()
+        speed[0] = S
+        self.add_ball(1, 5, pos, speed, -1)
+
+        # balls = arrangement.create_box(100, self.box.random_position(), 1)
+        # self.add_balls(balls)
+
+        self.pause = True
         self.text = False
 
     def add_balls(self, balls=list):
@@ -362,6 +244,10 @@ class MyGame(arcade.Window):
         for i, spring in enumerate(self.box.springs):
             v = MAXCOLOR + 1/((spring.dlength()/10000) - INVMAXCOLOR)
             color = self.getcolor(v, 0, 255)
+            if self.box.dimensions > DALPHA:
+                pos = (spring.p1.position[DALPHA] + spring.p2.position[DALPHA])/2
+                alpha = 255*(pos/self.box.box_sizes[DALPHA]) % 255
+                color.append(alpha)
             arcade.draw_line(*spring.p1.position[:2], *spring.p2.position[:2], color=color, line_width=1)
 
         # if len(self.arrow_list) > 0:
@@ -372,30 +258,31 @@ class MyGame(arcade.Window):
     
         if self.text:
             # Put the text on the screen.
-            output = "Balls: {}".format(len(self.box.particles))
+
+            output = "Dimensions: {}, Balls: {}".format(self.box.dimensions, len(self.box.particles))
             arcade.draw_text(output, 10, 20, arcade.color.WHITE, 14)
 
-            E = sum([ball.energy for ball in self.box.particles])
-            E += sum([s.energy for s in self.box.springs])
-            output = "Energy: {:.2f}".format(E)
-            arcade.draw_text(output, 10, 50, arcade.color.WHITE, 14)
+            # E = sum([ball.energy for ball in self.box.particles])
+            # E += sum([s.energy for s in self.box.springs])
+            # output = "Energy: {:.2f}".format(E)
+            # arcade.draw_text(output, 10, 50, arcade.color.WHITE, 14)
 
-            output = "Avg Impuls: {}".format(self.box.avg_momentum())
-            arcade.draw_text(output, 10, 80, arcade.color.WHITE, 14)
+            # output = "Avg Impuls: {}".format(self.box.avg_momentum())
+            # arcade.draw_text(output, 10, 80, arcade.color.WHITE, 14)
             
-            P = self.box.pressure()
-            output = "pressure: {:}".format(P)
-            arcade.draw_text(output, 10, 110, arcade.color.WHITE, 14)
+            # P = self.box.pressure()
+            # output = "pressure: {:}".format(P)
+            # arcade.draw_text(output, 10, 110, arcade.color.WHITE, 14)
 
-            PV = self.box.pressure() * self.box.volume()
-            output = "PV: {:.2f}".format(PV)
-            arcade.draw_text(output, 10, 150, arcade.color.WHITE, 14)
+            # PV = self.box.pressure() * self.box.volume()
+            # output = "PV: {:.2f}".format(PV)
+            # arcade.draw_text(output, 10, 150, arcade.color.WHITE, 14)
 
-            try:
-                output = "PV/nE: {}".format(PV/(E*len(self.box.particles)))
-                arcade.draw_text(output, 10, 180, arcade.color.WHITE, 14)
-            except:
-                raise
+            # try:
+            #     output = "PV/nE: {}".format(PV/(E*len(self.box.particles)))
+            #     arcade.draw_text(output, 10, 180, arcade.color.WHITE, 14)
+            # except:
+            #     raise
 
         # output = "Avg position: {}".format(self.box.avg_position())
         # arcade.draw_text(output, 10, 110, arcade.color.WHITE, 14)

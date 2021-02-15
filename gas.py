@@ -24,85 +24,6 @@ MASS = 1
 NBALLS = 20
 
 
-class OldField:
-    """
-    Ugly
-    """
-    def __init__(self, box) -> None:
-        self.box = box
-        self.field = self.nofield
-        super().__init__()
-    
-    def apply(self, particle):
-        (value, effect) = self.field(particle.mass, particle.position, particle.speed)
-        if effect == "add":
-            particle.speed += value
-        elif effect == "flow":
-            particle.speed = math.sqrt(particle.speed.dot(particle.speed)) * value
-        elif effect == "mul":
-            particle.speed = particle.speed * value
-        elif effect == "rot":
-            particle.speed = numpy.matmul(value, particle.speed)
-        elif effect == "replace":
-            particle.speed = value
-        else:
-            pass
-        return particle.speed
-    
-    def getvalue(self, position):
-        (value, effect) = self.field(0, position, self.box.nullvector)
-        if effect == "rot":
-            value = numpy.matmul(value, self.box.nullvector)
-        return value
-
-    def nofield(self, mass, position, speed):
-        effect = "add"
-        position = self.box.nullvector
-        speed = self.box.nullvector
-        return (speed, effect)
-
-    def rotate_flow(self, mass, position, speed):
-        effect = "flow"
-        center = self.box.box_sizes / 2
-        v0 = position - center
-        
-        u0 = v0/math.sqrt(v0.dot(v0))
-        dspeed = numpy.array([u0[1], -u0[0]])
-        return (dspeed, effect)
-    
-    def rotate(self, mass, position, speed):
-        effect = "rot"
-        theta = math.radians(mass*speed.dot(speed)/100)
-        c = math.cos(theta)
-        s = math.sin(theta)
-        M = numpy.array(((c, -s), (s, c)))
- 
-        return (M, effect)
-
-    def sinkR(self, mass, position, speed):
-        effect = "add"
-        dspeed = self.box.nullvector
-        center = self.box.box_sizes / 2
-        r = 20
-        v0 = position - center
-        v0dot = v0.dot(v0)
-        if abs(v0dot) > r*r:
-            u0 = v0/math.sqrt(v0dot)
-            dspeed = -50*u0/math.sqrt(v0dot)
-        return (dspeed, effect)
-
-    def sinkRR(self, mass, position, speed):
-        effect = "add"
-        dspeed = self.box.nullvector
-        center = self.box.box_sizes / 2
-        r = 20
-        v0 = position - center
-        v0dot = v0.dot(v0)
-        if abs(v0dot) > r*r:
-            u0 = v0/math.sqrt(v0dot)
-            dspeed = -2000*u0/v0dot
-        return (dspeed, effect)
-
 class Field:
     """
     Different field equation. 
@@ -170,7 +91,8 @@ class Field:
 
     def rotate(self, position=None, ball=None):
         """
-        Applies matrix rotation to the particles speed
+        Applies matrix rotation to the particles speed. 
+        Causes all the particles to move in circles.
 
         Args:
             position (numpy.array, optional): position. Defaults to None.
@@ -240,6 +162,16 @@ class Field:
         return dspeed
     
     def rotate_flow(self, position=None, ball=None):
+        """
+        Rotates alle particles arround the center of the box.
+
+        Args:
+            position (numpy.array, optional): position. Defaults to None.
+            ball (Particle, optional): the particle to affect. Defaults to None.
+
+        Returns:
+            numpy.array: Vector
+        """        
         if ball is None:
             ball = self.dummy_ball
         if position is None:
@@ -260,14 +192,17 @@ class Box:
     """
     n-dimensional box to contain particles
     """
-    def __init__(self, box_sizes) -> None:
+    def __init__(self, box_sizes, torus=False) -> None:
         """
         Create n-dimension box
 
         Args:
             box_sizes (list of floats): size of the box
         """
+        # shape of the box
         self.box_sizes = numpy.array(box_sizes, dtype=float)
+        self.torus = torus
+        # calculated properties based on box_sizes
         self.dimensions = len(self.box_sizes)
         self.unitvector = numpy.array([1.0]*self.dimensions)
         self.nullvector = self.unitvector * 0
@@ -278,17 +213,19 @@ class Box:
         self._get_edges()
         self._get_axis()
         self.center = sum(self.vertices)/len(self.vertices)
-        self.walls = []
-        self.torus = False
-        self.particles = []
-        self.springs = []
-        self.momentum = self.nullvector.copy()
+        # physical properties
         self.field = None
         self.gravity = self.nullvector.copy()
         self.friction = 0.0
         self.interaction = 0.0
-        self.ticks = 0
+        # content of the box
+        self.walls = []
+        self.particles = []
+        self.springs = []
+        # dynamic properties
+        self.momentum = self.nullvector.copy()
         self._normal_momentum = 0
+        self.ticks = 0
 
     def _get_vertices(self):
         """
@@ -315,6 +252,12 @@ class Box:
                     self.egdes.append((i,j))
     
     def _get_axis(self):
+        """
+        Calculates the axis
+
+        Returns:
+            list of numpy.array: the axis
+        """        
         self.axis = []
         for i, size in enumerate(self.box_sizes):
             _axis = self.nullvector.copy()
@@ -327,6 +270,12 @@ class Box:
         return str(self.box_sizes)
     
     def random_position(self):
+        """
+        Gives random position in the box
+
+        Returns:
+            numpy.array: position
+        """        
         V = []
         for max in self.box_sizes:
             V.append(max*random.random())
@@ -334,6 +283,15 @@ class Box:
         return position
    
     def random(self, size=1):
+        """
+        Gives random vector
+
+        Args:
+            size (int, optional): Absolute size of vector. Defaults to 1.
+
+        Returns:
+            numpy.array: vector
+        """        
         V = numpy.array([random.random()-0.5 for d_ in self.box_sizes])
         L = math.sqrt(V.dot(V))
         vector = size*V/L
@@ -973,7 +931,7 @@ class Spring:
         self.p1.speed += dv1
         self.p2.speed += dv2
 
-class FillBox:
+class ArrangeParticles:
     def __init__(self, box: Box) -> None:
         self.box = box
 
@@ -1043,7 +1001,7 @@ class FillBox:
         
         return balls
 
-    def create_n_mer(self, nballs, n=2, star=True, charge=0):
+    def create_n_mer(self, nballs, n=2, star=False, circle=False, charge=0):
         radius = 5
         lspring = 20
         balls = []
@@ -1051,6 +1009,7 @@ class FillBox:
             pos1 = self.box.random_position()
             speed = self.box.random() * VMAX * random.random()
             b1 = self.box.add_particle(1, radius, pos1, speed, charge)
+            bstart = b1
             balls.append(b1)
             if n > 1:
                 for i in range(n-1):
@@ -1062,6 +1021,72 @@ class FillBox:
                     self.box.springs.append(spring)
                     if not star:
                         b1 = b2
+                if circle:
+                    spring = Spring(lspring, 0.01, 0, b1, bstart)
+                    self.box.springs.append(spring)
+        return balls
+    
+    def test_interaction(self, interaction):
+        self.box.set_interaction(interaction)
+        balls = []
+
+        dpos = self.box.nullvector.copy()
+        dpos[1] = 120
+        pos = self.box.center + dpos
+        speed = self.box.nullvector.copy()
+        speed[0] = 3
+        ball = self.box.add_particle(5, 5, position=list(pos), speed=list(speed), charge=-1)
+        balls.append(ball)
+
+        dpos = self.box.nullvector.copy()
+        dpos[1] = -20
+        pos = self.box.center + dpos
+        speed[0] = -3/6
+        ball = self.box.add_particle(30, 30, position=list(pos), speed=list(speed), charge=1)
+        balls.append(ball)
+
+        return balls
+
+    def test_springs(self, interaction=0):
+        self.box.set_interaction(interaction)
+
+        balls = []
+
+        dpos = self.box.nullvector.copy()
+        dpos[1] = 120
+        pos = self.box.center + dpos
+        speed = self.box.nullvector.copy()
+        speed[0] = 0
+        #speed[1] = 1
+        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=-1)
+        balls.append(ball)
+        b1 = ball
+
+        dpos = self.box.nullvector.copy()
+        dpos[0] = -20
+        pos = self.box.center + dpos
+        speed[0] = -0
+        #speed[1] = -1/6
+        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=1)
+        balls.append(ball)
+        b2 = ball
+
+        dpos = self.box.nullvector.copy()
+        dpos[0] = 50
+        dpos[1] = 50
+        pos = self.box.center + dpos
+        speed[0] = -0
+        #speed[1] = -1/6
+        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=1)
+        balls.append(ball)
+        b3 = ball
+
+        spring = Spring(150, 0.03, 0.001, b1, b2)
+        self.box.springs.append(spring)
+        spring = Spring(150, 0.03, 0.001, b2, b3)
+        self.box.springs.append(spring)
+        spring = Spring(190, 0.02, 0.001, b1, b3)
+        self.box.springs.append(spring)
         
         return balls
 
@@ -1120,7 +1145,7 @@ def test():
     #         speed = SPEED
     #     box.add_particle(1, 1, None, speed)
 
-    filling = FillBox(box)
+    filling = ArrangeParticles(box)
     filling.random_balls(10, 10)
 
     for i in range(1000):
