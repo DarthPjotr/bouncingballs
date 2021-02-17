@@ -95,8 +95,8 @@ class MyGame(arcade.Window):
 
         self.place_balls()
 
-    def getcolor(self, v, vmin, vmax):
-        i = (v-vmin)/(vmax-vmin)
+    def getcolor(self, value, vmin, vmax):
+        i = (value-vmin)/(vmax-vmin)
         rgb = colormap.mpl_colormap(i)
         V = numpy.array(rgb[:3])
         V = V*255
@@ -113,9 +113,9 @@ class MyGame(arcade.Window):
         # balls = arrangement.test_interaction(10000)
         # self.add_balls(balls)
 
-        # balls = fillings.random_balls(20, 10)
-        # balls = fillings.create_simplex(180, None, 1, 5)
-        # self.add_balls(balls)
+        balls = arrangement.random_balls(10, 10)
+        # balls = arrangement.create_simplex(180, None, 1, 5)
+        self.add_balls(balls)
 
         # balls = arrangement.create_n_mer(4, 4, False, True, 1)
         # self.add_balls(balls)
@@ -126,19 +126,19 @@ class MyGame(arcade.Window):
         # balls = arrangement.create_n_mer(4, 4, False, True, -1)
         # self.add_balls(balls)
 
-        self.box.torus = True
-        S = 3
-        balls = arrangement.create_simplex(50, self.box.center, 1)
-        for ball in balls:
-            ball.speed[0] = -S/len(balls)
+        # self.box.torus = False
+        # S = 3
+        # balls = arrangement.create_simplex(50, self.box.center, 1)
+        # for ball in balls:
+        #     ball.speed[0] = -S/len(balls)
         
-        self.add_balls(balls)
+        # self.add_balls(balls)
 
-        pos = self.box.center.copy()
-        pos[1] += 250
-        speed = self.box.nullvector.copy()
-        speed[0] = S
-        self.add_ball(1, 5, pos, speed, -1)
+        # pos = self.box.center.copy()
+        # pos[1] += 250
+        # speed = self.box.nullvector.copy()
+        # speed[0] = S
+        # self.add_ball(1, 5, pos, speed, -1)
 
         # balls = arrangement.create_box(100, self.box.random_position(), 1)
         # self.add_balls(balls)
@@ -167,15 +167,17 @@ class MyGame(arcade.Window):
             arcade.cleanup_texture_cache()
             if self.box.field == None:
                 return
-            gx = numpy.arange(0, self.box.box_sizes[0], 80)
-            gy = numpy.arange(0, self.box.box_sizes[1], 80)
+            gx = numpy.arange(0, self.box.box_sizes[0], 50)
+            gy = numpy.arange(0, self.box.box_sizes[1], 50)
             for x in gx:
                 for y in gy:
-                    speed = 100*self.box.field.equation(position=numpy.array([x,y]))
-                    print(speed)
+                    position = self.box.center.copy()
+                    position[0] = x
+                    position[1] = y
+                    value = 10*self.box.field.equation(position=position)
                     try:
-                        arcade.draw_line(x, y, x+speed[0], y+speed[1], [255,255,255], 1)
-                        arcade.draw_circle_filled(x+speed[0], y+speed[1], 2, [255,255,255])
+                        arcade.draw_line(x, y, x+value[0], y+value[1], [255,255,255], 1)
+                        arcade.draw_circle_filled(x+value[0], y+value[1], 2, [255,255,255])
                     except:
                         pass
 
@@ -189,9 +191,9 @@ class MyGame(arcade.Window):
         # This command has to happen before we start drawing
         arcade.start_render()
 
-        if self.box.dimensions == 2 and self.box.field is not None and self.box.field.equation != self.box.field.nofield:
+        if self.box.field is not None and self.box.field.equation != self.box.field.nofield:
             self.draw_field()
-        
+
         if self.left_mouse_down:
             arcade.draw_line(self.mouse_x, self.mouse_y, self.mouse_dx, self.mouse_dy, arcade.color.WHITE, 1)
 

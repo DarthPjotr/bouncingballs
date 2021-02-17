@@ -131,10 +131,10 @@ class Field:
 
         dspeed = self.box.nullvector
         center = self.box.box_sizes / 2
-        r = 20
+        Rmin = 20
         v0 = position - center
         v0dot = v0.dot(v0)
-        if abs(v0dot) > r*r:
+        if abs(v0dot) > Rmin*Rmin:
             u0 = v0/math.sqrt(v0dot)
             dspeed = -50*u0/math.sqrt(v0dot)
 
@@ -150,10 +150,10 @@ class Field:
 
         dspeed = self.box.nullvector
         center = self.box.box_sizes / 2
-        r = 20
+        Rmin = 20
         v0 = position - center
         v0dot = v0.dot(v0)
-        if abs(v0dot) > r*r:
+        if abs(v0dot) > Rmin*Rmin:
             u0 = v0/math.sqrt(v0dot)
             dspeed = -2000*u0/v0dot
 
@@ -163,7 +163,7 @@ class Field:
     
     def rotate_flow(self, position=None, ball=None):
         """
-        Rotates alle particles arround the center of the box.
+        Rotates alle particles around the center (axis) of the box.
 
         Args:
             position (numpy.array, optional): position. Defaults to None.
@@ -178,10 +178,13 @@ class Field:
             position = ball.position
 
         center = self.box.box_sizes / 2
-        v0 = position - center
+        Rc = position - center
         
-        u0 = v0/math.sqrt(v0.dot(v0))
-        vector = numpy.array([u0[1], -u0[0]])
+        u0 = Rc/math.sqrt(Rc.dot(Rc))
+        vector = u0.copy()
+        vector[0] = u0[1]
+        vector[1] = -u0[0]
+        # vector = numpy.array([u0[1], -u0[0]])
 
         dspeed = math.sqrt(ball.speed.dot(ball.speed)) * vector
         if ball is not self.dummy_ball:
@@ -542,7 +545,7 @@ class Box:
                 ball.wrap()
             else:
                 ball.bounce()      
-            #hit the wall:
+            # hit the walls:
             for wall in self.walls:
                 ball.hit(wall)
             # collide the balls
@@ -681,7 +684,7 @@ class Particle:
         dposition = self.displacement(p2.position)
         distance2 = dposition.dot(dposition)
 
-        # only collide if particles are moving towards each other: 
+        # only collide when particles are moving towards each other: 
         # dot product of speed difference and position different < 0
         dspeed = self.speed - p2.speed
         dot_speed_pos = dspeed.dot(dposition)
