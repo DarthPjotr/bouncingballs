@@ -589,7 +589,7 @@ class Wall:
         self._vector = self.box.unitvector.copy()
         self._vector[self.dimension] *= self.rpos
         self.position = self.box.box_sizes * self._vector
-        self.vertices = numpy.array([vertix*self._vector for vertix in self.box.vertices if vertix[self.dimension] != 0]) 
+        self.vertices = numpy.array([vertex*self._vector for vertex in self.box.vertices if vertex[self.dimension] != 0]) 
         self.center = sum(self.vertices)/len(self.vertices)
     
     def __str__(self) -> str:
@@ -639,7 +639,7 @@ class Particle:
         """
         self.position += self.speed
 
-    def fast_collision_check(self, p2):
+    def fast_collision_check(self, ball):
         """
         Fast collision detection
 
@@ -649,8 +649,8 @@ class Particle:
         Returns:
             boolean: True when possible collision occured
         """
-        min_distance = self.radius + p2.radius
-        dposition = abs(self.displacement(p2.position))
+        min_distance = self.radius + ball.radius
+        dposition = abs(self.displacement(ball.position))
         #dposition = abs(self.position - p2.position)
 
         for dpos in dposition:
@@ -661,7 +661,7 @@ class Particle:
             return False
         return True
     
-    def collide(self, p2):
+    def collide(self, ball):
         """
         Handles particle collision
 
@@ -676,28 +676,28 @@ class Particle:
         """
         collided = False
 
-        if not self.fast_collision_check(p2):
+        if not self.fast_collision_check(ball):
             collided = False
             return collided
 
         # dposition = self.position - p2.position
-        dposition = self.displacement(p2.position)
+        dposition = self.displacement(ball.position)
         distance2 = dposition.dot(dposition)
 
         # only collide when particles are moving towards each other: 
         # dot product of speed difference and position different < 0
-        dspeed = self.speed - p2.speed
+        dspeed = self.speed - ball.speed
         dot_speed_pos = dspeed.dot(dposition)
 
-        dmin = self.radius + p2.radius
+        dmin = self.radius + ball.radius
         if distance2 > 0 and distance2 < dmin*dmin and dot_speed_pos < 0: # and d2 < distance2:
             dspeed_new = dot_speed_pos*dposition/distance2
             # speed1 = self.speed - (2*p2.mass/(self.mass+p2.mass)) * dspeed.dot(dpos)*(dpos)/distance2
             # speed2 = p2.speed - (2*self.mass/(self.mass+p2.mass)) * -dspeed.dot(-dpos)*(-dpos)/distance2
-            speed1 = self.speed - (2*p2.mass/(self.mass + p2.mass)) * dspeed_new
-            speed2 = p2.speed - (2*self.mass/(self.mass + p2.mass)) * -dspeed_new
+            speed1 = self.speed - (2*ball.mass/(self.mass + ball.mass)) * dspeed_new
+            speed2 = ball.speed - (2*self.mass/(self.mass + ball.mass)) * -dspeed_new
             self.speed = speed1
-            p2.speed = speed2
+            ball.speed = speed2
             collided = True
         
         # self.impuls = self.mass * self.speed
@@ -806,17 +806,21 @@ class Particle:
         if self.box.interaction == 0 or self.charge == 0:
             return self.speed
         dspeed = self.box.nullvector.copy()
-        for p in self.box.particles:
-            if p == self or p.charge == 0:
+        if self.mass == 0:
+            mass = 1
+        else:
+            mass = self.mass
+        for ball in self.box.particles:
+            if ball == self or ball.charge == 0:
                 continue
-            dpos = self.position - p.position
+            dpos = self.position - ball.position
             distance2 = dpos.dot(dpos)
-            charge = self.charge*p.charge
-            if distance2 < (self.radius+p.radius)*(self.radius+p.radius):
+            charge = self.charge*ball.charge
+            if distance2 < (self.radius+ball.radius)*(self.radius+ball.radius):
                 charge = abs(charge)
             if distance2 > 0:
                 N = dpos/math.sqrt(distance2)
-                dspeed += charge*self.box.interaction*N/(self.mass*distance2)
+                dspeed += charge*self.box.interaction*N/(mass*distance2)
         
         self.speed += dspeed
         return self.speed
@@ -935,33 +939,81 @@ class Spring:
         self.p2.speed += dv2
 
 class ArrangeParticles:
+    """
+    Standard particle arrangements 
+    """    
     def __init__(self, box: Box) -> None:
+        """
+        Creates particle arrangement
+
+        Args:
+            box (Box): The box
+        """        
         self.box = box
 
-    def random_balls(self, nballs: int, mass=None, radius=None, max_speed=VMAX):
+    def random_balls(self, nballs: int, mass=None, radius=None, max_speed=VMAX, charge=0):
+        """
+        Randomly places balls in the box
+
+        Args:
+            nballs (int): Number of balls
+            mass (float, optional): Mass of the balls. Defaults to None.
+            radius (int, optional): Radius of balls. Defaults to None.
+            max_speed (numpy.array, optional): Speed of balls. Defaults to VMAX.
+            charge (int, optional): Charge of the balls. Defaults to 0.
+
+        Returns:
+            list: list of balls
+        """        
+        rand_m = False
+        rand_r = False
+        rand_c = False
+
         if mass is None:
-            mass = random.randrange(0,10) * 1.0
+            rand_m = True
         if radius is None:
-            radius =  mass
+            rand_r = True
+        if charge is None:
+            rand_c = True
+            
         balls = []
         for i in range(nballs):
+            if rand_m:
+                mass = random.randrange(1, 30) * 1.0
+            if rand_r:
+                radius = round(mass)
+            if rand_c:
+                charge = random.randint(-1, 1)
+
             speed = self.box.random(max_speed)
-            ball = self.box.add_particle(mass, radius, None, speed, 0, None)
+            ball = self.box.add_particle(mass, radius, None, speed, charge, None)
             balls.append(ball)
 
         return balls
     
-    def create_simplex(self, size=200, position=None, charge=0, nedges=None):
+    def create_simplex(self, size=200, position=None, charge=0, vertices=None):
+        """
+        Creates simplex
+
+        Args:
+            size (int, optional): Size of the edges. Defaults to 200.
+            position (numpy.array, optional): position. Defaults to None.
+            charge (int, optional): Charge of the balls. Defaults to 0.
+            vertices (int, optional): Number of vertices. Defaults to None.
+
+        Returns:
+            list: list of balls
+        """        
         if position is None:
             center = self.box.center
         else:
             center = position
 
-        if nedges is None:
-            nedges = self.box.dimensions+1
+        if vertices is None:
+            vertices = self.box.dimensions+1
 
         balls = []
-        for i in range(nedges):
+        for i in range(vertices):
             pos = center + self.box.random(size)
             speed = self.box.nullvector.copy()
             ball = self.box.add_particle(1, 10, pos, speed, charge)
@@ -988,8 +1040,8 @@ class ArrangeParticles:
         speed = self.box.nullvector.copy()
 
         balls = []
-        for vertix in box.vertices:
-            pos = center - (box.box_sizes/2) + vertix
+        for vertex in box.vertices:
+            pos = center - (box.box_sizes/2) + vertex
             speed = self.box.nullvector.copy()
             ball = self.box.add_particle(1, 10, pos, speed, charge)
             balls.append(ball)
@@ -1104,7 +1156,7 @@ def test_wall():
     print(wall._vector, wall.position)
     print("wall: ", wall)
     center = sum(wall.vertices)/len(wall.vertices)
-    coords = [[vertix[0],vertix[1]] for vertix in wall.vertices]
+    coords = [[vertex[0],vertex[1]] for vertex in wall.vertices]
     print("coords: ", coords)
     size = numpy.array(max(coords))
 
@@ -1149,10 +1201,14 @@ def test():
     #     box.add_particle(1, 1, None, speed)
 
     filling = ArrangeParticles(box)
-    filling.random_balls(10, 10)
+    filling.random_balls(25, None, None, VMAX, None)
 
     for i in range(1000):
         try:
+            for ball in box.particles:
+                if numpy.isnan(ball.position.sum()):
+                    print(ball.position, ball.speed)
+                    raise ValueError
             box.go()
             K = sum([ball.energy for ball in box.particles])
             E = K * (2 / DIMENSIONS) # https://en.wikipedia.org/wiki/Kinetic_theory_of_gases#Pressure_and_kinetic_energy

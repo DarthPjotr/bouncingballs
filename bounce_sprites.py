@@ -23,7 +23,7 @@ UPDATE_RATE = 1/60
 (DISPLAY_WIDTH, DISPLAY_HEIGHT) = arcade.get_display_size()
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-DEPTH = 700
+DEPTH = 500
 D4 = 500
 D5 = 400
 SCREEN_TITLE = "Bouncing Balls Example"
@@ -38,7 +38,7 @@ BOX_DIMENSIONS = [SCREEN_WIDTH, SCREEN_HEIGHT, DEPTH, D4, D5]
 BALLS = 6
 GRAVITY = 0.0
 FRICTION = 0.000
-INTERACTION = 1000.0
+INTERACTION = 10000.0
 TORUS = False
 DIMENSIONS = 3
 # HEIGHT = 30
@@ -113,9 +113,11 @@ class MyGame(arcade.Window):
         # balls = arrangement.test_interaction(10000)
         # self.add_balls(balls)
 
-        balls = arrangement.random_balls(10, 10)
+        balls = arrangement.random_balls(25, None, None, charge=None)
         # balls = arrangement.create_simplex(180, None, 1, 5)
         self.add_balls(balls)
+        # for i, ball in enumerate(self.box.particles):
+        #     print(i, ball.position, ball.speed)
 
         # balls = arrangement.create_n_mer(4, 4, False, True, 1)
         # self.add_balls(balls)
@@ -124,6 +126,9 @@ class MyGame(arcade.Window):
         # self.add_balls(balls)
 
         # balls = arrangement.create_n_mer(4, 4, False, True, -1)
+        # self.add_balls(balls)
+
+        # balls = arrangement.create_simplex(50, self.box.center, 1)
         # self.add_balls(balls)
 
         # self.box.torus = False
@@ -220,7 +225,7 @@ class MyGame(arcade.Window):
 
         # for shape in self.arrow_list:
         #     self.arrow_list.remove(shape)
-        for ball in self.box.particles:
+        for i, ball in enumerate(self.box.particles):
             #arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
             end = ball.position + 5*ball.speed
             arcade.draw_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
@@ -234,6 +239,9 @@ class MyGame(arcade.Window):
                 output = "+"
             if ball.charge != 0 and len(output) > 0 and INTERACTION != 0:
                 arcade.draw_text(output, ball.position[0]+5, ball.position[1]-10, arcade.color.WHITE, 20, font_name="Calibri Bold")
+            
+            # output = str(i)
+            # arcade.draw_text(output, ball.position[0]-5, ball.position[1]+10, arcade.color.WHITE, 10, font_name="Calibri Bold")
 
             ball.object.center_x = ball.position[0]
             ball.object.center_y = ball.position[1]
@@ -298,6 +306,10 @@ class MyGame(arcade.Window):
         #arcade.check_for_collision_with_list
         if not(self.pause):
             self.bounced = self.box.go()
+        
+        # for i, ball in enumerate(self.box.particles):
+        #     if numpy.isnan(ball.position.sum()) or numpy.isnan(ball.speed.sum()):
+        #         print(i, self.box.ticks, ball.position, ball.speed)
 
     def on_mouse_press(self, x, y, button, modifiers):
         """
