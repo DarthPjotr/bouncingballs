@@ -1,9 +1,6 @@
 """
 Bounce balls on the screen.
-Spawn a new ball for each mouse-click.
-
-If Python and Arcade are installed, this example can be run from the command line with:
-python -m arcade.examples.bouncing_balls
+Spawns a new ball for each mouse-click.
 """
 
 import arcade
@@ -18,6 +15,7 @@ from gas import *
 # Set up the constants
 
 UPDATE_RATE = 1/60
+TEXT_REFRESH = 1
 
 # Size of the screen
 (DISPLAY_WIDTH, DISPLAY_HEIGHT) = arcade.get_display_size()
@@ -38,7 +36,7 @@ BOX_DIMENSIONS = [SCREEN_WIDTH, SCREEN_HEIGHT, DEPTH, D4, D5]
 BALLS = 6
 GRAVITY = 0.0
 FRICTION = 0.000
-INTERACTION = 10000.0
+INTERACTION = 0000.0
 TORUS = False
 DIMENSIONS = 3
 # HEIGHT = 30
@@ -77,6 +75,7 @@ class MyGame(arcade.Window):
         self.move_wall = False
 
         self._MAX = 0
+        self._output = {}
               
     def setup(self):
         self.box = Box(BOX_DIMENSIONS[:DIMENSIONS], TORUS)
@@ -107,15 +106,21 @@ class MyGame(arcade.Window):
 
         arrangement = ArrangeParticles(self.box)
 
+        balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
+        self.add_balls(balls)
         # balls = arrangement.test_springs(10000)
         # self.add_balls(balls)
 
-        # balls = arrangement.test_interaction(10000)
+        # balls = arrangement.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
         # self.add_balls(balls)
 
-        balls = arrangement.random_balls(25, None, None, charge=None)
-        # balls = arrangement.create_simplex(180, None, 1, 5)
-        self.add_balls(balls)
+        # self.box.set_interaction(10000)
+        # balls = arrangement.random_balls(10, 10, 5, charge=1)
+        # self.add_balls(balls)
+
+        # balls = arrangement.random_balls(10, 10, 5, charge=-1)
+        # self.add_balls(balls)
+
         # for i, ball in enumerate(self.box.particles):
         #     print(i, ball.position, ball.speed)
 
@@ -147,6 +152,7 @@ class MyGame(arcade.Window):
 
         # balls = arrangement.create_box(100, self.box.random_position(), 1)
         # self.add_balls(balls)
+
 
         self.pause = True
         self.text = False
@@ -202,7 +208,7 @@ class MyGame(arcade.Window):
         if self.left_mouse_down:
             arcade.draw_line(self.mouse_x, self.mouse_y, self.mouse_dx, self.mouse_dy, arcade.color.WHITE, 1)
 
-        # draw wall
+        # draw walls
         for wall in self.box.walls:
             coords = [[vertix[0],vertix[1]] for vertix in wall.vertices]
             size = numpy.array(max(coords))
@@ -237,11 +243,11 @@ class MyGame(arcade.Window):
                 output = "-"
             elif ball.charge > 0:
                 output = "+"
-            if ball.charge != 0 and len(output) > 0 and INTERACTION != 0:
+            if ball.charge != 0 and len(output) > 0 and self.box.interaction != 0:
                 arcade.draw_text(output, ball.position[0]+5, ball.position[1]-10, arcade.color.WHITE, 20, font_name="Calibri Bold")
             
             # output = str(i)
-            # arcade.draw_text(output, ball.position[0]-5, ball.position[1]+10, arcade.color.WHITE, 10, font_name="Calibri Bold")
+            # arcade.draw_text(output, ball.position[0]-0, ball.position[1]+0, arcade.color.WHITE, 8, font_name="Calibri Bold")
 
             ball.object.center_x = ball.position[0]
             ball.object.center_y = ball.position[1]
@@ -272,10 +278,30 @@ class MyGame(arcade.Window):
             output = "Dimensions: {}, Balls: {}".format(self.box.dimensions, len(self.box.particles))
             arcade.draw_text(output, 10, 20, arcade.color.WHITE, 14)
 
-            # E = sum([ball.energy for ball in self.box.particles])
-            # E += sum([s.energy for s in self.box.springs])
-            # output = "Energy: {:.2f}".format(E)
-            # arcade.draw_text(output, 10, 50, arcade.color.WHITE, 14)
+            if self.box.ticks < TEXT_REFRESH or self.box.ticks % TEXT_REFRESH == 0:
+                # KE = sum([ball.energy for ball in self.box.particles])
+                # E += sum([s.energy for s in self.box.springs])
+                KE = self.box.energy["KE"]
+                self._output["KE"] = "Kinetic energy: {:.2f}".format(KE)
+
+                PE = self.box.energy["PE"]
+                self._output["PE"] = "Potential Energy: {:.2f}".format(PE)
+
+                SE = self.box.energy["SE"]
+                self._output["SE"] = "Spring Energy: {:.2f}".format(KE)
+
+                TE = KE + PE + SE
+                self._output["TE"] = "Total Energy: {:.2f}".format(TE)
+            
+            try:
+                arcade.draw_text(self._output["KE"], 10, 50, arcade.color.WHITE, 14)
+                arcade.draw_text(self._output["PE"], 10, 80, arcade.color.WHITE, 14)
+                arcade.draw_text(self._output["SE"], 10, 120, arcade.color.WHITE, 14)
+                arcade.draw_text(self._output["TE"], 10, 150, arcade.color.WHITE, 14)
+                # arcade.draw_text(self._output["R"], 10, 180, arcade.color.WHITE, 14)
+            except KeyError: 
+                raise
+                pass
 
             # output = "Avg Impuls: {}".format(self.box.avg_momentum())
             # arcade.draw_text(output, 10, 80, arcade.color.WHITE, 14)
@@ -294,8 +320,8 @@ class MyGame(arcade.Window):
             # except:
             #     raise
 
-        # output = "Avg position: {}".format(self.box.avg_position())
-        # arcade.draw_text(output, 10, 110, arcade.color.WHITE, 14)
+            # output = "Avg position: {}".format(self.box.avg_position())
+            # arcade.draw_text(output, 10, 110, arcade.color.WHITE, 14)
 
         #play sound
         if self.bounced and not(self.quiet):
