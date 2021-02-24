@@ -6,6 +6,9 @@ import numpy
 import random
 import math
 
+import locale
+locale.setlocale(locale.LC_ALL, '')
+
 # SCREEN_WIDTH = 700
 # SCREEN_HEIGHT = 500
 # SCREEN_DEPTH = 400
@@ -226,6 +229,7 @@ class Box:
         self.particles = []
         self.springs = []
         # dynamic properties
+        self.energy = {}
         self.momentum = self.nullvector.copy()
         self._normal_momentum = 0
         self.ticks = 0
@@ -552,6 +556,11 @@ class Box:
             for ball2 in self.particles[i:]:
                 if ball.collide(ball2): bounced = True
         
+        # calculate energies
+        self.energy["KE"] = sum(ball.energy for ball in self.particles)
+        self.energy["PE"] = sum(ball.potential_energy for ball in self.particles)
+        self.energy["SE"] = sum(spring.energy for spring in self.springs)
+
         # move all balls
         for ball in self.particles:
             ball.move()
@@ -810,20 +819,33 @@ class Particle:
             mass = 1
         else:
             mass = self.mass
+
         for ball in self.box.particles:
             if ball == self or ball.charge == 0:
                 continue
-            dpos = self.position - ball.position
+
+            dpos = self.displacement(ball.position)
             distance2 = dpos.dot(dpos)
-            charge = self.charge*ball.charge
-            if distance2 < (self.radius+ball.radius)*(self.radius+ball.radius):
-                charge = abs(charge)
-            if distance2 > 0:
+            if distance2 > (self.radius+ball.radius)*(self.radius+ball.radius):
                 N = dpos/math.sqrt(distance2)
-                dspeed += charge*self.box.interaction*N/(mass*distance2)
+                dspeed += self.charge*ball.charge*self.box.interaction*N/(mass*distance2)
         
         self.speed += dspeed
         return self.speed
+    
+    @property
+    def potential_energy(self):
+        PE = 0
+        S = 0
+        for ball in self.box.particles:
+            if ball == self or ball.charge == 0:
+                continue
+
+            dpos = self.displacement(ball.position)
+            R = math.sqrt(dpos.dot(dpos))
+            S += ball.charge / R
+        PE = 0.5 * self.box.interaction * self.charge * S
+        return PE
     
     def check_inside(self, coords):
         """
@@ -1030,6 +1052,17 @@ class ArrangeParticles:
         return balls
 
     def create_box(self, size, position=None, charge=0):
+        """
+        Creates a box 
+
+        Args:
+            size (float): size of the box
+            position (numpy.array, optional): position. Defaults to None.
+            charge (int, optional): charge of the balls of the box. Defaults to 0.
+
+        Returns:
+            list: list of balls
+        """        
         ratio = max(self.box.box_sizes)/size
         sizes = self.box.box_sizes/ratio
         if position is None:
@@ -1057,6 +1090,19 @@ class ArrangeParticles:
         return balls
 
     def create_n_mer(self, nballs, n=2, star=False, circle=False, charge=0):
+        """
+        Creates shape of n balls in a line, star of circle shape
+
+        Args:
+            nballs (int): number of balls
+            n (int, optional): number of balls in the shape. Defaults to 2.
+            star (bool, optional): Make a star shape. Defaults to False.
+            circle (bool, optional): Make a circle. Defaults to False.
+            charge (int, optional): Charge of the balls. Defaults to 0.
+
+        Returns:
+            list: list of balls
+        """        
         radius = 5
         lspring = 20
         balls = []
@@ -1081,7 +1127,7 @@ class ArrangeParticles:
                     self.box.springs.append(spring)
         return balls
     
-    def test_interaction(self, interaction):
+    def test_interaction_simple(self, interaction):
         self.box.set_interaction(interaction)
         balls = []
 
@@ -1098,6 +1144,32 @@ class ArrangeParticles:
         pos = self.box.center + dpos
         speed[0] = -3/6
         ball = self.box.add_particle(30, 30, position=list(pos), speed=list(speed), charge=1)
+        balls.append(ball)
+
+        return balls
+
+    def test_interaction(self, interaction=20000, M0=40, V0=6, D=140, ratio=0.1):
+        self.box.set_interaction(interaction)
+        balls = []
+
+    
+        dpos = self.box.nullvector.copy()
+        dpos[1] = D * ratio
+        M = M0 * (1-ratio)
+        V = V0 * (ratio)
+        pos = self.box.center + dpos
+        speed = self.box.nullvector.copy()
+        speed[0] = V
+        ball = self.box.add_particle(M, int(M), position=list(pos), speed=list(speed), charge=-1, color=[255,0,0])
+        balls.append(ball)
+
+        dpos = self.box.nullvector.copy()
+        dpos[1] = -D * (1-ratio)
+        M = M0 * ratio
+        V = -V0 * (1-ratio)
+        pos = self.box.center + dpos
+        speed[0] = V
+        ball = self.box.add_particle(M, int(M), position=list(pos), speed=list(speed), charge=1, color=[0,255,0])
         balls.append(ball)
 
         return balls
@@ -1145,6 +1217,33 @@ class ArrangeParticles:
         
         return balls
 
+    def test_spring(self, length=150, distance=240, strength=0.03, interaction=0):
+        self.box.set_interaction(interaction)
+
+        balls = []
+
+        dpos = self.box.nullvector.copy()
+        dpos[0] = distance/2
+        pos = self.box.center + dpos
+        speed = self.box.nullvector.copy()
+        speed[0] = 0
+        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=-1, color=[255,0,0])
+        balls.append(ball)
+        b1 = ball
+
+        dpos = self.box.nullvector.copy()
+        dpos[0] = -distance/2
+        pos = self.box.center + dpos
+        speed[0] = -0
+        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=1, color=[0,255,0])
+        balls.append(ball)
+        b2 = ball
+
+        spring = Spring(length, strength, 0.000, b1, b2)
+        self.box.springs.append(spring)
+        
+        return balls
+
 def test_wall():
     D = 1
     box = Box([10,20,30])
@@ -1182,7 +1281,7 @@ def test_box():
 
 
 def test():
-    BOX_DIMENSIONS = [500, 600, 700, 400, 300]
+    BOX_DIMENSIONS = [800, 600, 700, 400, 300]
     NBALLS = 20
     GRAVITY = 0.0
     FRICTION = 0.00
@@ -1200,20 +1299,28 @@ def test():
     #         speed = SPEED
     #     box.add_particle(1, 1, None, speed)
 
-    filling = ArrangeParticles(box)
-    filling.random_balls(25, None, None, VMAX, None)
+    arrangement = ArrangeParticles(box)
+    # arrangement.random_balls(25, None, None, VMAX, None)
 
+    # balls = arrangement.test_springs(10000)
+    # self.add_balls(balls)
+
+    # balls = arrangement.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
+    balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
     for i in range(1000):
         try:
-            for ball in box.particles:
-                if numpy.isnan(ball.position.sum()):
-                    print(ball.position, ball.speed)
-                    raise ValueError
             box.go()
-            K = sum([ball.energy for ball in box.particles])
-            E = K * (2 / DIMENSIONS) # https://en.wikipedia.org/wiki/Kinetic_theory_of_gases#Pressure_and_kinetic_energy
-            PV = box.pressure()*box.volume()
-            print("{:.2f} {:.2f} {:.2f}".format(PV, E, PV/E))
+            KE = sum(ball.energy for ball in box.particles)
+            # E = KE * (2 / DIMENSIONS) # https://en.wikipedia.org/wiki/Kinetic_theory_of_gases#Pressure_and_kinetic_energy
+            # PV = box.pressure()*box.volume()
+            # print("{:.2f} {:.2f} {:.2f}".format(PV, E, PV/E))
+            PE = sum(ball.potential_energy for ball in box.particles)
+            SE = sum(spring.energy for spring in box.springs)
+
+            print("{};{};{};{};{}".format(i, KE, PE, SE, KE+PE+SE).replace(".", ","))
+            
+            # print("{:,2f} {:,2f} {:,2f}".format(PV, E, PV/E))
+
         except KeyboardInterrupt:
             print("user interupted")
             break
