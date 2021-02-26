@@ -5,6 +5,7 @@ import itertools
 import numpy
 import random
 import math
+from math import sin, cos
 
 import locale
 locale.setlocale(locale.LC_ALL, '')
@@ -198,6 +199,9 @@ class Box:
     """
     n-dimensional box to contain particles
     """
+    X = 0
+    Y = 1
+    Z = 2
     def __init__(self, box_sizes, torus=False) -> None:
         """
         Create n-dimension box
@@ -229,7 +233,8 @@ class Box:
         self.particles = []
         self.springs = []
         # dynamic properties
-        self.energy = {}
+        energies = ["KE", "EE", "PE", "SE"]
+        self.energy = {e : 0.0 for e in energies}
         self.momentum = self.nullvector.copy()
         self._normal_momentum = 0
         self.ticks = 0
@@ -317,6 +322,34 @@ class Box:
         self._get_axis()
         self.ticks = 1
         self._normal_momentum = 0
+    
+    def _rotation_matrix(self, α, β, γ):
+        """
+        rotation matrix of α, β, γ radians around x, y, z axes (respectively)
+        """
+        sα, cα = sin(α), cos(α)
+        sβ, cβ = sin(β), cos(β)
+        sγ, cγ = sin(γ), cos(γ)
+        return (
+            (cβ*cγ, -cβ*sγ, sβ),
+            (cα*sγ + sα*sβ*cγ, cα*cγ - sγ*sα*sβ, -cβ*sα),
+            (sγ*sα - cα*sβ*cγ, cα*sγ*sβ + sα*cγ, cα*cβ)
+        )
+
+    def rotate(self, α, β, γ):
+        if self.dimensions != 3:
+            return
+        for ball in self.particles:
+            cpos = ball.position - self.center
+            ball.position = self.center + cpos.dot(self._rotation_matrix(α, β, γ))
+            ball.speed = ball.speed.dot(self._rotation_matrix(α, β, γ))
+    
+    def rotate_axis(self, axis, rad):
+        if self.dimensions != 3:
+            return
+        rotation = self.nullvector.copy()
+        rotation[axis] = rad
+        self.rotate(*rotation)
     
     def volume(self) -> float:
         """
@@ -417,13 +450,20 @@ class Box:
             numpy.array: vector of the gravity
         """
         self.gravity = self.nullvector.copy()
-        if strength != 0 and direction is None:
+        if strength == 0:
+            return self.gravity
+        
+        if direction is None:
             direction = self.nullvector.copy()
             try:
                 direction[1]=-1
             except IndexError:
                 pass
-            self.gravity = strength * direction
+        
+        D2 = direction.dot(direction)
+        direction = direction/math.sqrt(D2)
+        self.gravity = strength * direction
+
         return self.gravity
     
     def fall(self, particle):
@@ -518,13 +558,22 @@ class Box:
 
     def go(self):
         """
-        Moves all particles to next position
+        Calculate speeds and move all particles to next position
 
         Returns:
             boolean: true if particles collides into each other
         """
         bounced = False
         self.ticks += 1
+
+        bounced = self._speeds()
+        self._energies()
+        self._move_all()
+
+        return bounced
+    
+    def _speeds(self):
+        bounced = False
     
         # apply springs 
         for spring in self.springs:
@@ -538,12 +587,12 @@ class Box:
             # gravity
             if self.gravity.any() != 0:
                 self.fall(ball)
-            # friction
-            if self.friction != 0:
-                self.slide(ball)
             # apply field
             if self.field is not None:
                 self.field.equation(ball=ball)
+            # friction
+            if self.friction != 0:
+                self.slide(ball)
             # Bounce or wrap the ball if needed
             if self.torus:
                 ball.wrap()
@@ -555,17 +604,20 @@ class Box:
             # collide the balls
             for ball2 in self.particles[i:]:
                 if ball.collide(ball2): bounced = True
-        
+
+        return bounced
+    
+    def _energies(self):
         # calculate energies
         self.energy["KE"] = sum(ball.energy for ball in self.particles)
+        self.energy["EE"] = 2 * self.energy["KE"]/self.dimensions # https://en.wikipedia.org/wiki/Kinetic_theory_of_gases#Pressure_and_kinetic_energy
         self.energy["PE"] = sum(ball.potential_energy for ball in self.particles)
         self.energy["SE"] = sum(spring.energy for spring in self.springs)
 
+    def _move_all(self):
         # move all balls
         for ball in self.particles:
             ball.move()
-        
-        return bounced
 
 
 class Wall:
@@ -843,7 +895,10 @@ class Particle:
 
             dpos = self.displacement(ball.position)
             R = math.sqrt(dpos.dot(dpos))
-            S += ball.charge / R
+            try:
+                S += ball.charge / R
+            except ZeroDivisionError:
+                pass
         PE = 0.5 * self.box.interaction * self.charge * S
         return PE
     
@@ -927,10 +982,10 @@ class Spring:
     @property
     def energy(self):
         """
-        Kinetic energy of spring
+        Potential energy of spring
 
         Returns:
-            float: kinetic energy
+            float: Potential energy
         """
         dlength = self.dlength()
         return 0.5 * self.strength * dlength * dlength
@@ -1279,7 +1334,6 @@ def test_box():
     print(box.area())
     print(box.axis)
 
-
 def test():
     BOX_DIMENSIONS = [800, 600, 700, 400, 300]
     NBALLS = 20
@@ -1310,14 +1364,18 @@ def test():
     for i in range(1000):
         try:
             box.go()
-            KE = sum(ball.energy for ball in box.particles)
-            # E = KE * (2 / DIMENSIONS) # https://en.wikipedia.org/wiki/Kinetic_theory_of_gases#Pressure_and_kinetic_energy
+            # KE = sum(ball.energy for ball in box.particles)
+            # EE = KE * (2 / DIMENSIONS) # https://en.wikipedia.org/wiki/Kinetic_theory_of_gases#Pressure_and_kinetic_energy
             # PV = box.pressure()*box.volume()
-            # print("{:.2f} {:.2f} {:.2f}".format(PV, E, PV/E))
-            PE = sum(ball.potential_energy for ball in box.particles)
-            SE = sum(spring.energy for spring in box.springs)
+            # print("{:.2f} {:.2f} {:.2f}".format(PV, EE, PV/EE))
+            # PE = sum(ball.potential_energy for ball in box.particles)
+            # SE = sum(spring.energy for spring in box.springs)
+            KE = box.energy["KE"]
+            PE = box.energy["PE"]
+            EE = box.energy["EE"]
+            SE = box.energy["SE"]
 
-            print("{};{};{};{};{}".format(i, KE, PE, SE, KE+PE+SE).replace(".", ","))
+            print("{};{};{};{};{};{}".format(i, KE, PE, SE, EE, KE+PE+SE).replace(".", ","))
             
             # print("{:,2f} {:,2f} {:,2f}".format(PV, E, PV/E))
 
