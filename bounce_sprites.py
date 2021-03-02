@@ -16,13 +16,14 @@ from gas import *
 
 UPDATE_RATE = 1/60
 TEXT_REFRESH = 1
-ROTATIOM = 15/360*2*math.pi
+ROTATION = 2*math.pi*15/360
+TICK_RATE = 1
 
 # Size of the screen
 (DISPLAY_WIDTH, DISPLAY_HEIGHT) = arcade.get_display_size()
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-DEPTH = 500
+SCREEN_WIDTH = 800 # DISPLAY_WIDTH
+SCREEN_HEIGHT = 600 # DISPLAY_HEIGHT - 100
+DEPTH = DISPLAY_HEIGHT # 500
 D4 = 500
 D5 = 400
 SCREEN_TITLE = "Bouncing Balls Example"
@@ -63,6 +64,7 @@ class MyGame(arcade.Window):
         self.arrow_list = arcade.ShapeElementList()
         self.text_list = arcade.ShapeElementList()
         self.set_visible()
+        self._frames = 0
 
         self.box = None
         self.pause = False
@@ -73,7 +75,6 @@ class MyGame(arcade.Window):
         self.mouse_dx = 0
         self.mouse_dy = 0
         self.center = numpy.array(self.get_size(),dtype=float)/2
-        self.move_wall = False
 
         self._MAX = 0
         self._output = {}
@@ -115,22 +116,30 @@ class MyGame(arcade.Window):
         # self.add_balls(balls)
 
         # balls = arrangement.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
+        # balls = arrangement.test_interaction(30000/100, M0=40, V0=6/10, D=300, ratio=0.1)
+        # balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
+        # self.add_balls(balls)
+        
+        # self.box.set_friction(0.005)
+        # direction = self.box.nullvector.copy()
+        # direction[self.box.Z] = 1
+        # self.box.set_gravity(0.0, direction)
+        # self.box.set_interaction(2500)
+        # # balls = arrangement.random_balls(20, 30, 30, charge=1)
+        # balls = arrangement.random_balls(10, charge=1)
+        # # balls = arrangement.create_n_mer(5*5, 5, star=True, charge=None)
+        # for i, ball in enumerate(balls):
+        #     if ball.charge == -1:
+        #         ball.color = arcade.color.RED
+        #     else:
+        #         ball.color = arcade.color.GREEN
         # self.add_balls(balls)
 
-        
-        # self.box.set_friction(0.01)
-        # direction = self.box.nullvector.copy()
-        # direction[2] = 1
-        # self.box.set_gravity(0.0, direction)
-        # self.box.set_interaction(70000)
-        # balls = arrangement.random_balls(3, 30, 30, charge=1)
+        # # balls = arrangement.random_balls(20, 30, 30, charge=-1)
+        # balls = arrangement.random_balls(10, charge=-1)
+        # # balls = arrangement.create_n_mer(20, 2,charge=-None)
         # for ball in balls:
         #     ball.color = arcade.color.RED
-        # self.add_balls(balls)
-
-        # balls = arrangement.random_balls(3, 30, 30, charge=-1)
-        # for ball in balls:
-        #     ball.color = arcade.color.GREEN
         # self.add_balls(balls)
 
         # for i, ball in enumerate(self.box.particles):
@@ -145,7 +154,7 @@ class MyGame(arcade.Window):
         # balls = arrangement.create_n_mer(4, 4, False, True, -1)
         # self.add_balls(balls)
 
-        balls = arrangement.create_simplex(50, self.box.center, 1)
+        balls = arrangement.create_simplex(50, self.box.center - 100, 1)
         self.add_balls(balls)
 
         # self.box.torus = False
@@ -213,6 +222,7 @@ class MyGame(arcade.Window):
 
         # This command has to happen before we start drawing
         arcade.start_render()
+        self._frames += 1
 
         if self.box.field is not None and self.box.field.equation != self.box.field.nofield:
             self.draw_field()
@@ -287,10 +297,11 @@ class MyGame(arcade.Window):
         if self.text:
             # Put the text on the screen.
 
-            output = "Dimensions: {}, Balls: {}".format(self.box.dimensions, len(self.box.particles))
+            charge = sum(p.charge for p in self.box.particles)
+            output = "Ticks: {}, Dimensions: {}, Balls: {}, Charge: {}".format(self.box.ticks, self.box.dimensions, len(self.box.particles), charge)
             arcade.draw_text(output, 10, 20, arcade.color.WHITE, 14)
 
-            if self.box.ticks < TEXT_REFRESH or self.box.ticks % TEXT_REFRESH == 0:
+            if self._frames < TEXT_REFRESH or self._frames % TEXT_REFRESH == 0:
                 KE = self.box.energy["KE"]
                 self._output["KE"] = "Kinetic energy: {:.2f}".format(KE)
 
@@ -340,7 +351,8 @@ class MyGame(arcade.Window):
         """ Movement and game logic """
         #arcade.check_for_collision_with_list
         if not(self.pause):
-            self.bounced = self.box.go()
+            for i in range(TICK_RATE):
+                self.bounced = self.box.go()
         
         # for i, ball in enumerate(self.box.particles):
         #     if numpy.isnan(ball.position.sum()) or numpy.isnan(ball.speed.sum()):
@@ -356,8 +368,6 @@ class MyGame(arcade.Window):
             self.mouse_dx = x
             self.mouse_dy = y
             self.left_mouse_down = True
-            # if arcade.is_point_in_polygon(x, y, self.wall_points):
-            #     self.move_wall = True
         elif button == arcade.MOUSE_BUTTON_RIGHT:
             for i, ball in enumerate(self.box.particles):
                 if ball.object.collides_with_point([x,y]):
@@ -393,8 +403,19 @@ class MyGame(arcade.Window):
             self.add_ball(mass, mass, position, speed, charge, None)
         
         self.left_mouse_down = False
-        self.move_wall = False
         return super().on_mouse_release(x, y, button, modifiers)
+    
+    def _do_rotation(self, symbol):
+        action = {
+                    arcade.key.A: (Box.Y,  ROTATION),
+                    arcade.key.D: (Box.Y, -ROTATION),
+                    arcade.key.W: (Box.X,  ROTATION),
+                    arcade.key.S: (Box.X, -ROTATION),
+                    arcade.key.X: (Box.Z,  ROTATION),
+                    arcade.key.V: (Box.Z, -ROTATION),
+                }
+        if symbol in action.keys():
+            self.box.rotate_axis(*action[symbol])
         
     def on_key_press(self, symbol: int, modifiers: int):
         if symbol == arcade.key.P:
@@ -403,44 +424,19 @@ class MyGame(arcade.Window):
         elif symbol == arcade.key.O:
             # no sound
             self.quiet = not(self.quiet)
+        elif symbol == arcade.key.K:
+            # kick the balls
+            self.box.kick_all()
+        elif symbol == arcade.key.Z:
+            # stop the balls
+            self.box.stop_all()
+        elif symbol == arcade.key.C:
+            # center the balls
+            self.box.center_all()  
         elif symbol == arcade.key.R:
             # reset framerate
             self.fps = 1/UPDATE_RATE
             self.set_update_rate(UPDATE_RATE)
-        elif symbol == arcade.key.K:
-            # kick the balls
-            for ball in self.box.particles:
-                ball.speed += self.box.random(5)
-        elif symbol == arcade.key.Z:
-            # stop the balls
-            for ball in self.box.particles:
-                ball.speed = self.box.nullvector.copy()
-            self.box.momentum = self.box.nullvector.copy()
-        elif symbol == arcade.key.C:
-            # center the balls
-            if len(self.box.particles) > 0:
-                avg_position = sum(ball.position for ball in self.box.particles)/len(self.box.particles)
-                dpos = self.box.center - avg_position
-                
-                avg_speed = sum(ball.speed for ball in self.box.particles)/len(self.box.particles)
-                for ball in self.box.particles:
-                    ball.position += dpos
-                    ball.speed -= avg_speed
-        elif symbol in [arcade.key.A, arcade.key.D]:
-            axis = Box.Y
-            if symbol == arcade.key.A: rad = ROTATIOM
-            if symbol == arcade.key.D: rad = -ROTATIOM
-            self.box.rotate_axis(axis, rad)
-        elif symbol in [arcade.key.W, arcade.key.S]:
-            axis = Box.X
-            if symbol == arcade.key.W: rad = ROTATIOM
-            if symbol == arcade.key.S: rad = -ROTATIOM
-            self.box.rotate_axis(axis, rad)
-        elif symbol in [arcade.key.X, arcade.key.V]:
-            axis = Box.Z
-            if symbol == arcade.key.X: rad = ROTATIOM
-            if symbol == arcade.key.V: rad = -ROTATIOM
-            self.box.rotate_axis(axis, rad)
         elif symbol == arcade.key.EQUAL:
             # increase framerate
             if self.fps < 10:
@@ -467,6 +463,8 @@ class MyGame(arcade.Window):
         elif symbol == arcade.key.Q:
             # quit
             self.close()
+        else:
+            self._do_rotation(symbol)
         return super().on_key_press(symbol, modifiers)
 
     def on_resize(self, width: float, height: float):

@@ -199,9 +199,12 @@ class Box:
     """
     n-dimensional box to contain particles
     """
-    X = 0
-    Y = 1
-    Z = 2
+    D1 = X = 0
+    D2 = Y = 1
+    D3 = Z = 2
+    D4 = 3
+    D5 = 4
+
     def __init__(self, box_sizes, torus=False) -> None:
         """
         Create n-dimension box
@@ -320,6 +323,7 @@ class Box:
         self._get_vertices()
         self._get_edges()
         self._get_axis()
+        self.center = sum(self.vertices)/len(self.vertices)
         self.ticks = 1
         self._normal_momentum = 0
     
@@ -337,6 +341,9 @@ class Box:
         )
 
     def rotate(self, α, β, γ):
+        """
+        Rotates content of box around x, y, z axes
+        """         
         if self.dimensions != 3:
             return
         for ball in self.particles:
@@ -345,6 +352,13 @@ class Box:
             ball.speed = ball.speed.dot(self._rotation_matrix(α, β, γ))
     
     def rotate_axis(self, axis, rad):
+        """
+        Rotates context of the box around an axis
+
+        Args:
+            axis (int): The axis to rotate around: 0: X, 1: Y, 2: Z
+            rad (float): radians to rotate
+        """        
         if self.dimensions != 3:
             return
         rotation = self.nullvector.copy()
@@ -555,6 +569,42 @@ class Box:
             return self._normal_momentum/(self.ticks*self.area())
         except ZeroDivisionError:
             return self._normal_momentum/self.area()
+    
+    def stop_all(self):
+        """
+        Stop all balls
+        """        
+        for ball in self.particles:
+            ball.speed = self.nullvector.copy()
+        self.momentum = self.nullvector.copy()
+    
+    def center_all(self):
+        """
+        Move center of mass to center of box and set total momentum to zero
+        """        
+        if len(self.particles) > 0:
+            total_mass = sum(ball.mass for ball in self.particles)
+            center_of_mass = sum(ball.mass*ball.position for ball in self.particles)/total_mass
+            dpos = self.center - center_of_mass
+            
+            avg_speed = sum(ball.speed for ball in self.particles)/len(self.particles)
+            avg_momentum = sum(ball.momentum for ball in self.particles)/len(self.particles)
+            for ball in self.particles:
+                ball.position += dpos
+                # ball.speed -= avg_speed
+                ball.speed -= avg_momentum/ball.mass
+            
+            self.momentum = self.nullvector.copy()
+    
+    def kick_all(self):
+        """
+        Kick all balls in random direction with 10% of average absolute speed with a minimum of 3
+        """
+        S = sum(abs(ball.speed) for ball in self.particles)
+        ms = 0.1 * math.sqrt(S.dot(S))
+        if ms < 3: ms = 3
+        for ball in self.particles:
+            ball.speed += self.random(ms)
 
     def go(self):
         """
@@ -1102,7 +1152,7 @@ class ArrangeParticles:
         for i, b1 in enumerate(balls):
             for b2 in balls[i:]:
                 if b1 != b2:               
-                    spring = Spring(size, 0.01, 0.01, b1, b2)
+                    spring = Spring(size, 0.05, 0.01, b1, b2)
                     self.box.springs.append(spring)
         return balls
 
@@ -1158,22 +1208,33 @@ class ArrangeParticles:
         Returns:
             list: list of balls
         """        
-        radius = 5
-        lspring = 20
+        radius = 30
+        lspring = 90
         balls = []
+        alternate = False
+        if charge is None:
+            alternate = True
+            charge = 1
         for i in range(round(nballs/n)):
             pos1 = self.box.random_position()
             speed = self.box.random() * VMAX * random.random()
+            if star and alternate:
+                charge = n - 1
             b1 = self.box.add_particle(1, radius, pos1, speed, charge)
             bstart = b1
             balls.append(b1)
             if n > 1:
                 for i in range(n-1):
+                    if alternate:
+                        if star:
+                            charge = -1
+                        else:
+                            charge = -charge
                     pos2 = pos1 + self.box.random() * (lspring + 10)
                     speed2 = speed + self.box.random()
                     b2 = self.box.add_particle(1, radius, pos2, speed2, charge)
                     balls.append(b2)
-                    spring = Spring(lspring, 0.01, 0, b1, b2)
+                    spring = Spring(lspring, 0.08, 0, b1, b2)
                     self.box.springs.append(spring)
                     if not star:
                         b1 = b2
