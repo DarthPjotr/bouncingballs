@@ -29,9 +29,9 @@ D5 = 400
 SCREEN_TITLE = "Bouncing Balls Example"
 
 # Use change in Sprites alpha value for 3rd dimension
-DALPHA = 2
+DALPHA = Box.Z
 # Use change in Sprites size for 4th dimension
-DSIZE = 3
+DSIZE = Box.D4
 
 # Physical contants
 BOX_DIMENSIONS = [SCREEN_WIDTH, SCREEN_HEIGHT, DEPTH, D4, D5]
@@ -86,10 +86,10 @@ class MyGame(arcade.Window):
         self.box.set_gravity(GRAVITY)
         self.box.set_friction(FRICTION)
         self.box.set_interaction(INTERACTION)
-        # self.box.torus = TORUS
+        self.box.torus = TORUS
 
-        # self.box.field = Field(self.box)
-        # self.box.field.equation = self.box.field.nofield
+        self.box.field = Field(self.box)
+        self.box.field.equation = None # self.box.field.nofield
 
         # wall = Wall(self.box, 0.4, 0)
         # self.box.walls.append(wall)
@@ -154,7 +154,7 @@ class MyGame(arcade.Window):
         # balls = arrangement.create_n_mer(4, 4, False, True, -1)
         # self.add_balls(balls)
 
-        balls = arrangement.create_simplex(50, self.box.center - 100, 1)
+        balls = arrangement.create_simplex(200, self.box.center, 0, self.box.dimensions+5)
         self.add_balls(balls)
 
         # self.box.torus = False
@@ -466,6 +466,7 @@ class MyGame(arcade.Window):
         else:
             self._do_rotation(symbol)
         return super().on_key_press(symbol, modifiers)
+    
 
     def on_resize(self, width: float, height: float):
         if DIMENSIONS == 1:

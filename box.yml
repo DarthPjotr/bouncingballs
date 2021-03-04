@@ -1,0 +1,22 @@
+box:
+  sizes: [800, 700, 600]
+  gravity: 0.0
+  friction: 0.0
+  interaction: 0.0
+  particles:
+    - mass: 1
+      radius: 1
+      position: [9,8,7]
+      speed: [1,2,3]
+      charge: -1
+    - mass: 2
+      radius: 2
+      position: [6,5,4]
+      speed: [-1,2,-3]
+  springs:
+    - strength: 0.03
+      dampening: 0.0
+      particles: [0,1]
+
+
+
