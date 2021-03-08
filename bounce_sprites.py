@@ -10,9 +10,14 @@ import numpy
 from palettable.scientific.diverging import Roma_20_r as colormap
 # from palettable.mycarta import CubeYF_20 as colormap
 
+import tkinter
+from tkinter import filedialog as fd
+
 from gas import *
 
 # Set up the constants
+
+ASK_LOAD = True
 
 UPDATE_RATE = 1/60
 TEXT_REFRESH = 1
@@ -40,7 +45,7 @@ GRAVITY = 0.0
 FRICTION = 0.00
 INTERACTION = 10000.0
 TORUS = False
-DIMENSIONS = 3
+DIMENSIONS = 2
 # HEIGHT = 30
 SPEED = 3
 
@@ -50,6 +55,21 @@ D_SPRITE_RADIUS = 15
 MAXCOLOR = 255
 INVMAXCOLOR = 1/MAXCOLOR
 
+
+
+def loaddialog():
+    root = tkinter.Tk()
+    root.withdraw()
+    file = fd.askopenfile(parent=root, title="Load", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")])
+    root.destroy()
+    return file
+
+def savedialog():
+    root = tkinter.Tk()
+    root.withdraw()
+    file = fd.asksaveasfile(mode="w", parent=root, title="Save", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")], defaultextension=".yml")
+    root.destroy()
+    return file
 
 class MyGame(arcade.Window):
     """ Main application class. """
@@ -80,23 +100,42 @@ class MyGame(arcade.Window):
         self._output = {}
               
     def setup(self):
-        self.box = Box(BOX_DIMENSIONS[:DIMENSIONS], TORUS)
-        direction = self.box.nullvector.copy()
-        direction[0] = 1
-        self.box.set_gravity(GRAVITY)
-        self.box.set_friction(FRICTION)
-        self.box.set_interaction(INTERACTION)
-        self.box.torus = TORUS
+        if ASK_LOAD:
+            file = loaddialog()
+            self.box = load(file)
+            self.add_balls(self.box.particles)
+            self.set_size(*self.box.box_sizes[:2])
+            # (width, height) = self.get_size()
+            # if DIMENSIONS == 1:
+            #     self.box.resize([width])
+            # else:
+            #     self.box.resize([width ,height])
+        else:
+            self.box = Box(BOX_DIMENSIONS[:DIMENSIONS], TORUS)
+            direction = self.box.nullvector.copy()
+            direction[0] = 1
+            self.box.set_gravity(GRAVITY)
+            self.box.set_friction(FRICTION)
+            self.box.set_interaction(INTERACTION)
+            self.box.torus = TORUS
 
-        self.box.field = Field(self.box)
-        self.box.field.equation = None # self.box.field.nofield
+            # self.box.field = Field(self.box)
+            # self.box.field.equation = None # self.box.field.nofield
 
-        # wall = Wall(self.box, 0.4, 0)
-        # self.box.walls.append(wall)
-        # wall = Wall(self.box, 0.6, 1)
-        # self.box.walls.append(wall)
+            # wall = Wall(self.box, 0.4, 0)
+            # self.box.walls.append(wall)
+            # wall = Wall(self.box, 0.6, 1)
+            # self.box.walls.append(wall)
 
-        self.place_balls()
+            self.place_balls()
+        
+        # print(self.box)
+        
+        # for p in self.box.particles:
+        #     print(p)
+    
+        # for s in self.box.springs:
+        #     print(s)
 
     def getcolor(self, value, vmin, vmax):
         i = (value-vmin)/(vmax-vmin)
@@ -125,8 +164,8 @@ class MyGame(arcade.Window):
         # direction[self.box.Z] = 1
         # self.box.set_gravity(0.0, direction)
         # self.box.set_interaction(2500)
-        # # balls = arrangement.random_balls(20, 30, 30, charge=1)
-        # balls = arrangement.random_balls(10, charge=1)
+        # balls = arrangement.random_balls(20, 30, 30, charge=1)
+        # # balls = arrangement.random_balls(10, charge=1)
         # # balls = arrangement.create_n_mer(5*5, 5, star=True, charge=None)
         # for i, ball in enumerate(balls):
         #     if ball.charge == -1:
@@ -135,8 +174,8 @@ class MyGame(arcade.Window):
         #         ball.color = arcade.color.GREEN
         # self.add_balls(balls)
 
-        # # balls = arrangement.random_balls(20, 30, 30, charge=-1)
-        # balls = arrangement.random_balls(10, charge=-1)
+        # balls = arrangement.random_balls(20, 30, 30, charge=-1)
+        # # balls = arrangement.random_balls(10, charge=-1)
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)
         # for ball in balls:
         #     ball.color = arcade.color.RED
@@ -154,8 +193,15 @@ class MyGame(arcade.Window):
         # balls = arrangement.create_n_mer(4, 4, False, True, -1)
         # self.add_balls(balls)
 
-        balls = arrangement.create_simplex(200, self.box.center, 0, self.box.dimensions+5)
+        # balls = arrangement.create_simplex(200, self.box.center, 0, self.box.dimensions)
+        # self.add_balls(balls)
+
+        balls = arrangement.create_pendulum()
+
         self.add_balls(balls)
+
+        # balls = arrangement.create_box(200, charge=1)
+        # self.add_balls(balls)
 
         # self.box.torus = False
         # S = 3
@@ -180,12 +226,12 @@ class MyGame(arcade.Window):
 
     def add_balls(self, balls=list):
         for ball in balls:
-            ball.object = arcade.SpriteCircle(ball.radius+D_SPRITE_RADIUS, ball.color, True)
+            ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
             self.ball_list.append(ball.object)
 
-    def add_ball(self, mass, radius, position=None, speed=None, charge=0, color=None):
-        ball = self.box.add_particle(mass, radius, position, speed, charge, color)
-        ball.object = arcade.SpriteCircle(ball.radius+D_SPRITE_RADIUS, ball.color, True)
+    def add_ball(self, mass, radius, position=None, speed=None, charge=0, fixed=False, color=None):
+        ball = self.box.add_particle(mass, radius, position, speed, charge, fixed, color)
+        ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
         self.ball_list.append(ball.object) 
 
         return ball
@@ -463,6 +509,10 @@ class MyGame(arcade.Window):
         elif symbol == arcade.key.Q:
             # quit
             self.close()
+        elif symbol == arcade.key.S and modifiers & arcade.key.MOD_CTRL:
+            file = savedialog()
+            save(self.box, file)
+            file.close()
         else:
             self._do_rotation(symbol)
         return super().on_key_press(symbol, modifiers)

@@ -7,6 +7,9 @@ import random
 import math
 from math import sin, cos
 
+import yaml
+from pprint import pp
+
 import locale
 locale.setlocale(locale.LC_ALL, '')
 
@@ -284,6 +287,20 @@ class Box:
     def __str__(self) -> str:
         return str(self.box_sizes)
     
+    def out(self):
+        box = {}
+        box["sizes"] = [float(f) for f in self.box_sizes] # list(self.box_sizes)
+        box['torus'] = self.torus
+        box["gravity"] = [float(f) for f in self.gravity] # list(self.gravity)
+        box["friction"] = float(self.friction)
+        box["interaction"] = float(self.interaction)
+        box["particles"] = [ball.out() for ball in self.particles]
+        box["springs"] = [spring.out() for spring in self.springs]
+
+        output = {"box": box}
+
+        return output
+    
     def random_position(self):
         """
         Gives random position in the box
@@ -344,12 +361,13 @@ class Box:
         """
         Rotates content of box around x, y, z axes
         """         
-        if self.dimensions != 3:
+        if self.dimensions < 3:
             return
         for ball in self.particles:
-            cpos = ball.position - self.center
-            ball.position = self.center + cpos.dot(self._rotation_matrix(α, β, γ))
-            ball.speed = ball.speed.dot(self._rotation_matrix(α, β, γ))
+            cpos = ball.position[:3] - self.center[:3]
+            ball.position[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
+            speed = ball.speed[:3]
+            ball.speed[:3] = speed.dot(self._rotation_matrix(α, β, γ))
     
     def rotate_axis(self, axis, rad):
         """
@@ -359,9 +377,9 @@ class Box:
             axis (int): The axis to rotate around: 0: X, 1: Y, 2: Z
             rad (float): radians to rotate
         """        
-        if self.dimensions != 3:
+        if self.dimensions < 3:
             return
-        rotation = self.nullvector.copy()
+        rotation = self.nullvector.copy()[:3]
         rotation[axis] = rad
         self.rotate(*rotation)
     
@@ -386,7 +404,7 @@ class Box:
         A = 2*sum([V/s for s in self.box_sizes])
         return A
     
-    def add_particle(self,mass=MASS, radius=RADIUS, position=None, speed=None, charge=0, color=None):
+    def add_particle(self,mass=MASS, radius=RADIUS, position=None, speed=None, charge=0, fixed=False, color=None):
         """
         Adds a particle to the box
 
@@ -417,7 +435,8 @@ class Box:
 
         if color is None:
             color = (random.randrange(256), random.randrange(256), random.randrange(256))
-        particle = Particle(self, mass, radius, position, speed, charge, color)
+        particle = Particle(self, mass, radius, position, speed, charge, fixed, color)
+        # print(particle.out())
         self.particles.append(particle)
         return particle
     
@@ -602,7 +621,7 @@ class Box:
         """
         S = sum(abs(ball.speed) for ball in self.particles)
         ms = 0.1 * math.sqrt(S.dot(S))
-        if ms < 3: ms = 3
+        if ms <0.5: ms = 0.5
         for ball in self.particles:
             ball.speed += self.random(ms)
 
@@ -721,7 +740,7 @@ class Particle:
     """
     Particle
     """
-    def __init__(self, box: Box, mass: float, radius: float, position: list, speed: list, charge: float, color: list) -> None:
+    def __init__(self, box: Box, mass: float, radius: float, position: list, speed: list, charge: float, fixed: bool, color: list) -> None:
         """
         Creates particle 
 
@@ -741,6 +760,7 @@ class Particle:
         self.speed = numpy.array(speed, dtype=float)
         self.charge = charge
         self.color = color
+        self.fixed = fixed
         self.object = None
         # self.impuls = self.mass * self.speed
     
@@ -748,6 +768,9 @@ class Particle:
         """
         Moves the particle
         """
+        if self.fixed:
+            self.speed = self.box.nullvector.copy()
+
         self.position += self.speed
 
     def fast_collision_check(self, ball):
@@ -914,7 +937,7 @@ class Particle:
         Returns:
             list: new speed vector
         """
-        if self.box.interaction == 0 or self.charge == 0:
+        if self.box.interaction == 0 or self.charge == 0 or self.fixed:
             return self.speed
         dspeed = self.box.nullvector.copy()
         if self.mass == 0:
@@ -992,7 +1015,22 @@ class Particle:
     def __str__(self) -> str:
         pstr = ""
         pstr = "particle:\n mass: {}\n radius: {}\n position: {}\n speed: {}".format(self.mass, self.radius, self.position, self.speed)
-        return pstr 
+        return pstr
+
+    def index(self):
+        i = self.box.particles.index(self)
+        return i
+    
+    def out(self):
+        particle = {}
+        particle["mass"] = float(self.mass)
+        particle["radius"] = float(self.radius)
+        particle["position"] = [float(f) for f in self.position] # list(self.position)
+        particle["speed"] = [float(f) for f in self.speed] # list(self.speed)
+        particle["charge"] = float(self.charge)
+        particle["fixed"] = self.fixed
+        particle["color"] = [int(i) for i in self.color]
+        return particle
 
 class Spring:
     """
@@ -1000,7 +1038,7 @@ class Spring:
     """
     def __init__(self, length: float, strength: float, damping: float, p1: Particle, p2: Particle) -> None:
         """
-        Creates spring betrween two Particles
+        Creates spring between two Particles
 
         Args:
             length (float): Rest length of spring
@@ -1014,6 +1052,17 @@ class Spring:
         self.damping = damping
         self.p1 = p1
         self.p2 = p2
+    
+    def __str__(self) -> str:
+        return "{} {} {}".format(self.strength, self.damping, (self.p1.index(), self.p2.index()))
+
+    def out(self):
+        spring = {}
+        spring["length"] = float(self.length)
+        spring["strength"] = float(self.strength)
+        spring["damping"] = float(self.damping)
+        spring["particles"] = [self.p1.index(), self.p2.index()]
+        return spring
     
     def dlength(self):
         """
@@ -1243,6 +1292,38 @@ class ArrangeParticles:
                     self.box.springs.append(spring)
         return balls
     
+
+    def create_pendulum(self, gravity=0.1):
+        self.box.set_gravity(gravity)
+        balls = []
+
+        pos = self.box.center.copy()
+        pos[Box.Y] = self.box.box_sizes[Box.Y] - 150
+        speed = self.box.nullvector.copy()
+        ancor = self.box.add_particle(1, 1, pos, speed, charge=0, fixed=True, color=[255,255,255])
+        balls.append(ancor)
+        
+        lspring = 150
+        pos = pos.copy()
+        pos[Box.X] += lspring
+        ball1 = self.box.add_particle(10,10, pos, speed, color=[0,255,255])
+        balls.append(ball1)
+
+        spring = Spring(lspring, 10, 0.01, ancor, ball1)
+        self.box.springs.append(spring)
+
+        lspring = 100
+        pos = pos.copy()
+        pos += self.box.random(lspring)
+        # pos[Box.Z] = self.box.center[Box.Z]
+        ball2 = self.box.add_particle(10,10, pos, speed, color=[0,255,255])
+        balls.append(ball2)
+
+        spring = Spring(lspring, 10, 0.01, ball1, ball2)
+        self.box.springs.append(spring)
+
+        return balls
+    
     def test_interaction_simple(self, interaction):
         self.box.set_interaction(interaction)
         balls = []
@@ -1360,6 +1441,52 @@ class ArrangeParticles:
         
         return balls
 
+def load(path):
+    if isinstance(path, str):
+        file = open(path)
+    else:
+        file = path
+    
+    data = yaml.load(file, Loader=yaml.FullLoader)
+    file.close()
+
+
+    b = data["box"]
+    box = Box(b["sizes"])
+    try:
+        box.set_gravity(b['gravity'])
+        box.set_friction(b['friction'])
+        box.set_interaction(b['interaction'])
+        box.torus = b['torus']
+    except:
+        pass
+
+    for p in b['particles']:
+        try:
+            fixed = p["fixed"]
+        except:
+            fixed = False
+        box.add_particle(p['mass'], p['radius'], p['position'], p['speed'], p['charge'], fixed, p['color'])
+    
+    for s in b['springs']:
+        ps = s['particles']
+        p1 = box.particles[ps[0]]
+        p2 = box.particles[ps[1]]
+        spring = Spring(s['length'], s['strength'], s['damping'], p1, p2)
+        box.springs.append(spring)
+
+    return box
+
+def save(box, path):
+    if isinstance(path, str):
+        file = open(path)
+    else:
+        file = path
+    out = box.out()
+
+    yaml.dump(out, file ,canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
+    file.close()
+
 def test_wall():
     D = 1
     box = Box([10,20,30])
@@ -1443,6 +1570,9 @@ def test():
         except KeyboardInterrupt:
             print("user interupted")
             break
+    
+    from pprint import pp
+    pp(box.out())            
 
 def test_displacement():
     box = Box([10, 20])
@@ -1457,13 +1587,45 @@ def test_displacement():
     d = box.displacement(p1, p3)
     print(d, p1 - p3)
 
+def test_save_yaml():
+    FILE = "D:\\temp\\box.yml"
+    BOX_DIMENSIONS = [800, 600, 700, 400, 300]
+    NBALLS = 20
+    GRAVITY = 0.0
+    FRICTION = 0.00
+    INTERACTION = 0000.0
+    TORUS = False
+    DIMENSIONS = 3
+    box = Box(BOX_DIMENSIONS[:DIMENSIONS])
+    arrangement = ArrangeParticles(box)
+    balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
+
+    save(box, FILE)
+
+def test_load_yaml():
+    FILE = "D:\\temp\\box.yml"
+    box = load(FILE)
+    print(box)
+
+    for p in box.particles:
+        print(p)
+    
+    for s in box.springs:
+        print(s)
+    
+    for i in range(100):
+        box.go()
+        print(box.ticks)
+
 
 if __name__ == "__main__": 
     print("START")
     
     # test_wall()
     # test_box()
-    test()
+    # test()
+    # test_save_yaml()
+    test_load_yaml()
     # test_displacement()
 
     print("END")
