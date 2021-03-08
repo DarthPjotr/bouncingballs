@@ -104,7 +104,8 @@ class MyGame(arcade.Window):
             file = loaddialog()
             self.box = load(file)
             self.add_balls(self.box.particles)
-            self.set_size(*self.box.box_sizes[:2])
+            self.set_size(int(self.box.box_sizes[Box.X]), int(self.box.box_sizes[Box.Y]))
+            # self.center_window()
             # (width, height) = self.get_size()
             # if DIMENSIONS == 1:
             #     self.box.resize([width])
