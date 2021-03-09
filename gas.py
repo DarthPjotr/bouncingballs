@@ -238,6 +238,7 @@ class Box:
         self.walls = []
         self.particles = []
         self.springs = []
+        self.rods = []
         # dynamic properties
         energies = ["KE", "EE", "PE", "SE"]
         self.energy = {e : 0.0 for e in energies}
@@ -759,7 +760,7 @@ class Particle:
         self.position = numpy.array(position, dtype=float)
         self.speed = numpy.array(speed, dtype=float)
         self.charge = charge
-        self.color = color
+        self.color = tuple(color)
         self.fixed = fixed
         self.object = None
         # self.impuls = self.mass * self.speed
@@ -1114,6 +1115,32 @@ class Spring:
         self.p1.speed += dv1
         self.p2.speed += dv2
 
+class Rod:
+    def __init__(self, lenght, p1, p2) -> None:
+        self.length = lenght
+        self.p1 = p1
+        self.p2 = p2
+
+    def __str__(self) -> str:
+        return "{} {}".format(self.length, (self.p1.index(), self.p2.index()))
+
+    def pull(self):
+        dpos = self.p1.displacement(self.p2.position)
+        center = dpos/2
+        vcenter = (self.p1.speed + self.p2.speed)/2
+        v1 = self.p1.speed - vcenter
+        v2 = self.p2.speed - vcenter
+        dv1 = dv2 = 0
+        self.p1.speed += dv1
+        self.p2.speed += dv2
+
+    def out(self):
+        rod = {}
+        rod["length"] = float(self.length)
+        rod["particles"] = [self.p1.index(), self.p2.index()]
+        return rod
+
+
 class ArrangeParticles:
     """
     Standard particle arrangements 
@@ -1441,6 +1468,33 @@ class ArrangeParticles:
         
         return balls
 
+    def test_rod(self, length=150, interaction=0):
+        self.box.set_interaction(interaction)
+
+        balls = []
+
+        dpos = self.box.nullvector.copy()
+        dpos[0] = length/2
+        pos = self.box.center + dpos
+        speed = self.box.nullvector.copy()
+        speed[0] = 0
+        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=-1, color=[255,0,0])
+        balls.append(ball)
+        b1 = ball
+
+        dpos = self.box.nullvector.copy()
+        dpos[0] = -length/2
+        pos = self.box.center + dpos
+        speed[0] = -0
+        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=1, color=[0,255,0])
+        balls.append(ball)
+        b2 = ball
+
+        rod = Rod(length, b1, b2)
+        self.box.rods.append(rod)
+        
+        return balls
+
 def load(path):
     if isinstance(path, str):
         file = open(path)
@@ -1450,11 +1504,10 @@ def load(path):
     data = yaml.load(file, Loader=yaml.FullLoader)
     file.close()
 
-
     b = data["box"]
     box = Box(b["sizes"])
     try:
-        box.set_gravity(b['gravity'])
+        box.gravity = numpy.array(b['gravity'])
         box.set_friction(b['friction'])
         box.set_interaction(b['interaction'])
         box.torus = b['torus']
@@ -1464,15 +1517,29 @@ def load(path):
     for p in b['particles']:
         try:
             fixed = p["fixed"]
-        except:
+        except KeyError:
             fixed = False
-        box.add_particle(p['mass'], p['radius'], p['position'], p['speed'], p['charge'], fixed, p['color'])
+        
+        try: 
+            charge = p['charge']
+        except KeyError:
+            charge = 0
+
+        try:
+            color = p['color']
+        except KeyError:
+            color = None
+        box.add_particle(p['mass'], p['radius'], p['position'], p['speed'], charge, fixed, color)
     
     for s in b['springs']:
         ps = s['particles']
         p1 = box.particles[ps[0]]
         p2 = box.particles[ps[1]]
-        spring = Spring(s['length'], s['strength'], s['damping'], p1, p2)
+        try: 
+            damping = s["damping"] 
+        except KeyError: 
+            damping = 0
+        spring = Spring(s['length'], s['strength'], damping, p1, p2)
         box.springs.append(spring)
 
     return box
@@ -1484,7 +1551,7 @@ def save(box, path):
         file = path
     out = box.out()
 
-    yaml.dump(out, file ,canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
+    yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
     file.close()
 
 def test_wall():
