@@ -25,7 +25,7 @@ locale.setlocale(locale.LC_ALL, '')
 # RED = (255, 0 ,0)
 # GREEN = (0, 255,0)
 
-VMAX = 5
+VMAX = 3
 RADIUS = 1
 MASS = 1
 NBALLS = 20
@@ -674,6 +674,10 @@ class Box:
             # collide the balls
             for ball2 in self.particles[i:]:
                 if ball.collide(ball2): bounced = True
+        
+        # apply rods
+        for rod in self.rods:
+            rod.pull()
 
         return bounced
     
@@ -1116,23 +1120,120 @@ class Spring:
         self.p2.speed += dv2
 
 class Rod:
-    def __init__(self, lenght, p1, p2) -> None:
+    def __init__(self, box, lenght, p1, p2, vcenter=None, vrot=None) -> None:
+        self.box = box
         self.length = lenght
         self.p1 = p1
         self.p2 = p2
 
+        if vcenter is None:
+            vcenter = numpy.zeros(self.box.dimensions)
+        self.vcenter = vcenter
+        if vrot is None:
+            vrot = numpy.zeros(self.box.dimensions)
+        self.vrot = vrot
+        self.results = ()
+        # self.hit(self.p1, self.p2)
+        # self.hit(self.p2, self.p1)
+
     def __str__(self) -> str:
         return "{} {}".format(self.length, (self.p1.index(), self.p2.index()))
 
+    def pull_old(self):
+        # dpos = self.p1.displacement(self.p2.position)
+        dpos = self.p1.position - self.p2.position
+        R2 = dpos @ dpos
+        V1r = self.p1.speed.dot(dpos)*dpos/R2
+        V2r = self.p2.speed.dot(dpos)*dpos/R2
+        V1p = self.p1.speed - V1r
+        V2p = self.p2.speed - V2r
+        dVr = V1r - V2r
+
+
+        self.p1.speed = V1p + dVr
+        self.p2.speed = V2p + dVr
+    
+
+    def hit_(self):
+        hit = False
+        C1 = (self.p1.position + self.p2.position)/2
+        vc1 = vc2 = vr1 = vr2 = self.box.nullvector.copy()
+
+        dv1 = self.p1.speed - self.vcenter - self.vrot
+        dv2 = self.p2.speed - self.vcenter + self.vrot
+        print(dv1, dv2)
+
+        if not dv2 @ dv2 < 0.001:
+            p2n = self.p2.position + dv2
+            dp = (p2n - self.p1.position)
+            p1n = p2n - (self.length * dp/math.sqrt(dp @ dp))
+            C2 = (p1n + p2n)/2
+            vc2 = C2 - C1
+            vr2 = (p2n - vc2) - self.p2.position
+            hit = True
+
+        if not dv1 @ dv1 < 0.001:
+            p1n = self.p1.position + dv1
+            dp = (p1n - self.p2.position)
+            p2n = p1n - (self.length * dp/math.sqrt(dp @ dp))
+            C2 = (p2n + p1n)/2
+            vc1 = C2 - C1
+            vr1 = (p1n - vc1) - self.p1.position
+            hit = True
+
+
+        self.vcenter += vc1 + vc2
+        self.vrot += vr1 + vr2
+
+        return hit
+
+    def hit(self, p1, p2):
+        hit = False
+        C1 = (p1.position + p2.position)/2
+        vc1 = self.box.nullvector.copy()
+        vc2 = self.box.nullvector.copy()
+        vr1 = self.box.nullvector.copy()
+        vr2 = self.box.nullvector.copy()
+
+        dv = p1.speed - self.vcenter - self.vrot
+        if True: #not dv @ dv < 0.0001:
+            p1n = p1.position + dv
+            dp = (p1n - p2.position)
+            p2n = p1n - (self.length * dp/math.sqrt(dp @ dp))
+            C2 = (p2n + p1n)/2
+            vc1 = C2 - C1
+            vr1 = dv - vc1
+            # vr2_ = (p2n - p2.position) - vc1
+            # print(vr2_ - vr1)
+            hit = True
+
+
+        self.vcenter += vc1 + vc2
+        self.vrot += vr1 + vr2
+
+        return hit
+
+    def rotate(self):
+        # self.vcenter = self.box.nullvector.copy()
+
+        # dp2 = self.p1.position - self.p2.position
+        dp2 = (self.p1.position + self.vrot) - (self.p2.position - self.vrot)
+        vrotp = (self.vrot @ dp2) * dp2/(dp2 @ dp2)
+
+        self.vrot -= 2*vrotp
+    
     def pull(self):
-        dpos = self.p1.displacement(self.p2.position)
-        center = dpos/2
-        vcenter = (self.p1.speed + self.p2.speed)/2
-        v1 = self.p1.speed - vcenter
-        v2 = self.p2.speed - vcenter
-        dv1 = dv2 = 0
-        self.p1.speed += dv1
-        self.p2.speed += dv2
+        h1 = h2 = False
+        h1 = self.hit(self.p1, self.p2) 
+        # h2 = self.hit(self.p2, self.p1)
+        if not (h1 or h2):
+            self.rotate()
+            pass
+
+        self.p1.speed = self.vcenter + self.vrot
+        self.p2.speed = self.vcenter - self.vrot
+        # print(self.p1.speed, self.p2.speed, self.vcenter, self.vrot)
+        
 
     def out(self):
         rod = {}
@@ -1284,8 +1385,8 @@ class ArrangeParticles:
         Returns:
             list: list of balls
         """        
-        radius = 30
-        lspring = 90
+        radius = 5
+        lspring = 150
         balls = []
         alternate = False
         if charge is None:
@@ -1293,7 +1394,7 @@ class ArrangeParticles:
             charge = 1
         for i in range(round(nballs/n)):
             pos1 = self.box.random_position()
-            speed = self.box.random() * VMAX * random.random()
+            speed = self.box.random(3)
             if star and alternate:
                 charge = n - 1
             b1 = self.box.add_particle(1, radius, pos1, speed, charge)
@@ -1306,11 +1407,11 @@ class ArrangeParticles:
                             charge = -1
                         else:
                             charge = -charge
-                    pos2 = pos1 + self.box.random() * (lspring + 10)
-                    speed2 = speed + self.box.random()
+                    pos2 = pos1 + self.box.random() * (lspring)
+                    speed2 = speed + self.box.random(0.5)
                     b2 = self.box.add_particle(1, radius, pos2, speed2, charge)
                     balls.append(b2)
-                    spring = Spring(lspring, 0.08, 0, b1, b2)
+                    spring = Spring(lspring, 0.15, 0.03, b1, b2)
                     self.box.springs.append(spring)
                     if not star:
                         b1 = b2
@@ -1467,6 +1568,25 @@ class ArrangeParticles:
         self.box.springs.append(spring)
         
         return balls
+    
+    def test_fixed_charge(self, interaction=10000):
+        self.box.set_interaction(interaction)
+
+        balls = []
+
+        ball = self.box.add_particle(1, 25, self.box.center, speed=self.box.nullvector.copy(), charge=5, fixed=True, color=[255,0,255])
+        balls.append(ball)
+
+        balls_ = self.create_n_mer(2, 2)
+        for i, ball in enumerate(balls_):
+            if i % 2 == 0:
+                ball.charge = -1
+            else:
+                ball.charge = 1
+        balls.extend(balls_)
+
+        return balls
+
 
     def test_rod(self, length=150, interaction=0):
         self.box.set_interaction(interaction)
@@ -1474,23 +1594,24 @@ class ArrangeParticles:
         balls = []
 
         dpos = self.box.nullvector.copy()
-        dpos[0] = length/2
+        dpos[Box.X] = length/2
         pos = self.box.center + dpos
         speed = self.box.nullvector.copy()
-        speed[0] = 0
-        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=-1, color=[255,0,0])
+        speed[Box.Y] = 1.0 # self.box.random(0.5)
+        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=0, color=[255,0,0])
         balls.append(ball)
         b1 = ball
 
         dpos = self.box.nullvector.copy()
-        dpos[0] = -length/2
+        dpos[Box.X] = -length/2
         pos = self.box.center + dpos
-        speed[0] = -0
-        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=1, color=[0,255,0])
+        speed = self.box.nullvector.copy()
+        # speed[Box.Y] = 1.0 # self.box.random(0.5)
+        ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=0, color=[0,255,0])
         balls.append(ball)
         b2 = ball
 
-        rod = Rod(length, b1, b2)
+        rod = Rod(self.box, length, b1, b2, vcenter=None, vrot=None)
         self.box.rods.append(rod)
         
         return balls

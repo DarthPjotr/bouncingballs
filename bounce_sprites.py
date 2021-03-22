@@ -17,17 +17,17 @@ from gas import *
 
 # Set up the constants
 
-ASK_LOAD = True
+ASK_LOAD = False
 
 UPDATE_RATE = 1/60
-TEXT_REFRESH = 1
+TEXT_REFRESH = 10
 ROTATION = 2*math.pi*15/360
 TICK_RATE = 1
 
 # Size of the screen
 (DISPLAY_WIDTH, DISPLAY_HEIGHT) = arcade.get_display_size()
-SCREEN_WIDTH = 800 # DISPLAY_WIDTH
-SCREEN_HEIGHT = 600 # DISPLAY_HEIGHT - 100
+SCREEN_WIDTH = 1000 # DISPLAY_WIDTH
+SCREEN_HEIGHT = 900 # DISPLAY_HEIGHT - 100
 DEPTH = DISPLAY_HEIGHT # 500
 D4 = 500
 D5 = 400
@@ -197,9 +197,12 @@ class MyGame(arcade.Window):
         # balls = arrangement.create_simplex(200, self.box.center, 0, self.box.dimensions)
         # self.add_balls(balls)
 
-        balls = arrangement.create_pendulum()
+        # balls = arrangement.create_pendulum()
+        balls = arrangement.test_rod(150)
+        # balls = arrangement.test_fixed_charge(10000)
 
         self.add_balls(balls)
+        #self.box.kick_all()
 
         # balls = arrangement.create_box(200, charge=1)
         # self.add_balls(balls)
@@ -227,7 +230,10 @@ class MyGame(arcade.Window):
 
     def add_balls(self, balls=list):
         for ball in balls:
-            ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
+            if ball.fixed:
+                ball.object = arcade.SpriteCircle(int(ball.radius)+5, ball.color, False)
+            else:
+                ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
             self.ball_list.append(ball.object)
 
     def add_ball(self, mass, radius, position=None, speed=None, charge=0, fixed=False, color=None):
@@ -302,7 +308,7 @@ class MyGame(arcade.Window):
         #     self.arrow_list.remove(shape)
         for i, ball in enumerate(self.box.particles):
             #arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
-            end = ball.position + 5*ball.speed
+            end = ball.position + 10*ball.speed
             arcade.draw_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
             # arrow = arcade.create_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
             # self.arrow_list.append(arrow)
@@ -334,6 +340,10 @@ class MyGame(arcade.Window):
                 alpha = 255*(pos/self.box.box_sizes[DALPHA]) % 255
                 color.append(alpha)
             arcade.draw_line(*spring.p1.position[:2], *spring.p2.position[:2], color=color, line_width=1)
+        
+        # draw rods
+        for i, rod in enumerate(self.box.rods):
+            arcade.draw_line(*rod.p1.position[:2], *rod.p2.position[:2], color=arcade.color.GRAY, line_width=2)
 
         # if len(self.arrow_list) > 0:
         #     self.arrow_list.draw()
