@@ -106,6 +106,9 @@ class MyGame(arcade.Window):
         
         data = yaml.load(file, Loader=yaml.FullLoader)
         file.close()
+
+        # ugly ...
+        global TEXT_REFRESH, TICK_RATE, D_SPRITE_RADIUS
         try:
             config = data['config']
             self.fps = config['fps']
