@@ -17,12 +17,12 @@ from gas import *
 
 # Set up the constants
 
-ASK_LOAD = False
+ASK_LOAD = True
 
 UPDATE_RATE = 1/60
 TEXT_REFRESH = 10
-ROTATION = 2*math.pi*15/360
 TICK_RATE = 1
+ROTATION = 2*math.pi*15/360
 
 # Size of the screen
 (DISPLAY_WIDTH, DISPLAY_HEIGHT) = arcade.get_display_size()
@@ -54,7 +54,6 @@ D_SPRITE_RADIUS = 15
 
 MAXCOLOR = 255
 INVMAXCOLOR = 1/MAXCOLOR
-
 
 
 def loaddialog():
@@ -98,13 +97,62 @@ class MyGame(arcade.Window):
 
         self._MAX = 0
         self._output = {}
+
+    def load(self, path):
+        if isinstance(path, str):
+            file = open(path)
+        else:
+            file = path
+        
+        data = yaml.load(file, Loader=yaml.FullLoader)
+        file.close()
+        try:
+            config = data['config']
+            self.fps = config['fps']
+            self.quiet = config['quiet']
+            self.pause = config['pause']
+            self.text = config['text']
+            TEXT_REFRESH = config['textrefresh']
+            TICK_RATE = config['tickrate']
+            D_SPRITE_RADIUS = config['spriteradius']
+        except KeyError:
+            raise
+
+        self.set_update_rate(1/self.fps)
+
+        self.box = load_gas(data)
+        self.add_balls(self.box.particles)
+        self.set_size(int(self.box.box_sizes[Box.X]), int(self.box.box_sizes[Box.Y]))
+
+    def out(self):
+        config = {}
+        config['fps'] = self.fps
+        config['quiet'] = self.quiet
+        config['pause'] = self.pause
+        config['text'] = self.text
+        config['textrefresh'] = TEXT_REFRESH
+        config['tickrate'] = TICK_RATE
+        config['spriteradius'] = D_SPRITE_RADIUS
+        out = {"config": config}
+        box = self.box.out()
+        return {**out, **box}
+    
+    def save(self, path):
+        if isinstance(path, str):
+            file = open(path)
+        else:
+            file = path
+        
+        out = self.out()
+
+        yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
+        file.close()
               
     def setup(self):
         if ASK_LOAD:
             file = loaddialog()
-            self.box = load(file)
-            self.add_balls(self.box.particles)
-            self.set_size(int(self.box.box_sizes[Box.X]), int(self.box.box_sizes[Box.Y]))
+            self.load(file)
+
             # self.center_window()
             # (width, height) = self.get_size()
             # if DIMENSIONS == 1:
@@ -129,14 +177,6 @@ class MyGame(arcade.Window):
             # self.box.walls.append(wall)
 
             self.place_balls()
-        
-        # print(self.box)
-        
-        # for p in self.box.particles:
-        #     print(p)
-    
-        # for s in self.box.springs:
-        #     print(s)
 
     def getcolor(self, value, vmin, vmax):
         i = (value-vmin)/(vmax-vmin)
@@ -522,7 +562,8 @@ class MyGame(arcade.Window):
             self.close()
         elif symbol == arcade.key.S and modifiers & arcade.key.MOD_CTRL:
             file = savedialog()
-            save(self.box, file)
+            # save_gas(self.box, file)
+            self.save(file)
             file.close()
         else:
             self._do_rotation(symbol)

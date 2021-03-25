@@ -1187,7 +1187,7 @@ class Rod:
 
         return hit
 
-    def hit(self, p1, p2):
+    def hit__(self, p1, p2):
         hit = False
         C1 = (p1.position + p2.position)/2
         vc1 = self.box.nullvector.copy()
@@ -1196,7 +1196,7 @@ class Rod:
         vr2 = self.box.nullvector.copy()
 
         dv = p1.speed - self.vcenter - self.vrot
-        if True: #not dv @ dv < 0.0001:
+        if not dv @ dv < 0.0001:
             p1n = p1.position + dv
             dp = (p1n - p2.position)
             p2n = p1n - (self.length * dp/math.sqrt(dp @ dp))
@@ -1213,20 +1213,63 @@ class Rod:
 
         return hit
 
+    def hit(self, p1, p2):
+        hit = False
+        C = (p1.position + p2.position) / 2
+
+        vcenter1 = self.box.nullvector.copy()
+        vcenter2 = self.box.nullvector.copy()
+        vrot1 = self.box.nullvector.copy()
+        vrot2 = self.box.nullvector.copy()
+
+        dv = p1.speed - self.vcenter - self.vrot
+        if (dv @ dv) > 0.0001:
+            vcd1 = (p1.position + p1.speed/2) - C         
+            vcenter1 = (p1.speed @ vcd1) * vcd1 / (vcd1 @ vcd1)
+            vrot1 = p1.speed - vcenter1
+            hit = True
+
+        dv = p2.speed - self.vcenter + self.vrot
+        if (dv @ dv) > 0.0001:
+            vcd2 = (p2.position + p2.speed/2) - C
+            vcenter2 = (p2.speed @ vcd2) * vcd2 / (vcd2 @ vcd2)
+            vrot2 = p2.speed - vcenter2
+            hit = True
+
+        if hit:
+            self.vcenter = vcenter1 + vcenter2
+            self.vrot = vrot1 + vrot2
+            # vrot = self.vrot.copy()
+
+            # p1n = p1.position + self.vrot
+            # dpn = p1n - C
+            # p1n = C + (self.length/2) * dpn / (math.sqrt(dpn @ dpn))
+            # self.vrot = p1n - p1.position
+
+            # p1n = p1.position + self.vrot
+            # p2n = p2.position - self.vrot
+            # dpn = p1n - p2n
+
+            # print(math.sqrt(dpn @ dpn), self.length, self.vrot - vrot)
+        # print(vcenter1, vrot1, vcenter2, vrot2, self.vcenter, self.vrot)
+
+        return hit
+
     def rotate(self):
         # self.vcenter = self.box.nullvector.copy()
 
         # dp2 = self.p1.position - self.p2.position
         dp2 = (self.p1.position + self.vrot) - (self.p2.position - self.vrot)
-        vrotp = (self.vrot @ dp2) * dp2/(dp2 @ dp2)
+        vrotp = (self.vrot @ dp2) * dp2 / (dp2 @ dp2)
 
         self.vrot -= 2*vrotp
     
     def pull(self):
         h1 = h2 = False
-        h1 = self.hit(self.p1, self.p2) 
+        h1 = self.hit(self.p1, self.p2)
         # h2 = self.hit(self.p2, self.p1)
-        if not (h1 or h2):
+        if not h1:
+        # if True:
             self.rotate()
             pass
 
@@ -1597,16 +1640,22 @@ class ArrangeParticles:
         dpos[Box.X] = length/2
         pos = self.box.center + dpos
         speed = self.box.nullvector.copy()
-        speed[Box.Y] = 1.0 # self.box.random(0.5)
+        # speed = self.box.random(1.0)
+        #speed[Box.X] = 1.5
+        #speed[Box.Y] = 2.0
         ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=0, color=[255,0,0])
         balls.append(ball)
         b1 = ball
 
         dpos = self.box.nullvector.copy()
         dpos[Box.X] = -length/2
+        # dpos[Box.Y] = 50
         pos = self.box.center + dpos
         speed = self.box.nullvector.copy()
         # speed[Box.Y] = 1.0 # self.box.random(0.5)
+        
+        speed[Box.X] = 1.5
+        speed[Box.Y] = -2.0
         ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=0, color=[0,255,0])
         balls.append(ball)
         b2 = ball
@@ -1624,7 +1673,10 @@ def load(path):
     
     data = yaml.load(file, Loader=yaml.FullLoader)
     file.close()
+    box = load_gas(data)
+    return box
 
+def load_gas(data):
     b = data["box"]
     box = Box(b["sizes"])
     try:
@@ -1665,7 +1717,7 @@ def load(path):
 
     return box
 
-def save(box, path):
+def save_gas(box, path):
     if isinstance(path, str):
         file = open(path)
     else:
@@ -1788,7 +1840,7 @@ def test_save_yaml():
     arrangement = ArrangeParticles(box)
     balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
 
-    save(box, FILE)
+    save_gas(box, FILE)
 
 def test_load_yaml():
     FILE = "D:\\temp\\box.yml"
