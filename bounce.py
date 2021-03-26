@@ -118,7 +118,7 @@ def main():
     print(box.vertices)
     for i, v in enumerate(box.vertices):
     	print(i, v)
-    print(box.egdes)
+    print(box.edges)
 
     box.add_particle()
     box.add_particle()

@@ -3,6 +3,7 @@ Ideal gas in n-dimensional box
 """
 import itertools
 import numpy
+from numpy import linalg
 import random
 import math
 from math import sin, cos
@@ -223,7 +224,7 @@ class Box:
         self.unitvector = numpy.array([1.0]*self.dimensions)
         self.nullvector = self.unitvector * 0
         self.vertices = []
-        self.egdes = []
+        self.edges = []
         self.axis = []
         self._get_vertices()
         self._get_edges()
@@ -268,7 +269,7 @@ class Box:
                     if v1[k] == v2[k]:
                         c += 1
                 if c == self.dimensions-1:
-                    self.egdes.append((i,j))
+                    self.edges.append((i,j))
     
     def _get_axis(self):
         """
@@ -1408,7 +1409,7 @@ class ArrangeParticles:
         balls[-1].speed = -5 * self.box.unitvector.copy()
 
         l = sum(box.box_sizes)/box.dimensions
-        for edge in box.egdes:
+        for edge in box.edges:
             spring = Spring(l, 0.01, 0.01, balls[edge[0]], balls[edge[1]])
             self.box.springs.append(spring)
         
@@ -1717,7 +1718,7 @@ def load_gas(data):
 
     return box
 
-def save_gas(box, path):
+def save(box, path):
     if isinstance(path, str):
         file = open(path)
     else:
@@ -1727,145 +1728,179 @@ def save_gas(box, path):
     yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
     file.close()
 
-def test_wall():
-    D = 1
-    box = Box([10,20,30])
-    print(box.vertices)
-    print(box.egdes)
-    print()
-    wall = Wall(box, 0.5, D)
-    print(box.box_sizes)
-    print(wall._vector, wall.position)
-    print("wall: ", wall)
-    center = sum(wall.vertices)/len(wall.vertices)
-    coords = [[vertex[0],vertex[1]] for vertex in wall.vertices]
-    print("coords: ", coords)
-    size = numpy.array(max(coords))
+class Test():
+    def test_wall(self):
+        D = 1
+        box = Box([10,20,30])
+        print(box.vertices)
+        print(box.edges)
+        print()
+        wall = Wall(box, 0.5, D)
+        print(box.box_sizes)
+        print(wall._vector, wall.position)
+        print("wall: ", wall)
+        center = sum(wall.vertices)/len(wall.vertices)
+        coords = [[vertex[0],vertex[1]] for vertex in wall.vertices]
+        print("coords: ", coords)
+        size = numpy.array(max(coords))
 
-    print("center: ", center)
+        print("center: ", center)
 
-    try:
-        size[D] = -1
-    except IndexError:
-        pass
-    print("size: ", size)
-
-    print()
-    print(wall.vertices.mean(axis=D))
-    pass
-
-def test_box():
-    box = Box([800,600,700])
-    print(box.vertices)
-    print(box.egdes)
-    print(box.volume())
-    print(box.area())
-    print(box.axis)
-
-def test():
-    BOX_DIMENSIONS = [800, 600, 700, 400, 300]
-    NBALLS = 20
-    GRAVITY = 0.0
-    FRICTION = 0.00
-    INTERACTION = 0000.0
-    TORUS = False
-    DIMENSIONS = 3
-    SPEED = VMAX
-    box = Box(BOX_DIMENSIONS[:DIMENSIONS])
-    # for i in range(NBALLS):
-    #     if SPEED is not None:
-    #         speed = numpy.array([2*random.random()-1 for r in range(DIMENSIONS)])
-    #         speed = SPEED * speed / math.sqrt(speed.dot(speed))
-    #         speed = list(speed)
-    #     else:
-    #         speed = SPEED
-    #     box.add_particle(1, 1, None, speed)
-
-    arrangement = ArrangeParticles(box)
-    # arrangement.random_balls(25, None, None, VMAX, None)
-
-    # balls = arrangement.test_springs(10000)
-    # self.add_balls(balls)
-
-    # balls = arrangement.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
-    balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
-    for i in range(1000):
         try:
+            size[D] = -1
+        except IndexError:
+            pass
+        print("size: ", size)
+
+        print()
+        print(wall.vertices.mean(axis=D))
+        pass
+
+    def test_box(self):
+        box = Box([800,600,700])
+        print(box.vertices)
+        print(box.edges)
+        print(box.volume())
+        print(box.area())
+        print(box.axis)
+
+    def test(self):
+        BOX_DIMENSIONS = [800, 600, 700, 400, 300]
+        NBALLS = 20
+        GRAVITY = 0.0
+        FRICTION = 0.00
+        INTERACTION = 0000.0
+        TORUS = False
+        DIMENSIONS = 3
+        SPEED = VMAX
+        box = Box(BOX_DIMENSIONS[:DIMENSIONS])
+        # for i in range(NBALLS):
+        #     if SPEED is not None:
+        #         speed = numpy.array([2*random.random()-1 for r in range(DIMENSIONS)])
+        #         speed = SPEED * speed / math.sqrt(speed.dot(speed))
+        #         speed = list(speed)
+        #     else:
+        #         speed = SPEED
+        #     box.add_particle(1, 1, None, speed)
+
+        arrangement = ArrangeParticles(box)
+        # arrangement.random_balls(25, None, None, VMAX, None)
+
+        # balls = arrangement.test_springs(10000)
+        # self.add_balls(balls)
+
+        # balls = arrangement.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
+        balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
+        for i in range(1000):
+            try:
+                box.go()
+                # KE = sum(ball.energy for ball in box.particles)
+                # EE = KE * (2 / DIMENSIONS) # https://en.wikipedia.org/wiki/Kinetic_theory_of_gases#Pressure_and_kinetic_energy
+                # PV = box.pressure()*box.volume()
+                # print("{:.2f} {:.2f} {:.2f}".format(PV, EE, PV/EE))
+                # PE = sum(ball.potential_energy for ball in box.particles)
+                # SE = sum(spring.energy for spring in box.springs)
+                KE = box.energy["KE"]
+                PE = box.energy["PE"]
+                EE = box.energy["EE"]
+                SE = box.energy["SE"]
+
+                print("{};{};{};{};{};{}".format(i, KE, PE, SE, EE, KE+PE+SE).replace(".", ","))
+                
+                # print("{:,2f} {:,2f} {:,2f}".format(PV, E, PV/E))
+
+            except KeyboardInterrupt:
+                print("user interupted")
+                break
+        
+        from pprint import pp
+        pp(box.out())            
+
+    def test_displacement(self):
+        box = Box([10, 20])
+        p1 = numpy.array([1,2])
+        p2 = numpy.array([2,19])  
+        p3 = numpy.array([9,19])
+        box.torus = True
+
+        d = box.displacement(p1, p2)
+        print(d, p1 - p2)
+
+        d = box.displacement(p1, p3)
+        print(d, p1 - p3)
+
+    def test_save_yaml(self):
+        FILE = "D:\\temp\\box.yml"
+        BOX_DIMENSIONS = [800, 600, 700, 400, 300]
+        NBALLS = 20
+        GRAVITY = 0.0
+        FRICTION = 0.00
+        INTERACTION = 0000.0
+        TORUS = False
+        DIMENSIONS = 3
+        box = Box(BOX_DIMENSIONS[:DIMENSIONS])
+        arrangement = ArrangeParticles(box)
+        balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
+
+        save(box, FILE)
+
+    def test_load_yaml(self):
+        FILE = "D:\\temp\\box.yml"
+        box = load(FILE)
+        print(box)
+
+        for p in box.particles:
+            print(p)
+        
+        for s in box.springs:
+            print(s)
+        
+        for i in range(100):
             box.go()
-            # KE = sum(ball.energy for ball in box.particles)
-            # EE = KE * (2 / DIMENSIONS) # https://en.wikipedia.org/wiki/Kinetic_theory_of_gases#Pressure_and_kinetic_energy
-            # PV = box.pressure()*box.volume()
-            # print("{:.2f} {:.2f} {:.2f}".format(PV, EE, PV/EE))
-            # PE = sum(ball.potential_energy for ball in box.particles)
-            # SE = sum(spring.energy for spring in box.springs)
-            KE = box.energy["KE"]
-            PE = box.energy["PE"]
-            EE = box.energy["EE"]
-            SE = box.energy["SE"]
-
-            print("{};{};{};{};{};{}".format(i, KE, PE, SE, EE, KE+PE+SE).replace(".", ","))
-            
-            # print("{:,2f} {:,2f} {:,2f}".format(PV, E, PV/E))
-
-        except KeyboardInterrupt:
-            print("user interupted")
-            break
+            print(box.ticks)
     
-    from pprint import pp
-    pp(box.out())            
+    def normal(self):
+        sizes = [100,100,100,100,100,100,100,100,100,100,100,100]
+        box = Box(sizes)
+        print(box.vertices)
+        print(box.axis)
 
-def test_displacement():
-    box = Box([10, 20])
-    p1 = numpy.array([1,2])
-    p2 = numpy.array([2,19])  
-    p3 = numpy.array([9,19])
-    box.torus = True
+        n = linalg.solve(box.axis, box.unitvector)
+        N = n / math.sqrt(n@n)
+        print(n, N, N@N)
 
-    d = box.displacement(p1, p2)
-    print(d, p1 - p2)
+        points = []
+        for i in range(box.dimensions):
+            p = box.random_position()
+            points.append(p)
 
-    d = box.displacement(p1, p3)
-    print(d, p1 - p3)
 
-def test_save_yaml():
-    FILE = "D:\\temp\\box.yml"
-    BOX_DIMENSIONS = [800, 600, 700, 400, 300]
-    NBALLS = 20
-    GRAVITY = 0.0
-    FRICTION = 0.00
-    INTERACTION = 0000.0
-    TORUS = False
-    DIMENSIONS = 3
-    box = Box(BOX_DIMENSIONS[:DIMENSIONS])
-    arrangement = ArrangeParticles(box)
-    balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
+        print("\n######\n")
+        print(points)
 
-    save_gas(box, FILE)
+        n = linalg.solve(points, box.unitvector)
+        N = n/math.sqrt(n@n)
+        print(N)
+        p = points[-1]
+        for q in points:
+            d = p - q
+            print(d@N)
+            p = q
 
-def test_load_yaml():
-    FILE = "D:\\temp\\box.yml"
-    box = load(FILE)
-    print(box)
-
-    for p in box.particles:
-        print(p)
-    
-    for s in box.springs:
-        print(s)
-    
-    for i in range(100):
-        box.go()
-        print(box.ticks)
-
+        # print(box.edges)
+        
 
 if __name__ == "__main__": 
     print("START")
+
+    t = Test()
     
-    # test_wall()
-    # test_box()
-    # test()
-    # test_save_yaml()
-    test_load_yaml()
-    # test_displacement()
+    # t.test_wall()
+    # t.test_box()
+    # t.test()
+    # t.test_save_yaml()
+    # t.test_load_yaml()
+    # t.test_displacement()
+    t.normal()
 
     print("END")
