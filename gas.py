@@ -221,8 +221,8 @@ class Box:
         self.torus = torus
         # calculated properties based on box_sizes
         self.dimensions = len(self.box_sizes)
-        self.unitvector = numpy.array([1.0]*self.dimensions)
-        self.nullvector = self.unitvector * 0
+        self.onevector = numpy.array([1.0]*self.dimensions)
+        self.nullvector = self.onevector * 0
         self.vertices = []
         self.edges = []
         self.axis = []
@@ -694,6 +694,80 @@ class Box:
         for ball in self.particles:
             ball.move()
 
+class Plane:
+    def __init__(self, box: Box, normal=None, point=None, points=None) -> None:
+        self.box = box
+        
+        if normal is not None and point is not None:
+            if len(normal) != self.box.dimensions or len(point) != self.box.dimensions:
+                raise ValueError("wrong size")
+            else:
+                normal = numpy.array(normal)
+                self.normal = normal/math.sqrt(normal@normal)
+                self.point = numpy.array(point)
+        elif points is not None:
+            if numpy.shape(points) != (self.box.dimensions, self.box.dimensions):
+                raise ValueError("wrong size")
+            else:
+                points = numpy.array(points)
+                self.normal = self._get_normal(points)
+                self.point = numpy.array(sum(point for point in points)/len(points))
+                # self._test_normal(points)
+        else:
+            raise TypeError("missing required argument")
+        
+        self.D = self.normal @ self.point
+        
+    def _get_normal(self, points):
+        normal = linalg.solve(points, self.box.onevector)
+        unitnormal = normal/math.sqrt(normal@normal)
+        return unitnormal
+
+    def _test_normal(self, points):
+        print(self.normal)
+        p = points[-1]
+        for q in points:
+            d = p - q
+            print(d@self.normal)
+            p = q
+    
+    def __str__(self) -> str:
+        parts = []
+        for i, p in enumerate(self.normal):
+            part = "{}*x{}".format(p, i)
+            parts.append(part)
+        
+        equation = " + ".join(parts)
+        equation += " = {}".format(self.D)
+        pstr = "plane:\n normal: {}\n point: {}\n D: {}\nequation: {}".format(self.normal, self.point, self.D, equation)
+        return pstr
+    
+    def intersection(self, planes):
+        if self not in planes:
+            planes.append(self)
+        
+        if len(planes) != self.box.dimensions:
+            raise ValueError("not enough planes to calculate intersection")
+        normals = [p.normal for p in planes]
+        Ds = [p.D for p in planes]
+
+        intersection = linalg.solve(normals, Ds)
+
+        return intersection
+    
+    def on(self, point):
+        v = numpy.array(point) - self.point
+        if v @ self.normal == 0:
+            return True
+        return False
+    
+    def on2(self, point):
+        point = numpy.array(point)
+        if sum(point * self.normal) == self.D:
+            return True
+        else:
+            return False
+
 
 class Wall:
     """
@@ -722,7 +796,7 @@ class Wall:
         """
         Sets wall properties
         """
-        self._vector = self.box.unitvector.copy()
+        self._vector = self.box.onevector.copy()
         self._vector[self.dimension] *= self.rpos
         self.position = self.box.box_sizes * self._vector
         self.vertices = numpy.array([vertex*self._vector for vertex in self.box.vertices if vertex[self.dimension] != 0]) 
@@ -1367,8 +1441,8 @@ class ArrangeParticles:
             ball = self.box.add_particle(1, 10, pos, speed, charge)
             balls.append(ball)
 
-        balls[0].speed = 5 * self.box.unitvector.copy()
-        balls[-1].speed = -5 * self.box.unitvector.copy()
+        balls[0].speed = 5 * self.box.onevector.copy()
+        balls[-1].speed = -5 * self.box.onevector.copy()
 
         for i, b1 in enumerate(balls):
             for b2 in balls[i:]:
@@ -1405,8 +1479,8 @@ class ArrangeParticles:
             ball = self.box.add_particle(1, 10, pos, speed, charge)
             balls.append(ball)
         
-        balls[0].speed = 5 * self.box.unitvector.copy()
-        balls[-1].speed = -5 * self.box.unitvector.copy()
+        balls[0].speed = 5 * self.box.onevector.copy()
+        balls[-1].speed = -5 * self.box.onevector.copy()
 
         l = sum(box.box_sizes)/box.dimensions
         for edge in box.edges:
@@ -1729,6 +1803,46 @@ def save(box, path):
     file.close()
 
 class Test():
+    def test_plane(self):
+        planes = []
+        box = Box([10,20,30])
+        plane = Plane(box, [3,2,5], [5,10,30])
+        print(plane)
+        planes.append(plane)
+
+        print("\n####\n")
+
+        # plane2 = Plane(box, points=[[5,10,15],[6,8,2],[7,12,4]])
+        plane2 = Plane(box, [2,4,3], [5,10,30])
+        # plane2 = Plane(box, [3,2,5], [5,10,30])
+        print(plane2)
+        planes.append(plane2)
+
+        print("\n####\n")
+
+        plane3 = Plane(box, [5,3,6], [5,15,25])
+        print(plane3)
+        planes.append(plane3)
+
+        print("\n####\n")
+        print(plane.intersection(planes))
+        intersection = plane.intersection(planes)
+
+        print("\n####\n")
+
+        print(plane.on([5,10,30]))
+        print(plane.on2([5,10,30]))
+
+        print(plane.on([5,13,33]))
+        print(plane.on2([5,13,33]))
+
+        print("\n####\n")
+        for p in planes:
+            print(p.on(intersection))
+            print(p.on2(intersection))
+
+
+
     def test_wall(self):
         D = 1
         box = Box([10,20,30])
@@ -1860,12 +1974,12 @@ class Test():
             print(box.ticks)
     
     def normal(self):
-        sizes = [100,100,100,100,100,100,100,100,100,100,100,100]
+        sizes = [100,100,100,100]
         box = Box(sizes)
         print(box.vertices)
         print(box.axis)
 
-        n = linalg.solve(box.axis, box.unitvector)
+        n = linalg.solve(box.axis, box.onevector)
         N = n / math.sqrt(n@n)
         print(n, N, N@N)
 
@@ -1878,7 +1992,7 @@ class Test():
         print("\n######\n")
         print(points)
 
-        n = linalg.solve(points, box.unitvector)
+        n = linalg.solve(points, box.onevector)
         N = n/math.sqrt(n@n)
         print(N)
         p = points[-1]
@@ -1901,6 +2015,7 @@ if __name__ == "__main__":
     # t.test_save_yaml()
     # t.test_load_yaml()
     # t.test_displacement()
-    t.normal()
+    # t.normal()
+    t.test_plane()
 
     print("END")
