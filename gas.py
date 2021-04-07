@@ -226,9 +226,11 @@ class Box:
         self.vertices = []
         self.edges = []
         self.axis = []
+        self.planes = []
         self._get_vertices()
         self._get_edges()
         self._get_axis()
+        self._get_planes()
         self.center = sum(self.vertices)/len(self.vertices)
         # physical properties
         self.field = None
@@ -285,6 +287,25 @@ class Box:
             self.axis.append(_axis)
         
         return self.axis
+    
+    def _get_planes(self):       
+        coordinates = self.box_sizes
+        for i, x in enumerate(coordinates):
+            points = [p for p in self.vertices if p[i] == x]
+            point = sum(points)/len(points)
+            points.pop(-1)
+            plane = Plane(self, point=point, points=points)
+            # plane.point = point
+            self.planes.append(plane)
+
+        coordinates = self.nullvector
+        for i, x in enumerate(coordinates):
+            points = [p for p in self.vertices if p[i] == x]
+            point = sum(points)/len(points)
+            points.pop(-1)
+            plane = Plane(self, point=point, points=points)
+            # plane.point = point
+            self.planes.append(plane)
 
     def __str__(self) -> str:
         return str(self.box_sizes)
@@ -702,44 +723,56 @@ class Plane:
             if len(normal) != self.box.dimensions or len(point) != self.box.dimensions:
                 raise ValueError("wrong size")
             else:
-                normal = numpy.array(normal)
-                self.normal = normal/math.sqrt(normal@normal)
                 self.point = numpy.array(point)
+                normal = numpy.array(normal)
+                self.unitnormal = normal/math.sqrt(normal@normal)
         elif points is not None:
             if numpy.shape(points) != (self.box.dimensions, self.box.dimensions):
                 raise ValueError("wrong size")
             else:
+                if point is not None:
+                    self.point = point
+                else:
+                    self.point = numpy.array(sum(point for point in points)/len(points))
                 points = numpy.array(points)
-                self.normal = self._get_normal(points)
-                self.point = numpy.array(sum(point for point in points)/len(points))
+                self.unitnormal = self._get_normal(points)
                 # self._test_normal(points)
         else:
             raise TypeError("missing required argument")
         
-        self.D = self.normal @ self.point
+        self.D = self.unitnormal @ self.point
         
     def _get_normal(self, points):
+
+        shape = numpy.shape(points)
+        ones = numpy.ones(shape)
+        i = 0
+        while linalg.det(points) == 0 and i < 10:
+            points += ones
+            i += 1
+        
         normal = linalg.solve(points, self.box.onevector)
+
         unitnormal = normal/math.sqrt(normal@normal)
         return unitnormal
 
     def _test_normal(self, points):
-        print(self.normal)
+        print(self.unitnormal)
         p = points[-1]
         for q in points:
             d = p - q
-            print(d@self.normal)
+            print(d @ self.unitnormal)
             p = q
     
     def __str__(self) -> str:
         parts = []
-        for i, p in enumerate(self.normal):
+        for i, p in enumerate(self.unitnormal):
             part = "{}*x{}".format(p, i)
             parts.append(part)
         
         equation = " + ".join(parts)
         equation += " = {}".format(self.D)
-        pstr = "plane:\n normal: {}\n point: {}\n D: {}\nequation: {}".format(self.normal, self.point, self.D, equation)
+        pstr = "plane:\n normal: {}\n point: {}\n D: {}\nequation: {}".format(self.unitnormal, self.point, self.D, equation)
         return pstr
     
     def intersection(self, planes):
@@ -748,25 +781,42 @@ class Plane:
         
         if len(planes) != self.box.dimensions:
             raise ValueError("not enough planes to calculate intersection")
-        normals = [p.normal for p in planes]
+        normals = [p.unitnormal for p in planes]
         Ds = [p.D for p in planes]
 
         intersection = linalg.solve(normals, Ds)
 
         return intersection
     
-    def on(self, point):
-        v = numpy.array(point) - self.point
-        if v @ self.normal == 0:
-            return True
-        return False
+    # def on(self, point):
+    #     v = numpy.array(point) - self.point
+    #     if v @ self.normal == 0:
+    #         return True
+    #     return False
     
-    def on2(self, point):
+    # def on2(self, point):
+    #     point = numpy.array(point)
+    #     if sum(point * self.normal) == self.D:
+    #         return True
+    #     else:
+    #         return False
+    
+    def distance(self, point):
         point = numpy.array(point)
-        if sum(point * self.normal) == self.D:
-            return True
+        v = point - self.point
+        return v @ self.unitnormal
+    
+    def intersect_line(self, point, vector):
+        dt = (self.point - point) @ self.unitnormal
+        dn = vector * self.unitnormal
+        if dt == 0:
+            return None
+        elif dn == 0:
+            return None
         else:
-            return False
+            d = dt / dn
+        
+        return point + vector * d
 
 
 class Wall:
@@ -1974,10 +2024,15 @@ class Test():
             print(box.ticks)
     
     def normal(self):
-        sizes = [100,100,100,100]
+        sizes = [100,100,100]
         box = Box(sizes)
         print(box.vertices)
+        print(box.edges)
         print(box.axis)
+        for p in box.planes:
+            print(p)
+
+        return 
 
         n = linalg.solve(box.axis, box.onevector)
         N = n / math.sqrt(n@n)
@@ -2016,6 +2071,6 @@ if __name__ == "__main__":
     # t.test_load_yaml()
     # t.test_displacement()
     # t.normal()
-    t.test_plane()
+    t.normal()
 
     print("END")
