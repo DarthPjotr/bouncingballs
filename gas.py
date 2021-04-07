@@ -293,8 +293,7 @@ class Box:
         for i, x in enumerate(coordinates):
             points = [p for p in self.vertices if p[i] == x]
             point = sum(points)/len(points)
-            points.pop(-1)
-            plane = Plane(self, point=point, points=points)
+            plane = Plane(self, point=point, points=points[:self.dimensions])
             # plane.point = point
             self.planes.append(plane)
 
@@ -302,8 +301,7 @@ class Box:
         for i, x in enumerate(coordinates):
             points = [p for p in self.vertices if p[i] == x]
             point = sum(points)/len(points)
-            points.pop(-1)
-            plane = Plane(self, point=point, points=points)
+            plane = Plane(self, point=point, points=points[:self.dimensions])
             # plane.point = point
             self.planes.append(plane)
 
@@ -723,19 +721,19 @@ class Plane:
             if len(normal) != self.box.dimensions or len(point) != self.box.dimensions:
                 raise ValueError("wrong size")
             else:
-                self.point = numpy.array(point)
                 normal = numpy.array(normal)
                 self.unitnormal = normal/math.sqrt(normal@normal)
+                self.point = numpy.array(point)
         elif points is not None:
             if numpy.shape(points) != (self.box.dimensions, self.box.dimensions):
-                raise ValueError("wrong size")
+                pass
+                # raise ValueError("wrong size")
             else:
-                if point is not None:
-                    self.point = point
-                else:
-                    self.point = numpy.array(sum(point for point in points)/len(points))
+                if point is None:
+                    point = numpy.array(sum(point for point in points)/len(points))
                 points = numpy.array(points)
                 self.unitnormal = self._get_normal(points)
+                self.point = numpy.array(point)
                 # self._test_normal(points)
         else:
             raise TypeError("missing required argument")
@@ -747,10 +745,10 @@ class Plane:
         shape = numpy.shape(points)
         ones = numpy.ones(shape)
         i = 0
-        while linalg.det(points) == 0 and i < 10:
+        while linalg.det(points) == 0 and i < 100:
             points += ones
             i += 1
-        
+
         normal = linalg.solve(points, self.box.onevector)
 
         unitnormal = normal/math.sqrt(normal@normal)
@@ -967,7 +965,7 @@ class Particle:
         # self.impuls = self.mass * self.speed
         return collided
         
-    def bounce(self):
+    def _bounce_org(self):
         """
         Check and handles particle hitting the box walls
 
@@ -999,6 +997,32 @@ class Particle:
         self.box._normal_momentum += abs(momentum[index])
         return bounced
     
+    def bounce(self):
+        """
+        Check and handles particle hitting the box walls
+
+        Args:
+            box (Box): the box
+
+        Returns:
+            boolean: True if hit occured
+        """
+        bounced = False
+        old_speed = self.speed.copy()
+        index = 0
+
+        for plane in self.box.planes:
+            if abs(plane.distance(self.position)) < self.radius:
+                bounced = True
+                dp = (self.speed @ plane.unitnormal) * plane.unitnormal
+                dn = self.speed - dp
+                self.speed = 2*dn - self.speed
+                
+                momentum = self.mass * (old_speed - self.speed)
+                self.box.momentum += momentum
+                self.box._normal_momentum += abs(momentum @ plane.unitnormal)
+        return bounced
+
     def displacement(self, position):
         """
         Calculates displacement vector between this particle and a position vectors. 
@@ -2024,7 +2048,7 @@ class Test():
             print(box.ticks)
     
     def normal(self):
-        sizes = [100,100,100]
+        sizes = [100,100]
         box = Box(sizes)
         print(box.vertices)
         print(box.edges)

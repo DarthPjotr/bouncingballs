@@ -218,7 +218,7 @@ class MyGame(arcade.Window):
         #         ball.color = arcade.color.GREEN
         # self.add_balls(balls)
 
-        balls = arrangement.random_balls(20, 30, 30)
+        balls = arrangement.random_balls(5, 30, 30)
         # # balls = arrangement.random_balls(10, charge=-1)
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)
         # for ball in balls:
