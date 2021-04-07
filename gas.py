@@ -361,6 +361,10 @@ class Box:
         self._get_vertices()
         self._get_edges()
         self._get_axis()
+        planes = self.planes[self.dimensions:]
+        self.planes = []
+        self._get_planes()
+        self.planes.extend(planes)
         self.center = sum(self.vertices)/len(self.vertices)
         self.ticks = 1
         self._normal_momentum = 0
@@ -726,8 +730,7 @@ class Plane:
                 self.point = numpy.array(point)
         elif points is not None:
             if numpy.shape(points) != (self.box.dimensions, self.box.dimensions):
-                pass
-                # raise ValueError("wrong size")
+                raise ValueError("wrong size")
             else:
                 if point is None:
                     point = numpy.array(sum(point for point in points)/len(points))
@@ -806,7 +809,7 @@ class Plane:
     
     def intersect_line(self, point, vector):
         dt = (self.point - point) @ self.unitnormal
-        dn = vector * self.unitnormal
+        dn = vector @ self.unitnormal
         if dt == 0:
             return None
         elif dn == 0:
@@ -1009,18 +1012,24 @@ class Particle:
         """
         bounced = False
         old_speed = self.speed.copy()
-        index = 0
 
         for plane in self.box.planes:
             if abs(plane.distance(self.position)) < self.radius:
-                bounced = True
-                dp = (self.speed @ plane.unitnormal) * plane.unitnormal
-                dn = self.speed - dp
-                self.speed = 2*dn - self.speed
-                
-                momentum = self.mass * (old_speed - self.speed)
-                self.box.momentum += momentum
-                self.box._normal_momentum += abs(momentum @ plane.unitnormal)
+                intersection = plane.intersect_line(self.position, self.speed)
+                if intersection is None:
+                    continue
+                p2 = (self.position + self.speed)
+                p2i = p2 - intersection
+                if (p2i @ p2i) < (self.speed @ self.speed):
+                # if True:
+                    bounced = True
+                    dp = (self.speed @ plane.unitnormal) * plane.unitnormal
+                    dn = self.speed - dp
+                    self.speed = 2*dn - self.speed
+                    
+                    momentum = self.mass * (old_speed - self.speed)
+                    self.box.momentum += momentum
+                    self.box._normal_momentum += abs(momentum @ plane.unitnormal)
         return bounced
 
     def displacement(self, position):

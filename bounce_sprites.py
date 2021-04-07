@@ -45,7 +45,7 @@ GRAVITY = 0.0
 FRICTION = 0.00
 INTERACTION = 10000.0
 TORUS = False
-DIMENSIONS = 3
+DIMENSIONS = 2
 # HEIGHT = 30
 SPEED = 3
 
@@ -219,11 +219,14 @@ class MyGame(arcade.Window):
         # self.add_balls(balls)
 
         balls = arrangement.random_balls(5, 30, 30)
+        points = self.box.axis
+        plane = Plane(self.box, points=points)
+        self.box.planes.append(plane)
         # # balls = arrangement.random_balls(10, charge=-1)
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)
         # for ball in balls:
         #     ball.color = arcade.color.RED
-        # self.add_balls(balls)
+        self.add_balls(balls)
 
         # for i, ball in enumerate(self.box.particles):
         #     print(i, ball.position, ball.speed)
@@ -237,7 +240,7 @@ class MyGame(arcade.Window):
         # balls = arrangement.create_n_mer(4, 4, False, True, -1)
         # self.add_balls(balls)
 
-        # balls = arrangement.create_simplex(200, self.box.center, 0, self.box.dimensions)
+        balls = arrangement.create_simplex(200, self.box.center, 0, self.box.dimensions+1)
         # self.add_balls(balls)
 
         # balls = arrangement.create_pendulum()
