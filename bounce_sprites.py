@@ -17,7 +17,7 @@ from gas import *
 
 # Set up the constants
 
-ASK_LOAD = True
+ASK_LOAD = False
 
 UPDATE_RATE = 1/60
 TEXT_REFRESH = 10
@@ -45,7 +45,7 @@ GRAVITY = 0.0
 FRICTION = 0.00
 INTERACTION = 10000.0
 TORUS = False
-DIMENSIONS = 2
+DIMENSIONS = 3
 # HEIGHT = 30
 SPEED = 3
 
@@ -218,7 +218,7 @@ class MyGame(arcade.Window):
         #         ball.color = arcade.color.GREEN
         # self.add_balls(balls)
 
-        # balls = arrangement.random_balls(20, 30, 30, charge=-1)
+        balls = arrangement.random_balls(20, 30, 30)
         # # balls = arrangement.random_balls(10, charge=-1)
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)
         # for ball in balls:
@@ -241,7 +241,7 @@ class MyGame(arcade.Window):
         # self.add_balls(balls)
 
         # balls = arrangement.create_pendulum()
-        balls = arrangement.test_rod(150)
+        # balls = arrangement.test_rod(150)
         # balls = arrangement.test_fixed_charge(10000)
 
         self.add_balls(balls)
