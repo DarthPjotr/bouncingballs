@@ -219,8 +219,8 @@ class MyGame(arcade.Window):
         # self.add_balls(balls)
         balls = arrangement.random_balls(5, 30, 30)
         points = self.box.axis
-        normal = [1,1,1,1,1,1]
-        point = self.box.center/2
+        normal = [1,-3,-1,1,1,1]
+        point = self.box.center/3
         plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
         self.box.planes.append(plane)
 
@@ -351,9 +351,9 @@ class MyGame(arcade.Window):
             points = plane.box_intersections
 
             if len(points) > 0:
-                arcade.draw_polygon_outline(points, arcade.color.BLUE, 2)
+                arcade.draw_polygon_outline(points, arcade.color.LIGHT_GRAY, 2)
                 for i, point in enumerate(points):
-                    arcade.draw_circle_filled(*point[:2], 5, arcade.color.RED)
+                    arcade.draw_circle_filled(*point[:2], 3, arcade.color.LIGHT_GRAY)
                     # arcade.draw_text(str(i), *point[:2], arcade.color.WHITE, 12)
                     
         # draw avg impuls vector

@@ -367,6 +367,8 @@ class Box:
         planes = self.planes[2*self.dimensions:]
         self.planes = []
         self._get_planes()
+        for plane in planes:
+            plane.box_intersections = plane._box_intersections()
         self.planes.extend(planes)
         self.center = sum(self.vertices)/len(self.vertices)
         self.ticks = 1
@@ -827,23 +829,23 @@ class Plane:
                 if not skip:
                     points.append(intersection)
         
-        points = self._sort_by_distance(points)
+        # points = self._sort_by_distance(points)
+        points = self._sort_by_planes(points)
 
         return points
     
     def _sort_by_distance(self, points):
-        if len(points) > 2:
+        if len(points) > 0:
             sorted = []
-
             imin = 0
             while len(points) > 0:
                 p0 = points.pop(imin)
                 sorted.append(p0)
-                dmin = max(self.box.box_sizes) ** 2
+                dmin2 = max(self.box.box_sizes) ** 2
                 for i, p1 in enumerate(points):
                     d01 = (p1-p0) @ (p1-p0)
-                    if d01 < dmin:
-                        dmin = d01
+                    if d01 < dmin2:
+                        dmin2 = d01
                         imin = i
             
             points = sorted
@@ -852,9 +854,9 @@ class Plane:
     
     def _sort_by_angles(self, points):
         if len(points) > 0:
-
             p1 = points[0] - self.point
             pt = []
+
             for p in points:
                 p2 = p - self.point
                 p1p2 = math.sqrt(p1@p1) * math.sqrt(p2@p2)
@@ -867,9 +869,23 @@ class Plane:
                     theta = 360*acos(cos)/(2*math.pi)
                     pt.append([theta, cos, p])
 
-
             points = [p[1] for p in pt]
         
+        return points
+    
+    def _sort_by_planes(self, points):
+        sorted = []
+
+        i = 0
+        while len(points) > 0:
+            p0 = points.pop(i)
+            sorted.append(p0)
+            for i, p1 in enumerate(points):
+                if numpy.any(p0==p1):
+                    sorted.append(p1)
+                    break
+
+        points = sorted
         return points
 
 class Wall:
