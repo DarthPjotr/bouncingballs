@@ -45,7 +45,7 @@ GRAVITY = 0.0
 FRICTION = 0.00
 INTERACTION = 10000.0
 TORUS = False
-DIMENSIONS = 2
+DIMENSIONS = 3
 # HEIGHT = 30
 SPEED = 3
 
@@ -217,11 +217,13 @@ class MyGame(arcade.Window):
         #     else:
         #         ball.color = arcade.color.GREEN
         # self.add_balls(balls)
-
         balls = arrangement.random_balls(5, 30, 30)
         points = self.box.axis
-        plane = Plane(self.box, points=points)
+        normal = [1,1,1,1,1,1]
+        point = self.box.center/2
+        plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
         self.box.planes.append(plane)
+
         # # balls = arrangement.random_balls(10, charge=-1)
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)
         # for ball in balls:
@@ -271,7 +273,7 @@ class MyGame(arcade.Window):
         # self.add_balls(balls)
 
         self.quiet = True
-        self.pause = True
+        # self.pause = True
         self.text = False
 
     def add_balls(self, balls=list):
@@ -344,6 +346,16 @@ class MyGame(arcade.Window):
             wall_ = arcade.create_rectangle_filled(*center, *size,  (150,150,150))
             wall_.draw()
         
+        # draw planes
+        for i, plane in enumerate(self.box.planes[2*self.box.dimensions:]):
+            points = plane.box_intersections
+
+            if len(points) > 0:
+                arcade.draw_polygon_outline(points, arcade.color.BLUE, 2)
+                for i, point in enumerate(points):
+                    arcade.draw_circle_filled(*point[:2], 5, arcade.color.RED)
+                    # arcade.draw_text(str(i), *point[:2], arcade.color.WHITE, 12)
+                    
         # draw avg impuls vector
         start = self.box.box_sizes/2
         avg_impuls = self.box.avg_momentum()

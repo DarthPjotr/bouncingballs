@@ -4,9 +4,12 @@ Ideal gas in n-dimensional box
 import itertools
 import numpy
 from numpy import linalg
+from pyglet.window.key import E
+# from scipy.spatial import ConvexHull, QhullError
+import scipy.spatial as sp
 import random
 import math
-from math import sin, cos
+from math import sin, cos, acos
 
 import yaml
 from pprint import pp
@@ -361,7 +364,7 @@ class Box:
         self._get_vertices()
         self._get_edges()
         self._get_axis()
-        planes = self.planes[self.dimensions:]
+        planes = self.planes[2*self.dimensions:]
         self.planes = []
         self._get_planes()
         self.planes.extend(planes)
@@ -742,6 +745,7 @@ class Plane:
             raise TypeError("missing required argument")
         
         self.D = self.unitnormal @ self.point
+        self.box_intersections = self._box_intersections()
         
     def _get_normal(self, points):
 
@@ -773,7 +777,8 @@ class Plane:
         
         equation = " + ".join(parts)
         equation += " = {}".format(self.D)
-        pstr = "plane:\n normal: {}\n point: {}\n D: {}\nequation: {}".format(self.unitnormal, self.point, self.D, equation)
+        # pstr = "plane:\n normal: {}\n point: {}\n D: {}\nequation: {}".format(self.unitnormal, self.point, self.D, equation)
+        pstr = "n:{},\tp:{}".format(self.unitnormal, self.point)
         return pstr
     
     def intersection(self, planes):
@@ -788,19 +793,6 @@ class Plane:
         intersection = linalg.solve(normals, Ds)
 
         return intersection
-    
-    # def on(self, point):
-    #     v = numpy.array(point) - self.point
-    #     if v @ self.normal == 0:
-    #         return True
-    #     return False
-    
-    # def on2(self, point):
-    #     point = numpy.array(point)
-    #     if sum(point * self.normal) == self.D:
-    #         return True
-    #     else:
-    #         return False
     
     def distance(self, point):
         point = numpy.array(point)
@@ -818,7 +810,67 @@ class Plane:
             d = dt / dn
         
         return point + vector * d
+    
+    def _box_intersections(self):
+        points = []
+        for (i, j) in self.box.edges:
+            v1 = self.box.vertices[i]
+            v2 = self.box.vertices[j]
+            V = v1 - v2
+            intersection = self.intersect_line(v1, V)
+            if intersection is not None and numpy.all(intersection <= self.box.box_sizes) and numpy.all(intersection >= self.box.nullvector):
+                skip = False
+                for ins in points:
+                    if numpy.allclose(intersection, ins):
+                        skip = True
+                        break
+                if not skip:
+                    points.append(intersection)
+        
+        points = self._sort_by_distance(points)
 
+        return points
+    
+    def _sort_by_distance(self, points):
+        if len(points) > 2:
+            sorted = []
+
+            imin = 0
+            while len(points) > 0:
+                p0 = points.pop(imin)
+                sorted.append(p0)
+                dmin = max(self.box.box_sizes) ** 2
+                for i, p1 in enumerate(points):
+                    d01 = (p1-p0) @ (p1-p0)
+                    if d01 < dmin:
+                        dmin = d01
+                        imin = i
+            
+            points = sorted
+
+        return points
+    
+    def _sort_by_angles(self, points):
+        if len(points) > 0:
+
+            p1 = points[0] - self.point
+            pt = []
+            for p in points:
+                p2 = p - self.point
+                p1p2 = math.sqrt(p1@p1) * math.sqrt(p2@p2)
+                p1dp2 = p1@p2
+
+                if p1p2 != 0:
+                    cos = p1dp2/p1p2
+
+                if cos >= -1 and cos <= 1:
+                    theta = 360*acos(cos)/(2*math.pi)
+                    pt.append([theta, cos, p])
+
+
+            points = [p[1] for p in pt]
+        
+        return points
 
 class Wall:
     """
@@ -2056,8 +2108,9 @@ class Test():
             box.go()
             print(box.ticks)
     
-    def normal(self):
-        sizes = [100,100]
+    def plane(self):
+        # sizes = [1000, 900, 1080]
+        sizes = [100, 100, 1080]
         box = Box(sizes)
         print(box.vertices)
         print(box.edges)
@@ -2065,31 +2118,49 @@ class Test():
         for p in box.planes:
             print(p)
 
-        return 
 
-        n = linalg.solve(box.axis, box.onevector)
-        N = n / math.sqrt(n@n)
-        print(n, N, N@N)
+        # plane = Plane(box, points=box.axis)
+        point = box.center
+        normal = numpy.array([1,2,0])
 
-        points = []
-        for i in range(box.dimensions):
-            p = box.random_position()
-            points.append(p)
+        normal = [1,1,1]
+        point = box.center
+        plane = Plane(box, normal=normal, point=point)
+        # print(plane)
+        # box.planes.append(plane)
+        plane = Plane(box, normal=normal, point=point)
+        # print(plane)
+        box.planes.append(plane)
+
+        print("\n####\n")
+        for plane in box.planes[2*box.dimensions:]:
+            points = plane.box_intersections
+            print(plane)
+            print("\n")
+            print(points)
+            print("\n")
+            # print("\n")
+            # results = []
+            # points = []
+            # for (i, j) in box.edges:
+            #     v1 = box.vertices[i]
+            #     v2 = box.vertices[j]
+            #     V = v1 - v2
+            #     intersection = plane.intersect_line(v1, V)
+            #     if intersection is not None and numpy.all(intersection <= box.box_sizes) and numpy.all(intersection >= box.nullvector):
+            #         skip = False
+            #         for ins in points:
+            #             if numpy.allclose(intersection, ins):
+            #                 skip = True
+            #                 break
+            #         if not skip:
+            #             points.append(intersection)
+            #             results.append(((i,j),intersection))
+                
+            # for p in results:
+            #     print(p)
 
 
-        print("\n######\n")
-        print(points)
-
-        n = linalg.solve(points, box.onevector)
-        N = n/math.sqrt(n@n)
-        print(N)
-        p = points[-1]
-        for q in points:
-            d = p - q
-            print(d@N)
-            p = q
-
-        # print(box.edges)
         
 
 if __name__ == "__main__": 
@@ -2104,6 +2175,6 @@ if __name__ == "__main__":
     # t.test_load_yaml()
     # t.test_displacement()
     # t.normal()
-    t.normal()
+    t.plane()
 
     print("END")
