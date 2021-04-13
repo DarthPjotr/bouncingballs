@@ -219,8 +219,8 @@ class MyGame(arcade.Window):
         # self.add_balls(balls)
         balls = arrangement.random_balls(5, 30, 30)
         points = self.box.axis
-        normal = [1,-3,-1,1,1,1]
-        point = self.box.center/3
+        normal = [1,1,1,1,1,1]
+        point = self.box.center
         plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
         self.box.planes.append(plane)
 
@@ -242,14 +242,14 @@ class MyGame(arcade.Window):
         # balls = arrangement.create_n_mer(4, 4, False, True, -1)
         # self.add_balls(balls)
 
-        balls = arrangement.create_simplex(200, self.box.center, 0, self.box.dimensions+1)
+        # balls = arrangement.create_simplex(200, self.box.center, 0, self.box.dimensions+1)
         # self.add_balls(balls)
 
         # balls = arrangement.create_pendulum()
         # balls = arrangement.test_rod(150)
         # balls = arrangement.test_fixed_charge(10000)
 
-        self.add_balls(balls)
+        # self.add_balls(balls)
         #self.box.kick_all()
 
         # balls = arrangement.create_box(200, charge=1)

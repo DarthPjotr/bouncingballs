@@ -4,7 +4,7 @@ Ideal gas in n-dimensional box
 import itertools
 import numpy
 from numpy import linalg
-from pyglet.window.key import E
+from pyglet.window.key import E, F
 # from scipy.spatial import ConvexHull, QhullError
 import scipy.spatial as sp
 import random
@@ -296,7 +296,9 @@ class Box:
         for i, x in enumerate(coordinates):
             points = [p for p in self.vertices if p[i] == x]
             point = sum(points)/len(points)
-            plane = Plane(self, point=point, points=points[:self.dimensions])
+            normal = self.nullvector.copy()
+            normal[i] = 1
+            plane = Plane(self, point=point, normal=normal) #points=points[:self.dimensions])
             # plane.point = point
             self.planes.append(plane)
 
@@ -304,9 +306,14 @@ class Box:
         for i, x in enumerate(coordinates):
             points = [p for p in self.vertices if p[i] == x]
             point = sum(points)/len(points)
-            plane = Plane(self, point=point, points=points[:self.dimensions])
+            normal = self.nullvector.copy()
+            normal[i] = 1
+            plane = Plane(self, point=point, normal=normal) # points=points[:self.dimensions])
             # plane.point = point
             self.planes.append(plane)
+
+    def __get_planes(self):       
+        pass
 
     def __str__(self) -> str:
         return str(self.box_sizes)
@@ -320,6 +327,7 @@ class Box:
         box["interaction"] = float(self.interaction)
         box["particles"] = [ball.out() for ball in self.particles]
         box["springs"] = [spring.out() for spring in self.springs]
+        box["planes"] = [plane.out() for plane in self.planes[2*self.dimensions:]]
 
         output = {"box": box}
 
@@ -782,6 +790,12 @@ class Plane:
         # pstr = "plane:\n normal: {}\n point: {}\n D: {}\nequation: {}".format(self.unitnormal, self.point, self.D, equation)
         pstr = "n:{},\tp:{}".format(self.unitnormal, self.point)
         return pstr
+
+    def out(self):
+        plane = {}
+        plane["normal"] = [float(f) for f in self.unitnormal]
+        plane["point"] = [float(f) for f in self.point]
+        return plane
     
     def intersection(self, planes):
         if self not in planes:
@@ -876,12 +890,18 @@ class Plane:
     def _sort_by_planes(self, points):
         sorted = []
 
+        if self.box.dimensions < 4:
+            D = 1
+        else:
+            D = self.box.dimensions - 2
+
         i = 0
         while len(points) > 0:
             p0 = points.pop(i)
             sorted.append(p0)
             for i, p1 in enumerate(points):
-                if numpy.any(p0==p1):
+                # if numpy.any(p0==p1):
+                if len([t for t in (p0==p1) if t]) == D:
                     sorted.append(p1)
                     break
 
@@ -1036,7 +1056,7 @@ class Particle:
         # self.impuls = self.mass * self.speed
         return collided
         
-    def _bounce_org(self):
+    def bounce_simple(self):
         """
         Check and handles particle hitting the box walls
 
@@ -1068,7 +1088,7 @@ class Particle:
         self.box._normal_momentum += abs(momentum[index])
         return bounced
     
-    def bounce(self):
+    def __bounce(self):
         """
         Check and handles particle hitting the box walls
 
@@ -1098,6 +1118,31 @@ class Particle:
                     momentum = self.mass * (old_speed - self.speed)
                     self.box.momentum += momentum
                     self.box._normal_momentum += abs(momentum @ plane.unitnormal)
+        return bounced
+
+    def bounce(self):
+        """
+        Check and handles particle hitting the box walls
+
+        Args:
+            box (Box): the box
+
+        Returns:
+            boolean: True if hit occured
+        """
+        bounced = False
+        old_speed = self.speed.copy()
+
+        for plane in self.box.planes:
+            if abs(plane.distance(self.position)) < self.radius:
+                bounced = True
+                dp = (self.speed @ plane.unitnormal) * plane.unitnormal
+                dn = self.speed - dp
+                self.speed = 2*dn - self.speed
+                
+                momentum = self.mass * (old_speed - self.speed)
+                self.box.momentum += momentum
+                self.box._normal_momentum += abs(momentum @ plane.unitnormal)
         return bounced
 
     def displacement(self, position):
@@ -1940,6 +1985,12 @@ def load_gas(data):
             damping = 0
         spring = Spring(s['length'], s['strength'], damping, p1, p2)
         box.springs.append(spring)
+    
+    for p in b["planes"]:
+        normal = p["normal"]
+        point = p["point"]
+        plane = Plane(box, normal, point)
+        box.planes.append(plane)
 
     return box
 
@@ -2126,7 +2177,7 @@ class Test():
     
     def plane(self):
         # sizes = [1000, 900, 1080]
-        sizes = [100, 100, 1080]
+        sizes = [100, 200, 300, 400]
         box = Box(sizes)
         print(box.vertices)
         print(box.edges)
@@ -2134,19 +2185,18 @@ class Test():
         for p in box.planes:
             print(p)
 
-
         # plane = Plane(box, points=box.axis)
         point = box.center
-        normal = numpy.array([1,2,0])
+        normal = numpy.array([1,2,0,1])
 
-        normal = [1,1,1]
+        normal = [1,1,1,1]
         point = box.center
         plane = Plane(box, normal=normal, point=point)
         # print(plane)
         # box.planes.append(plane)
         plane = Plane(box, normal=normal, point=point)
         # print(plane)
-        box.planes.append(plane)
+        # box.planes.append(plane)
 
         print("\n####\n")
         for plane in box.planes[2*box.dimensions:]:
