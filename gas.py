@@ -992,6 +992,15 @@ class Particle:
 
         self.position += self.speed
 
+        for i, x in enumerate(self.box.nullvector):
+            if self.position[i] < x:
+                self.position[i] = 1.0*(x + self.radius)
+        
+        for i, x in enumerate(self.box.box_sizes):
+            if self.position[i] > x:
+                self.position[i] = 1.0*(x - self.radius)
+
+
     def fast_collision_check(self, ball):
         """
         Fast collision detection
@@ -1102,7 +1111,9 @@ class Particle:
         old_speed = self.speed.copy()
 
         for plane in self.box.planes:
-            if abs(plane.distance(self.position)) < self.radius:
+            vn = self.speed @ plane.unitnormal
+            dp = abs(plane.distance(self.position))
+            if  dp < self.radius or dp < vn:
                 intersection = plane.intersect_line(self.position, self.speed)
                 if intersection is None:
                     continue
@@ -1134,7 +1145,9 @@ class Particle:
         old_speed = self.speed.copy()
 
         for plane in self.box.planes:
-            if abs(plane.distance(self.position)) < self.radius:
+            vn = self.speed @ plane.unitnormal
+            dp = abs(plane.distance(self.position))
+            if  dp < self.radius or dp < vn:
                 bounced = True
                 dp = (self.speed @ plane.unitnormal) * plane.unitnormal
                 dn = self.speed - dp
@@ -2177,7 +2190,7 @@ class Test():
     
     def plane(self):
         # sizes = [1000, 900, 1080]
-        sizes = [100, 200, 300, 400]
+        sizes = [100, 100, 100, 100]
         box = Box(sizes)
         print(box.vertices)
         print(box.edges)
@@ -2193,7 +2206,7 @@ class Test():
         point = box.center
         plane = Plane(box, normal=normal, point=point)
         # print(plane)
-        # box.planes.append(plane)
+        box.planes.append(plane)
         plane = Plane(box, normal=normal, point=point)
         # print(plane)
         # box.planes.append(plane)
@@ -2203,8 +2216,12 @@ class Test():
             points = plane.box_intersections
             print(plane)
             print("\n")
-            print(points)
+            points = numpy.array(points)
+            # points.sort(axis=2)
+            for point in points:
+                print(point)
             print("\n")
+            
             # print("\n")
             # results = []
             # points = []

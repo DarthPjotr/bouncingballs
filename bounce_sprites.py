@@ -219,7 +219,7 @@ class MyGame(arcade.Window):
         # self.add_balls(balls)
         balls = arrangement.random_balls(5, 30, 30)
         points = self.box.axis
-        normal = [1,1,1,1,1,1]
+        normal = [1,10,1,1,1,1]
         point = self.box.center
         plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
         self.box.planes.append(plane)
