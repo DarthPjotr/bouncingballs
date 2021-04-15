@@ -45,7 +45,7 @@ GRAVITY = 0.0
 FRICTION = 0.00
 INTERACTION = 10000.0
 TORUS = False
-DIMENSIONS = 3
+DIMENSIONS = 2
 # HEIGHT = 30
 SPEED = 3
 
@@ -217,12 +217,17 @@ class MyGame(arcade.Window):
         #     else:
         #         ball.color = arcade.color.GREEN
         # self.add_balls(balls)
-        balls = arrangement.random_balls(5, 30, 30)
+        balls = arrangement.random_balls(50, 3, 3, charge=0)
         points = self.box.axis
-        normal = [1,10,1,1,1,1]
+        normal = [1,5,1,1,1,1]
         point = self.box.center
         plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
-        self.box.planes.append(plane)
+        # self.box.planes.append(plane)
+
+        normal = [1,-5,1,1,1,1]
+        point = self.box.center/2
+        plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
+        # self.box.planes.append(plane)
 
         # # balls = arrangement.random_balls(10, charge=-1)
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)

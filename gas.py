@@ -1097,7 +1097,7 @@ class Particle:
         self.box._normal_momentum += abs(momentum[index])
         return bounced
     
-    def __bounce(self):
+    def bounce(self):
         """
         Check and handles particle hitting the box walls
 
@@ -1112,8 +1112,9 @@ class Particle:
 
         for plane in self.box.planes:
             vn = self.speed @ plane.unitnormal
-            dp = abs(plane.distance(self.position))
-            if  dp < self.radius or dp < vn:
+            dp = plane.distance(self.position)
+            # print(dp, self.radius, vn)
+            if  dp < self.radius or dp < abs(vn):
                 intersection = plane.intersect_line(self.position, self.speed)
                 if intersection is None:
                     continue
@@ -1131,7 +1132,7 @@ class Particle:
                     self.box._normal_momentum += abs(momentum @ plane.unitnormal)
         return bounced
 
-    def bounce(self):
+    def __bounce(self):
         """
         Check and handles particle hitting the box walls
 
