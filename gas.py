@@ -377,6 +377,7 @@ class Box:
         self._get_planes()
         for plane in planes:
             plane.box_intersections = plane._box_intersections()
+            plane.edges = plane._edges()
         self.planes.extend(planes)
         self.center = sum(self.vertices)/len(self.vertices)
         self.ticks = 1
@@ -531,6 +532,7 @@ class Box:
             except IndexError:
                 pass
         
+        direction = numpy.array(direction)
         D2 = direction.dot(direction)
         direction = direction/math.sqrt(D2)
         self.gravity = strength * direction
@@ -756,6 +758,7 @@ class Plane:
         
         self.D = self.unitnormal @ self.point
         self.box_intersections = self._box_intersections()
+        self.edges = self._edges()
         
     def _get_normal(self, points):
 
@@ -907,6 +910,22 @@ class Plane:
 
         points = sorted
         return points
+    
+    def _edges(self):
+        edges = []
+        points = self.box_intersections
+        for i, p0 in enumerate(points):
+            for j, p1 in enumerate(points):
+                if numpy.all(p0==p1):
+                    continue
+                # if numpy.any(p0==p1):
+                if len([t for t in p0==p1 if t]) == self.box.dimensions - 2:
+                    if (i,j) not in edges and (j,i) not in edges:
+                        # edges.add((i,j))
+                        edges.append((i,j))
+
+        
+        return edges
 
 class Wall:
     """
@@ -1748,6 +1767,45 @@ class ArrangeParticles:
                     self.box.springs.append(spring)
         return balls
     
+    def create_kube(self, size, position=None, charge=0):
+        """
+        Creates a kube
+
+        Args:
+            size (float): size of the box
+            position (numpy.array, optional): position. Defaults to None.
+            charge (int, optional): charge of the balls of the box. Defaults to 0.
+
+        Returns:
+            list: list of balls
+        """        
+        if position is None:
+            center = self.box.box_sizes/2
+        else:
+            center = position
+        sizes = [size]*self.box.dimensions
+        box = Box(sizes)
+        speed = self.box.nullvector.copy()
+
+        balls = []
+        for vertex in box.vertices:
+            pos = center - (box.box_sizes/2) + vertex
+            speed = self.box.nullvector.copy()
+            ball = self.box.add_particle(1, 1, pos, speed, charge)
+            balls.append(ball)
+        
+        # balls[0].speed = 5 * self.box.onevector.copy()
+        # balls[-1].speed = -5 * self.box.onevector.copy()
+
+        for i, b0 in enumerate(balls):
+            for b1 in balls[i:]:
+                if b1 == b0:
+                    continue
+                d = math.sqrt((b0.position-b1.position) @ (b0.position-b1.position))
+                spring = Spring(d, 0.1, 0.02, b0, b1)
+                self.box.springs.append(spring)
+    
+        return balls 
 
     def create_pendulum(self, gravity=0.1):
         self.box.set_gravity(gravity)
@@ -2191,7 +2249,7 @@ class Test():
     
     def plane(self):
         # sizes = [1000, 900, 1080]
-        sizes = [100, 100, 100, 100]
+        sizes = [100, 200, 300, 400]
         box = Box(sizes)
         print(box.vertices)
         print(box.edges)
@@ -2222,6 +2280,12 @@ class Test():
             for point in points:
                 print(point)
             print("\n")
+        
+        for plane in box.planes[2*box.dimensions:]:
+            points = plane.box_intersections
+            print(plane)
+            for (i,j) in plane.edges:
+                print(i, j, points[i], points[j])
             
             # print("\n")
             # results = []

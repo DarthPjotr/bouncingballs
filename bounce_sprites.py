@@ -45,12 +45,12 @@ GRAVITY = 0.0
 FRICTION = 0.00
 INTERACTION = 10000.0
 TORUS = False
-DIMENSIONS = 2
+DIMENSIONS = 3
 # HEIGHT = 30
 SPEED = 3
 
 # because it looks better with soft SpriteCircle add bit to sprite radius
-D_SPRITE_RADIUS = 15
+D_SPRITE_RADIUS = 10
 
 MAXCOLOR = 255
 INVMAXCOLOR = 1/MAXCOLOR
@@ -80,6 +80,8 @@ class MyGame(arcade.Window):
         self.fps = 1/UPDATE_RATE
         self.sound = arcade.load_sound(".\\sounds\\c_bang1.wav")
         self.ball_list = arcade.SpriteList(use_spatial_hash=False)
+        # self.plane_list = arcade.ShapeElementList()
+        self.plane_list = None
         self.arrow_list = arcade.ShapeElementList()
         self.text_list = arcade.ShapeElementList()
         self.set_visible()
@@ -190,6 +192,7 @@ class MyGame(arcade.Window):
         return color
 
     def place_balls(self):
+        balls = []
 
         arrangement = ArrangeParticles(self.box)
 
@@ -217,23 +220,27 @@ class MyGame(arcade.Window):
         #     else:
         #         ball.color = arcade.color.GREEN
         # self.add_balls(balls)
-        balls = arrangement.random_balls(50, 3, 3, charge=0)
-        points = self.box.axis
-        normal = [1,5,1,1,1,1]
+        balls = arrangement.random_balls(50, 3, 30, charge=0)
+        # balls = arrangement.create_kube(400)
+        normal = [0,1,0,1,1,1]
         point = self.box.center
         plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
-        # self.box.planes.append(plane)
+        #self.box.planes.append(plane)
+
+        # self.box.set_gravity(-0.3, normal[:DIMENSIONS])
+        # self.box.set_friction(0.1)
 
         normal = [1,-5,1,1,1,1]
         point = self.box.center/2
         plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
-        # self.box.planes.append(plane)
+        self.box.planes.append(plane)
 
         # # balls = arrangement.random_balls(10, charge=-1)
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)
         # for ball in balls:
         #     ball.color = arcade.color.RED
         self.add_balls(balls)
+        self.add_planes(self.box.planes[2*self.box.dimensions:])
 
         # for i, ball in enumerate(self.box.particles):
         #     print(i, ball.position, ball.speed)
@@ -296,6 +303,23 @@ class MyGame(arcade.Window):
 
         return ball
     
+    def add_planes(self, planes=list):
+        self.plane_list = None
+        self.plane_list = arcade.ShapeElementList()
+        for plane in planes:
+            for (i,j) in plane.edges:
+                p0 = plane.box_intersections[i]
+                p1 = plane.box_intersections[j]
+                dot = arcade.create_ellipse(*p0[:2], 5, 5, arcade.color.LIGHT_GRAY)
+                self.plane_list.append(dot)
+                dot = arcade.create_ellipse(*p1[:2], 5, 5, arcade.color.LIGHT_GRAY)
+                self.plane_list.append(dot)
+                # arcade.draw_circle_filled(*p0[:2], 3, arcade.color.LIGHT_GRAY)
+                # arcade.draw_circle_filled(*p1[:2], 3, arcade.color.LIGHT_GRAY)
+                line = arcade.create_line(*p0[:2], *p1[:2], arcade.color.LIGHT_GRAY, 1)
+                self.plane_list.append(line)
+
+    
     def draw_field(self):
         if self.background is not None:
             arcade.draw_lrwh_rectangle_textured(0, 0,
@@ -352,14 +376,24 @@ class MyGame(arcade.Window):
             wall_.draw()
         
         # draw planes
-        for i, plane in enumerate(self.box.planes[2*self.box.dimensions:]):
-            points = plane.box_intersections
+        # for i, plane in enumerate(self.box.planes[2*self.box.dimensions:]):
+        #     points = plane.box_intersections
 
-            if len(points) > 0:
-                arcade.draw_polygon_outline(points, arcade.color.LIGHT_GRAY, 2)
-                for i, point in enumerate(points):
-                    arcade.draw_circle_filled(*point[:2], 3, arcade.color.LIGHT_GRAY)
-                    # arcade.draw_text(str(i), *point[:2], arcade.color.WHITE, 12)
+        #     if len(points) > 0:
+        #         arcade.draw_polygon_outline(points, arcade.color.LIGHT_GRAY, 2)
+        #         for i, point in enumerate(points):
+        #             arcade.draw_circle_filled(*point[:2], 3, arcade.color.LIGHT_GRAY)
+        #             # arcade.draw_text(str(i), *point[:2], arcade.color.WHITE, 12)
+
+        # for plane in self.box.planes[2*self.box.dimensions:]:
+        #     for (i,j) in plane.edges:
+        #         p0 = plane.box_intersections[i]
+        #         p1 = plane.box_intersections[j]
+        #         arcade.draw_circle_filled(*p0[:2], 3, arcade.color.LIGHT_GRAY)
+        #         arcade.draw_circle_filled(*p1[:2], 3, arcade.color.LIGHT_GRAY)
+        #         arcade.draw_line(*p0[:2], *p1[:2], arcade.color.LIGHT_GRAY, 1)
+        #         #arcade.draw_polygon_outline(p1, arcade.color.LIGHT_GRAY, 2)
+
                     
         # draw avg impuls vector
         start = self.box.box_sizes/2
@@ -411,6 +445,7 @@ class MyGame(arcade.Window):
         # if len(self.arrow_list) > 0:
         #     self.arrow_list.draw()
         self.ball_list.draw()
+        self.plane_list.draw()
         #self.sprite_list.draw_hit_boxes((255,255,255), 2)
 
     
@@ -604,6 +639,9 @@ class MyGame(arcade.Window):
                                             self.width, self.height,
                                             self.background)
         numpy.array(self.get_size(),dtype=float)/2
+
+        self.add_planes(self.box.planes[2*self.box.dimensions:])
+
         return super().on_resize(width, height)
 
 
