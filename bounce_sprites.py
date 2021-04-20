@@ -80,10 +80,9 @@ class MyGame(arcade.Window):
         self.fps = 1/UPDATE_RATE
         self.sound = arcade.load_sound(".\\sounds\\c_bang1.wav")
         self.ball_list = arcade.SpriteList(use_spatial_hash=False)
-        # self.plane_list = arcade.ShapeElementList()
         self.plane_list = None
-        self.arrow_list = arcade.ShapeElementList()
-        self.text_list = arcade.ShapeElementList()
+        # self.arrow_list = arcade.ShapeElementList()
+        # self.text_list = arcade.ShapeElementList()
         self.set_visible()
         self._frames = 0
 
@@ -101,6 +100,8 @@ class MyGame(arcade.Window):
         self._output = {}
 
     def load(self, path):
+        self.ball_list = None
+        self.ball_list = arcade.SpriteList(use_spatial_hash=False)
         if isinstance(path, str):
             file = open(path)
         else:
@@ -111,6 +112,7 @@ class MyGame(arcade.Window):
 
         # ugly ...
         global TEXT_REFRESH, TICK_RATE, D_SPRITE_RADIUS
+        # if 'config' in data.keys():
         try:
             config = data['config']
             self.fps = config['fps']
@@ -121,7 +123,7 @@ class MyGame(arcade.Window):
             TICK_RATE = config['tickrate']
             D_SPRITE_RADIUS = config['spriteradius']
         except KeyError:
-            raise
+            pass
 
         self.set_update_rate(1/self.fps)
 
@@ -166,8 +168,6 @@ class MyGame(arcade.Window):
             #     self.box.resize([width ,height])
         else:
             self.box = Box(BOX_DIMENSIONS[:DIMENSIONS], TORUS)
-            direction = self.box.nullvector.copy()
-            direction[0] = 1
             self.box.set_gravity(GRAVITY)
             self.box.set_friction(FRICTION)
             self.box.set_interaction(INTERACTION)
@@ -176,14 +176,10 @@ class MyGame(arcade.Window):
             # self.box.field = Field(self.box)
             # self.box.field.equation = None # self.box.field.nofield
 
-            # wall = Wall(self.box, 0.4, 0)
-            # self.box.walls.append(wall)
-            # wall = Wall(self.box, 0.6, 1)
-            # self.box.walls.append(wall)
-
             self.place_balls()
 
-    def getcolor(self, value, vmin, vmax):
+    @staticmethod
+    def getcolor(value, vmin, vmax):
         i = (value-vmin)/(vmax-vmin)
         rgb = colormap.mpl_colormap(i)
         V = numpy.array(rgb[:3])
@@ -230,8 +226,9 @@ class MyGame(arcade.Window):
         # self.box.set_gravity(-0.3, normal[:DIMENSIONS])
         # self.box.set_friction(0.1)
 
-        normal = [1,-5,1,1,1,1]
-        point = self.box.center/2
+        normal = [1,1,1,1,1,1]
+        point = self.box.center
+        # point = self.box.nullvector.copy()
         plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
         self.box.planes.append(plane)
 
@@ -310,12 +307,12 @@ class MyGame(arcade.Window):
             for (i,j) in plane.edges:
                 p0 = plane.box_intersections[i]
                 p1 = plane.box_intersections[j]
+
                 dot = arcade.create_ellipse(*p0[:2], 5, 5, arcade.color.LIGHT_GRAY)
                 self.plane_list.append(dot)
                 dot = arcade.create_ellipse(*p1[:2], 5, 5, arcade.color.LIGHT_GRAY)
                 self.plane_list.append(dot)
-                # arcade.draw_circle_filled(*p0[:2], 3, arcade.color.LIGHT_GRAY)
-                # arcade.draw_circle_filled(*p1[:2], 3, arcade.color.LIGHT_GRAY)
+
                 line = arcade.create_line(*p0[:2], *p1[:2], arcade.color.LIGHT_GRAY, 1)
                 self.plane_list.append(line)
 
@@ -360,40 +357,20 @@ class MyGame(arcade.Window):
         if self.left_mouse_down:
             arcade.draw_line(self.mouse_x, self.mouse_y, self.mouse_dx, self.mouse_dy, arcade.color.WHITE, 1)
 
-        # draw walls
-        for wall in self.box.walls:
-            coords = [[vertix[0],vertix[1]] for vertix in wall.vertices]
-            size = numpy.array(max(coords))
-            center = wall.center[:2]
+        # # draw walls
+        # for wall in self.box.walls:
+        #     coords = [[vertix[0],vertix[1]] for vertix in wall.vertices]
+        #     size = numpy.array(max(coords))
+        #     center = wall.center[:2]
 
-            try:
-                size[wall.dimension] = 5
-            except IndexError:
-                pass
+        #     try:
+        #         size[wall.dimension] = 5
+        #     except IndexError:
+        #         pass
 
-            # arcade.draw_rectangle_filled(*center, *size,  (150,150,150))
-            wall_ = arcade.create_rectangle_filled(*center, *size,  (150,150,150))
-            wall_.draw()
-        
-        # draw planes
-        # for i, plane in enumerate(self.box.planes[2*self.box.dimensions:]):
-        #     points = plane.box_intersections
-
-        #     if len(points) > 0:
-        #         arcade.draw_polygon_outline(points, arcade.color.LIGHT_GRAY, 2)
-        #         for i, point in enumerate(points):
-        #             arcade.draw_circle_filled(*point[:2], 3, arcade.color.LIGHT_GRAY)
-        #             # arcade.draw_text(str(i), *point[:2], arcade.color.WHITE, 12)
-
-        # for plane in self.box.planes[2*self.box.dimensions:]:
-        #     for (i,j) in plane.edges:
-        #         p0 = plane.box_intersections[i]
-        #         p1 = plane.box_intersections[j]
-        #         arcade.draw_circle_filled(*p0[:2], 3, arcade.color.LIGHT_GRAY)
-        #         arcade.draw_circle_filled(*p1[:2], 3, arcade.color.LIGHT_GRAY)
-        #         arcade.draw_line(*p0[:2], *p1[:2], arcade.color.LIGHT_GRAY, 1)
-        #         #arcade.draw_polygon_outline(p1, arcade.color.LIGHT_GRAY, 2)
-
+        #     # arcade.draw_rectangle_filled(*center, *size,  (150,150,150))
+        #     wall_ = arcade.create_rectangle_filled(*center, *size,  (150,150,150))
+        #     wall_.draw()
                     
         # draw avg impuls vector
         start = self.box.box_sizes/2
@@ -504,14 +481,9 @@ class MyGame(arcade.Window):
 
     def on_update(self, delta_time):
         """ Movement and game logic """
-        #arcade.check_for_collision_with_list
         if not(self.pause):
             for i in range(TICK_RATE):
                 self.bounced = self.box.go()
-        
-        # for i, ball in enumerate(self.box.particles):
-        #     if numpy.isnan(ball.position.sum()) or numpy.isnan(ball.speed.sum()):
-        #         print(i, self.box.ticks, ball.position, ball.speed)
 
     def on_mouse_press(self, x, y, button, modifiers):
         """
@@ -552,9 +524,7 @@ class MyGame(arcade.Window):
                 speed = None
             else:
                 speed = [dx/5,dy/5]
-            # ball = self.box.add_particle(mass=mass, radius=mass, position=position, speed=speed, charge=charge)
-            # ball.object = arcade.SpriteCircle(ball.radius+15, ball.color, True)
-            # self.ball_list.append(ball.object)
+
             self.add_ball(mass, mass, position, speed, charge, None)
         
         self.left_mouse_down = False
@@ -618,9 +588,12 @@ class MyGame(arcade.Window):
         elif symbol == arcade.key.Q:
             # quit
             self.close()
+        elif symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
+            file = loaddialog()
+            self.load(file)
+            file.close()
         elif symbol == arcade.key.S and modifiers & arcade.key.MOD_CTRL:
             file = savedialog()
-            # save_gas(self.box, file)
             self.save(file)
             file.close()
         else:

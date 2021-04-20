@@ -733,7 +733,19 @@ class Box:
             ball.move()
 
 class Plane:
+    """
+    Plane
+    """    
     def __init__(self, box: Box, normal=None, point=None, points=None) -> None:
+        """
+        Creates plane
+
+        Args:
+            box (Box): the Box
+            normal (numpy.array, optional): the normal vector. Defaults to None.
+            point (numpy.array, optional): a point on the plane. Defaults to None.
+            points (list of numpy.array, optional): point on the plane. Defaults to None.
+        """        
         self.box = box
         
         if normal is not None and point is not None:
@@ -761,7 +773,15 @@ class Plane:
         self.edges = self._edges()
         
     def _get_normal(self, points):
+        """
+        Calculates the normal vector from points on the plane
 
+        Args:
+            points (list of numpy.array): the points
+
+        Returns:
+            numpy.array: unit normal vector
+        """        
         shape = numpy.shape(points)
         ones = numpy.ones(shape)
         i = 0
@@ -801,6 +821,15 @@ class Plane:
         return plane
     
     def intersection(self, planes):
+        """
+        Calculates intersection point between planes
+
+        Args:
+            planes (list of Plane): the planes
+
+        Returns:
+            numpy.array: the intersection point
+        """        
         if self not in planes:
             planes.append(self)
         
@@ -814,11 +843,30 @@ class Plane:
         return intersection
     
     def distance(self, point):
+        """
+        Calculates distance between point and the plane
+
+        Args:
+            point (numpy.array): the point
+
+        Returns:
+            float: the distance
+        """        
         point = numpy.array(point)
         v = point - self.point
         return v @ self.unitnormal
     
     def intersect_line(self, point, vector):
+        """
+        Calculates intersetcion point between line and the plane
+
+        Args:
+            point (numpy.array): a point on the line
+            vector (numpy.array): the vector of the line
+
+        Returns:
+            numpy.array: the intersection point
+        """        
         dt = (self.point - point) @ self.unitnormal
         dn = vector @ self.unitnormal
         if dt == 0:
@@ -831,6 +879,12 @@ class Plane:
         return point + vector * d
     
     def _box_intersections(self):
+        """
+        Calculates the intersection points with the box
+
+        Returns:
+            list of numpy.array: the intersection points
+        """        
         points = []
         for (i, j) in self.box.edges:
             v1 = self.box.vertices[i]
@@ -912,18 +966,21 @@ class Plane:
         return points
     
     def _edges(self):
+        """
+        Calculates the edges
+
+        Returns:
+            list of (int, int): list of edges
+        """        
         edges = []
         points = self.box_intersections
         for i, p0 in enumerate(points):
             for j, p1 in enumerate(points):
                 if numpy.all(p0==p1):
                     continue
-                # if numpy.any(p0==p1):
                 if len([t for t in p0==p1 if t]) == self.box.dimensions - 2:
                     if (i,j) not in edges and (j,i) not in edges:
-                        # edges.add((i,j))
                         edges.append((i,j))
-
         
         return edges
 
@@ -2027,42 +2084,45 @@ def load_gas(data):
         box.set_friction(b['friction'])
         box.set_interaction(b['interaction'])
         box.torus = b['torus']
-    except:
+    except KeyError:
         pass
 
-    for p in b['particles']:
-        try:
-            fixed = p["fixed"]
-        except KeyError:
-            fixed = False
-        
-        try: 
-            charge = p['charge']
-        except KeyError:
-            charge = 0
+    if "particles" in b.keys():
+        for p in b['particles']:
+            try:
+                fixed = p["fixed"]
+            except KeyError:
+                fixed = False
+            
+            try: 
+                charge = p['charge']
+            except KeyError:
+                charge = 0
 
-        try:
-            color = p['color']
-        except KeyError:
-            color = None
-        box.add_particle(p['mass'], p['radius'], p['position'], p['speed'], charge, fixed, color)
+            try:
+                color = p['color']
+            except KeyError:
+                color = None
+            box.add_particle(p['mass'], p['radius'], p['position'], p['speed'], charge, fixed, color)
     
-    for s in b['springs']:
-        ps = s['particles']
-        p1 = box.particles[ps[0]]
-        p2 = box.particles[ps[1]]
-        try: 
-            damping = s["damping"] 
-        except KeyError: 
-            damping = 0
-        spring = Spring(s['length'], s['strength'], damping, p1, p2)
-        box.springs.append(spring)
+    if "springs" in b.keys():
+        for s in b['springs']:
+            ps = s['particles']
+            p1 = box.particles[ps[0]]
+            p2 = box.particles[ps[1]]
+            try: 
+                damping = s["damping"] 
+            except KeyError: 
+                damping = 0
+            spring = Spring(s['length'], s['strength'], damping, p1, p2)
+            box.springs.append(spring)
     
-    for p in b["planes"]:
-        normal = p["normal"]
-        point = p["point"]
-        plane = Plane(box, normal, point)
-        box.planes.append(plane)
+    if "planes" in b.keys():
+        for p in b["planes"]:
+            normal = p["normal"]
+            point = p["point"]
+            plane = Plane(box, normal, point)
+            box.planes.append(plane)
 
     return box
 
