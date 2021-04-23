@@ -80,8 +80,8 @@ class MyGame(arcade.Window):
         self.fps = 1/UPDATE_RATE
         self.sound = arcade.load_sound(".\\sounds\\c_bang1.wav")
         self.ball_list = arcade.SpriteList(use_spatial_hash=False)
-        self.plane_list = None
-        # self.arrow_list = arcade.ShapeElementList()
+        self.plane_list = arcade.ShapeElementList()
+        self.arrow_list = arcade.ShapeElementList()
         # self.text_list = arcade.ShapeElementList()
         self.set_visible()
         self._frames = 0
@@ -112,7 +112,6 @@ class MyGame(arcade.Window):
 
         # ugly ...
         global TEXT_REFRESH, TICK_RATE, D_SPRITE_RADIUS
-        # if 'config' in data.keys():
         try:
             config = data['config']
             self.fps = config['fps']
@@ -356,21 +355,6 @@ class MyGame(arcade.Window):
 
         if self.left_mouse_down:
             arcade.draw_line(self.mouse_x, self.mouse_y, self.mouse_dx, self.mouse_dy, arcade.color.WHITE, 1)
-
-        # # draw walls
-        # for wall in self.box.walls:
-        #     coords = [[vertix[0],vertix[1]] for vertix in wall.vertices]
-        #     size = numpy.array(max(coords))
-        #     center = wall.center[:2]
-
-        #     try:
-        #         size[wall.dimension] = 5
-        #     except IndexError:
-        #         pass
-
-        #     # arcade.draw_rectangle_filled(*center, *size,  (150,150,150))
-        #     wall_ = arcade.create_rectangle_filled(*center, *size,  (150,150,150))
-        #     wall_.draw()
                     
         # draw avg impuls vector
         start = self.box.box_sizes/2
@@ -378,14 +362,14 @@ class MyGame(arcade.Window):
         end = start + avg_impuls
         arcade.draw_line(*start[:2], *end[:2], color=arcade.color.WHITE, line_width=1)
 
-        # for shape in self.arrow_list:
-        #     self.arrow_list.remove(shape)
+        self.arrow_list = None
+        self.arrow_list = arcade.ShapeElementList()
         for i, ball in enumerate(self.box.particles):
             #arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
             end = ball.position + 10*ball.speed
-            arcade.draw_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
-            # arrow = arcade.create_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
-            # self.arrow_list.append(arrow)
+            # arcade.draw_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
+            arrow = arcade.create_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
+            self.arrow_list.append(arrow)
 
             output = ""
             if ball.charge < 0:
@@ -419,8 +403,7 @@ class MyGame(arcade.Window):
         for i, rod in enumerate(self.box.rods):
             arcade.draw_line(*rod.p1.position[:2], *rod.p2.position[:2], color=arcade.color.GRAY, line_width=2)
 
-        # if len(self.arrow_list) > 0:
-        #     self.arrow_list.draw()
+        self.arrow_list.draw()
         self.ball_list.draw()
         self.plane_list.draw()
         #self.sprite_list.draw_hit_boxes((255,255,255), 2)

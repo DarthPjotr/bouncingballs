@@ -707,9 +707,6 @@ class Box:
                 ball.wrap()
             else:
                 ball.bounce()      
-            # hit the walls:
-            for wall in self.walls:
-                ball.hit(wall)
             # collide the balls
             for ball2 in self.particles[i:]:
                 if ball.collide(ball2): bounced = True
@@ -984,52 +981,6 @@ class Plane:
         
         return edges
 
-class Wall:
-    """
-    Extra wall inside the box
-    """
-    def __init__(self, box: Box, rpos: float, dimension: int) -> None:
-        """
-        Creates wall
-
-        Args:
-            box (Box): the box
-            rpos (float): relative position in the box, must be between 0 and 1
-            dimension (int): which box dimension to make wall, must be between 0 and box.dimensions-1
-
-        Raises:
-            ValueError: rpos must be between 0 and 1
-        """
-        self.box = box
-        if rpos < 0 or rpos > 1:
-            raise ValueError("rpos must be between 0 and 1")
-        self.dimension = dimension
-        self.rpos = rpos
-        self._set_props()
-    
-    def _set_props(self):
-        """
-        Sets wall properties
-        """
-        self._vector = self.box.onevector.copy()
-        self._vector[self.dimension] *= self.rpos
-        self.position = self.box.box_sizes * self._vector
-        self.vertices = numpy.array([vertex*self._vector for vertex in self.box.vertices if vertex[self.dimension] != 0]) 
-        self.center = sum(self.vertices)/len(self.vertices)
-    
-    def __str__(self) -> str:
-        return str(self.vertices)
-
-    def move(self, new_rpos):
-        """
-        Moves the wall
-
-        Args:
-            new_rpos (float): new relative position
-        """
-        self.rpos = new_rpos
-        self._set_props()
-
 
 class Particle:
     """
@@ -1189,15 +1140,17 @@ class Particle:
         for plane in self.box.planes:
             vn = self.speed @ plane.unitnormal
             dp = plane.distance(self.position)
-            # print(dp, self.radius, vn)
+
+            # is the particle close enough to bounce of the wall?
             if  dp < self.radius or dp < abs(vn):
                 intersection = plane.intersect_line(self.position, self.speed)
                 if intersection is None:
                     continue
                 p2 = (self.position + self.speed)
                 p2i = p2 - intersection
+
+                # does particle move towards the wall?
                 if (p2i @ p2i) < (self.speed @ self.speed):
-                # if True:
                     bounced = True
                     dp = (self.speed @ plane.unitnormal) * plane.unitnormal
                     dn = self.speed - dp
@@ -1268,29 +1221,6 @@ class Particle:
                 self.position[i] = self.position[i] - self.box.box_sizes[i]
                 wrapped = True
         return wrapped
-
-    def hit(self, wall):
-        """
-        Handles hitting extra walls in the box
-
-        Args:
-            wall (Wall): the wall
-
-        Returns:
-            boolean: True when the wall was hit
-        """
-        bounced = False
-        dwall = self.position[wall.dimension] - wall.position[wall.dimension]
-        new_pos = dwall + self.speed[wall.dimension]
-        #print(ball, dwall, new_pos, (dwall < 0 and new_pos > 0) or (dwall > 0 and new_pos < 0))
-        if (dwall <= 0 and new_pos > 0) or (dwall >= 0 and new_pos < 0):
-            old_speed = self.speed.copy()
-            self.speed[wall.dimension] = -self.speed[wall.dimension]
-            self.position += self.speed
-            wall.box.impuls += self.mass * (old_speed - self.speed)
-            bounced = True
-        
-        return bounced
     
     def interact(self):
         """
@@ -1461,7 +1391,6 @@ class Spring:
         https://en.wikipedia.org/wiki/Harmonic_oscillator
         F = -kx - c(dx/dt)
         """
-        #dpos = self.p1.position - self.p2.position
         dpos = self.p1.displacement(self.p2.position)
         length2 = dpos.dot(dpos)
         length = math.sqrt(length2)
@@ -1469,8 +1398,6 @@ class Spring:
         N = dpos/length
 
         dspeed = self.p1.speed - self.p2.speed
-        #dot_speed_pos = dspeed.dot(dpos)
-        #D = self.damping * dot_speed_pos*dpos/length2
         D = self.damping * dspeed.dot(dpos)*dpos/length2
         F = -self.strength*(dlength)*N
 
@@ -2175,34 +2102,6 @@ class Test():
             print(p.on(intersection))
             print(p.on2(intersection))
 
-
-
-    def test_wall(self):
-        D = 1
-        box = Box([10,20,30])
-        print(box.vertices)
-        print(box.edges)
-        print()
-        wall = Wall(box, 0.5, D)
-        print(box.box_sizes)
-        print(wall._vector, wall.position)
-        print("wall: ", wall)
-        center = sum(wall.vertices)/len(wall.vertices)
-        coords = [[vertex[0],vertex[1]] for vertex in wall.vertices]
-        print("coords: ", coords)
-        size = numpy.array(max(coords))
-
-        print("center: ", center)
-
-        try:
-            size[D] = -1
-        except IndexError:
-            pass
-        print("size: ", size)
-
-        print()
-        print(wall.vertices.mean(axis=D))
-        pass
 
     def test_box(self):
         box = Box([800,600,700])
