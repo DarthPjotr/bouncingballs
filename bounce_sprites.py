@@ -91,6 +91,7 @@ class MyGame(arcade.Window):
         self.bounced = False
         self.quiet = False
         self.text = True
+        self.draw_planes = False
         self.left_mouse_down = False
         self.mouse_dx = 0
         self.mouse_dy = 0
@@ -215,26 +216,28 @@ class MyGame(arcade.Window):
         #     else:
         #         ball.color = arcade.color.GREEN
         # self.add_balls(balls)
-        balls = arrangement.random_balls(50, 3, 30, charge=0)
-        # balls = arrangement.create_kube(400)
-        normal = [0,1,0,1,1,1]
-        point = self.box.center
-        plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
+        # balls = arrangement.random_balls(50, 3, 30, charge=0)
+        # # balls = arrangement.create_kube(400)
+        # normal = [0,1,0,1,1,1]
+        # point = self.box.center
+        # plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
         #self.box.planes.append(plane)
 
         # self.box.set_gravity(-0.3, normal[:DIMENSIONS])
         # self.box.set_friction(0.1)
 
-        normal = [1,1,1,1,1,1]
-        point = self.box.center
-        # point = self.box.nullvector.copy()
-        plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
-        self.box.planes.append(plane)
+        # normal = [0,1,0,1,1,1]
+        # point = [500, 700, 540]# self.box.center
+        # # point = self.box.nullvector.copy()
+        # plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
+        # self.box.planes.append(plane)
 
         # # balls = arrangement.random_balls(10, charge=-1)
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)
         # for ball in balls:
         #     ball.color = arcade.color.RED
+        balls = arrangement.create_kube_planes(500, 10)
+
         self.add_balls(balls)
         self.add_planes(self.box.planes[2*self.box.dimensions:])
 
@@ -405,7 +408,8 @@ class MyGame(arcade.Window):
 
         self.arrow_list.draw()
         self.ball_list.draw()
-        self.plane_list.draw()
+        if self.draw_planes:
+            self.plane_list.draw()
         #self.sprite_list.draw_hit_boxes((255,255,255), 2)
 
     
@@ -524,6 +528,7 @@ class MyGame(arcade.Window):
                 }
         if symbol in action.keys():
             self.box.rotate_axis(*action[symbol])
+            self.add_planes(self.box.planes[2*self.box.dimensions:])
         
     def on_key_press(self, symbol: int, modifiers: int):
         if symbol == arcade.key.P:
@@ -540,7 +545,7 @@ class MyGame(arcade.Window):
             self.box.stop_all()
         elif symbol == arcade.key.C:
             # center the balls
-            self.box.center_all()  
+            self.box.center_all(fixed=True)  
         elif symbol == arcade.key.R:
             # reset framerate
             self.fps = 1/UPDATE_RATE

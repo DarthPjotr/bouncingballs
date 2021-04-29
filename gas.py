@@ -202,6 +202,16 @@ class Field:
             ball.speed = dspeed
         return vector
 
+class Shape:
+    def __init__(self, vertices, edges) -> None:
+        self.vertices = vertices
+        self.edges = edges
+        self.planes = self._get_planes()
+
+    def _get_planes(self):
+        planes = []
+        return planes
+
 class Box:
     """
     n-dimensional box to contain particles
@@ -402,6 +412,14 @@ class Box:
         """         
         if self.dimensions < 3:
             return
+
+        for plane in self.planes[2*self.dimensions:]:
+            cpos = plane.point[:3] - self.center[:3] 
+            plane.point[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
+            normal = plane.unitnormal[:3]
+            plane.unitnormal[:3] = normal.dot(self._rotation_matrix(α, β, γ))
+            plane._set_params()
+
         for ball in self.particles:
             cpos = ball.position[:3] - self.center[:3]
             ball.position[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
@@ -637,7 +655,7 @@ class Box:
             ball.speed = self.nullvector.copy()
         self.momentum = self.nullvector.copy()
     
-    def center_all(self):
+    def center_all(self, fixed=True):
         """
         Move center of mass to center of box and set total momentum to zero
         """        
@@ -649,6 +667,8 @@ class Box:
             avg_speed = sum(ball.speed for ball in self.particles)/len(self.particles)
             avg_momentum = sum(ball.momentum for ball in self.particles)/len(self.particles)
             for ball in self.particles:
+                if fixed and ball.fixed:
+                    continue
                 ball.position += dpos
                 # ball.speed -= avg_speed
                 ball.speed -= avg_momentum/ball.mass
@@ -765,6 +785,9 @@ class Plane:
         else:
             raise TypeError("missing required argument")
         
+        self._set_params()
+    
+    def _set_params(self):
         self.D = self.unitnormal @ self.point
         self.box_intersections = self._box_intersections()
         self.edges = self._edges()
@@ -1348,9 +1371,10 @@ class Spring:
         self.damping = damping
         self.p1 = p1
         self.p2 = p2
+        self.fixed = self.p1.fixed and self.p2.fixed
     
     def __str__(self) -> str:
-        return "{} {} {}".format(self.strength, self.damping, (self.p1.index(), self.p2.index()))
+        return "{} {} {} {}".format(self.length, self.strength, self.damping, (self.p1.index(), self.p2.index()))
 
     def out(self):
         spring = {}
@@ -1391,6 +1415,9 @@ class Spring:
         https://en.wikipedia.org/wiki/Harmonic_oscillator
         F = -kx - c(dx/dt)
         """
+        if self.fixed:
+            return
+
         dpos = self.p1.displacement(self.p2.position)
         length2 = dpos.dot(dpos)
         length = math.sqrt(length2)
@@ -1701,6 +1728,55 @@ class ArrangeParticles:
             self.box.springs.append(spring)
         
         return balls
+    
+    def create_kube_planes(self, size, nballs):
+        sizes = numpy.array(self.box.dimensions * [size*1.0])
+        kube = Box(sizes)
+        dcenter = self.box.center - kube.center
+        # for vertix in kube.vertices:
+        #     vertix += dcenter
+        # for plane in kube.planes:
+        #     plane.point += dcenter
+        #     plane.box = self.box
+        #     
+        for plane in kube.planes:
+            point = plane.point + dcenter
+            normal = plane.unitnormal
+            plane_ = Plane(self.box, normal, point)
+            self.box.planes.append(plane_)
+    
+        balls = []
+
+        b = {}
+        for (p1, p2) in kube.edges:
+            if p1 not in b:
+                pos1 = kube.vertices[p1] + dcenter
+                speed = self.box.nullvector.copy()
+                ball1 = self.box.add_particle(1,3, pos1, speed, 0, True, [255,255,255])
+                b[p1] = ball1
+                balls.append(ball1)
+
+            if p2 not in b:
+                pos2 = kube.vertices[p2] + dcenter
+                speed = self.box.nullvector.copy()
+                ball2 = self.box.add_particle(1,3, pos2, speed, 0, True, [255,255,255])
+                b[p2] = ball2
+                balls.append(ball2)
+            
+            l = math.sqrt((b[p1].position - b[p2].position) @ (b[p1].position - b[p2].position))
+            spring = Spring(l, 0, 0, b[p1], b[p2])
+            self.box.springs.append(spring)
+
+
+        for i in range(nballs):
+            position = kube.random_position() + dcenter
+            ball = self.box.add_particle(1, 5, position)
+            balls.append(ball)
+        
+        return balls
+
+
+
 
     def create_n_mer(self, nballs, n=2, star=False, circle=False, charge=0):
         """
