@@ -306,19 +306,29 @@ class MyGame(arcade.Window):
         self.plane_list = None
         self.plane_list = arcade.ShapeElementList()
         for plane in planes:
-            for (i,j) in plane.edges:
-                p0 = plane.box_intersections[i]
-                p1 = plane.box_intersections[j]
+            if self.draw_planes:
+                for (i,j) in plane.edges:
+                    p0 = plane.box_intersections[i]
+                    p1 = plane.box_intersections[j]
 
-                dot = arcade.create_ellipse(*p0[:2], 5, 5, arcade.color.LIGHT_GRAY)
-                self.plane_list.append(dot)
-                dot = arcade.create_ellipse(*p1[:2], 5, 5, arcade.color.LIGHT_GRAY)
-                self.plane_list.append(dot)
+                    dot = arcade.create_ellipse(*p0[:2], 5, 5, arcade.color.LIGHT_GRAY)
+                    self.plane_list.append(dot)
+                    dot = arcade.create_ellipse(*p1[:2], 5, 5, arcade.color.LIGHT_GRAY)
+                    self.plane_list.append(dot)
 
-                line = arcade.create_line(*p0[:2], *p1[:2], arcade.color.LIGHT_GRAY, 1)
-                self.plane_list.append(line)
+                    line = arcade.create_line(*p0[:2], *p1[:2], arcade.color.LIGHT_GRAY, 1)
+                    self.plane_list.append(line)
 
-    
+            point = arcade.create_ellipse(*plane.point[:2], 5, 5, arcade.color.LIGHT_GREEN)
+            start = plane.point
+            end1 = plane.point + 15*plane.unitnormal
+            end2 = plane.point - 15*plane.unitnormal
+            normal1 = arcade.create_line(*start[:2], *end1[:2], arcade.color.LIGHT_GREEN, 1)
+            normal2 = arcade.create_line(*start[:2], *end2[:2], arcade.color.LIGHT_RED_OCHRE, 1)
+            self.plane_list.append(point)
+            self.plane_list.append(normal1)
+            self.plane_list.append(normal2)
+
     def draw_field(self):
         if self.background is not None:
             arcade.draw_lrwh_rectangle_textured(0, 0,
@@ -408,7 +418,8 @@ class MyGame(arcade.Window):
 
         self.arrow_list.draw()
         self.ball_list.draw()
-        if self.draw_planes:
+        #if self.draw_planes:
+        if True:
             self.plane_list.draw()
         #self.sprite_list.draw_hit_boxes((255,255,255), 2)
 

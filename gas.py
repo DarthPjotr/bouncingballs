@@ -7,6 +7,7 @@ from numpy import linalg
 from pyglet.window.key import E, F
 # from scipy.spatial import ConvexHull, QhullError
 import scipy.spatial as sp
+import networkx as nx
 import random
 import math
 from math import sin, cos, acos
@@ -202,15 +203,10 @@ class Field:
             ball.speed = dspeed
         return vector
 
-class Shape:
-    def __init__(self, vertices, edges) -> None:
-        self.vertices = vertices
-        self.edges = edges
-        self.planes = self._get_planes()
+class Shape(nx.Graph):
+    def __init__(self, incoming_graph_data, **attr):
+        super().__init__(incoming_graph_data=incoming_graph_data, **attr)
 
-    def _get_planes(self):
-        planes = []
-        return planes
 
 class Box:
     """
@@ -2140,12 +2136,65 @@ def save(box, path):
     file.close()
 
 class Test():
+    def test_shapes(self):
+        box = Box([10, 20, 30, 40])
+        shape = Shape(box.edges)
+        
+        print(shape.nodes)
+        print(shape.edges)
+        print(nx.cycle_basis(shape))
+        print("\n")
+        for n in shape.nodes:
+        #     pass
+        # if True:
+            cycle = nx.find_cycle(shape, n, "ignore")
+            print(n, cycle)
+            for (i,j, _) in cycle:
+                print (i,j, box.vertices[i], box.vertices[j])
+            print("\n")
+        
+        cycles = []
+        planes = []
+        for i, cycle in enumerate(nx.simple_cycles(shape.to_directed())):
+            if len(cycle) > box.dimensions-1:
+                # print(i, cycle)
+                points = [box.vertices[n] for n in cycle[:box.dimensions]]
+                try:
+                    plane = Plane(box, points=points)
+                except Exception:
+                    continue
+
+                flat = True
+                d = 0
+                for n in cycle[box.dimensions:]:
+                    d = abs(plane.distance(box.vertices[n]))
+                    if d > 0.001 :
+                        flat = False
+                        # print("skip", d)
+                        break
+                
+                cycle.sort()
+                if flat and cycle not in cycles:
+                    # print(d, cycle)
+                    cycles.append(cycle)
+                    planes.append(plane)
+        
+
+
+        print("\nPlanes:")
+        for i, c in enumerate(cycles):
+            print(planes[i])
+            print(c)
+
+
+
     def test_plane(self):
         planes = []
         box = Box([10,20,30])
         plane = Plane(box, [3,2,5], [5,10,30])
         print(plane)
         planes.append(plane)
+        
 
         print("\n####\n")
 
@@ -2358,6 +2407,7 @@ if __name__ == "__main__":
     # t.test_load_yaml()
     # t.test_displacement()
     # t.normal()
-    t.plane()
+    # t.plane()
+    t.test_shapes()
 
     print("END")
