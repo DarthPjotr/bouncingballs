@@ -681,19 +681,23 @@ class Box:
         for ball in self.particles:
             ball.speed += self.random(ms)
 
-    def go(self):
+    def go(self, steps=1):
         """
         Calculate speeds and move all particles to next position
+
+        Args:
+            steps (int): number of interations
 
         Returns:
             boolean: true if particles collides into each other
         """
         bounced = False
-        self.ticks += 1
+        for _ in range(steps):
+            self.ticks += 1
 
-        bounced = self._speeds()
-        self._energies()
-        self._move_all()
+            bounced |= self._speeds()
+            self._energies()
+            self._move_all()
 
         return bounced
     
@@ -1863,8 +1867,8 @@ class ArrangeParticles:
     
         return balls 
 
-    def create_pendulum(self, gravity=0.1):
-        self.box.set_gravity(gravity)
+    def create_pendulum(self, gravity=0.1, direction=None):
+        self.box.set_gravity(gravity, direction)
         balls = []
 
         pos = self.box.center.copy()

@@ -236,10 +236,11 @@ class MyGame(arcade.Window):
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)
         # for ball in balls:
         #     ball.color = arcade.color.RED
-        balls = arrangement.create_kube_planes(500, 10)
+        # balls = arrangement.create_kube_planes(500, 10)
+        balls = arrangement.create_pendulum()
 
         self.add_balls(balls)
-        self.add_planes(self.box.planes[2*self.box.dimensions:])
+        # self.add_planes(self.box.planes[2*self.box.dimensions:])
 
         # for i, ball in enumerate(self.box.particles):
         #     print(i, ball.position, ball.speed)

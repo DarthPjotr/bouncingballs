@@ -1,0 +1,321 @@
+<CoordinateSystem> { Z-Up }
+
+<Comment> {
+  "x2egg -o cube.egg cube.x"
+}
+<Texture> tref1 {
+  noIcon.jpeg
+}
+<Material> mref1 {
+  <Scalar> diffr { 0.7 }
+  <Scalar> diffg { 0.7 }
+  <Scalar> diffb { 0.7 }
+  <Scalar> specr { 1 }
+  <Scalar> specg { 1 }
+  <Scalar> specb { 1 }
+  <Scalar> shininess { 50 }
+}
+<Group> Scene_Root {
+  <Group> light {
+    <Transform> {
+      <Matrix4> {
+        1 0 0 0
+        0 1 0 0
+        0 0 1 0
+        0 0 0 1
+      }
+    }
+  }
+  <Group> cube {
+    <Transform> {
+      <Matrix4> {
+        1 0 0 0
+        0 1 0 0
+        0 0 1 0
+        0 0 0 1
+      }
+    }
+    <Group> cube_obj {
+      <VertexPool> cube_obj {
+        <Vertex> 0 {
+          4 -4 -4
+          <UV> { 0 1 }
+          <Normal> { 0 0 -1 }
+        }
+        <Vertex> 1 {
+          4 4 -4
+          <UV> { 0 0 }
+          <Normal> { 0 0 -1 }
+        }
+        <Vertex> 2 {
+          -4 4 -4
+          <UV> { 1 0 }
+          <Normal> { 0 0 -1 }
+        }
+        <Vertex> 3 {
+          -4 -4 -4
+          <UV> { 1 1 }
+          <Normal> { 0 0 -1 }
+        }
+        <Vertex> 4 {
+          -4 -4 4
+          <UV> { 0 0 }
+          <Normal> { 0 -1 0 }
+        }
+        <Vertex> 5 {
+          4 -4 4
+          <UV> { 1 0 }
+          <Normal> { 0 -1 0 }
+        }
+        <Vertex> 6 {
+          4 -4 -4
+          <UV> { 1 1 }
+          <Normal> { 0 -1 0 }
+        }
+        <Vertex> 7 {
+          -4 -4 -4
+          <UV> { 0 1 }
+          <Normal> { 0 -1 0 }
+        }
+        <Vertex> 8 {
+          -4 4 -4
+          <UV> { 0 0 }
+          <Normal> { -1 0 0 }
+        }
+        <Vertex> 9 {
+          -4 4 4
+          <UV> { 1 0 }
+          <Normal> { -1 0 0 }
+        }
+        <Vertex> 10 {
+          -4 -4 4
+          <UV> { 1 1 }
+          <Normal> { -1 0 0 }
+        }
+        <Vertex> 11 {
+          -4 -4 -4
+          <UV> { 0 1 }
+          <Normal> { -1 0 0 }
+        }
+        <Vertex> 12 {
+          4 -4 4
+          <UV> { 0 1 }
+          <Normal> { 1 0 0 }
+        }
+        <Vertex> 13 {
+          4 4 4
+          <UV> { 0 0 }
+          <Normal> { 1 0 0 }
+        }
+        <Vertex> 14 {
+          4 4 -4
+          <UV> { 1 0 }
+          <Normal> { 1 0 0 }
+        }
+        <Vertex> 15 {
+          4 -4 -4
+          <UV> { 1 1 }
+          <Normal> { 1 0 0 }
+        }
+        <Vertex> 16 {
+          4 4 -4
+          <UV> { 1 0 }
+          <Normal> { 0 1 0 }
+        }
+        <Vertex> 17 {
+          4 4 4
+          <UV> { 1 1 }
+          <Normal> { 0 1 0 }
+        }
+        <Vertex> 18 {
+          -4 4 4
+          <UV> { 0 1 }
+          <Normal> { 0 1 0 }
+        }
+        <Vertex> 19 {
+          -4 4 -4
+          <UV> { 0 0 }
+          <Normal> { 0 1 0 }
+        }
+        <Vertex> 20 {
+          -4 4 4
+          <UV> { 0 0 }
+          <Normal> { 0 0 1 }
+        }
+        <Vertex> 21 {
+          4 4 4
+          <UV> { 1 0 }
+          <Normal> { 0 0 1 }
+        }
+        <Vertex> 22 {
+          4 -4 4
+          <UV> { 1 1 }
+          <Normal> { 0 0 1 }
+        }
+        <Vertex> 23 {
+          -4 -4 4
+          <UV> { 0 1 }
+          <Normal> { 0 0 1 }
+        }
+        <Vertex> 24 {
+          -4 -4 -4
+          <UV> { 1 1 }
+          <Normal> { -0.57735 -0.57735 -0.57735 }
+        }
+        <Vertex> 25 {
+          -4 -4 -4
+          <UV> { 0 1 }
+          <Normal> { -0.57735 -0.57735 -0.57735 }
+        }
+        <Vertex> 26 {
+          -4 -4 -4
+          <UV> { 0 1 }
+          <Normal> { -0.57735 -0.57735 -0.57735 }
+        }
+        <Vertex> 27 {
+          -4 -4 4
+          <UV> { 0 0 }
+          <Normal> { -0.57735 -0.57735 0.57735 }
+        }
+        <Vertex> 28 {
+          -4 -4 4
+          <UV> { 1 1 }
+          <Normal> { -0.57735 -0.57735 0.57735 }
+        }
+        <Vertex> 29 {
+          -4 -4 4
+          <UV> { 0 1 }
+          <Normal> { -0.57735 -0.57735 0.57735 }
+        }
+        <Vertex> 30 {
+          -4 4 -4
+          <UV> { 1 0 }
+          <Normal> { -0.57735 0.57735 -0.57735 }
+        }
+        <Vertex> 31 {
+          -4 4 -4
+          <UV> { 0 0 }
+          <Normal> { -0.57735 0.57735 -0.57735 }
+        }
+        <Vertex> 32 {
+          -4 4 -4
+          <UV> { 0 0 }
+          <Normal> { -0.57735 0.57735 -0.57735 }
+        }
+        <Vertex> 33 {
+          -4 4 4
+          <UV> { 1 0 }
+          <Normal> { -0.57735 0.57735 0.57735 }
+        }
+        <Vertex> 34 {
+          -4 4 4
+          <UV> { 0 1 }
+          <Normal> { -0.57735 0.57735 0.57735 }
+        }
+        <Vertex> 35 {
+          -4 4 4
+          <UV> { 0 0 }
+          <Normal> { -0.57735 0.57735 0.57735 }
+        }
+        <Vertex> 36 {
+          4 -4 -4
+          <UV> { 0 1 }
+          <Normal> { 0.57735 -0.57735 -0.57735 }
+        }
+        <Vertex> 37 {
+          4 -4 -4
+          <UV> { 1 1 }
+          <Normal> { 0.57735 -0.57735 -0.57735 }
+        }
+        <Vertex> 38 {
+          4 -4 -4
+          <UV> { 1 1 }
+          <Normal> { 0.57735 -0.57735 -0.57735 }
+        }
+        <Vertex> 39 {
+          4 -4 4
+          <UV> { 1 0 }
+          <Normal> { 0.57735 -0.57735 0.57735 }
+        }
+        <Vertex> 40 {
+          4 -4 4
+          <UV> { 0 1 }
+          <Normal> { 0.57735 -0.57735 0.57735 }
+        }
+        <Vertex> 41 {
+          4 -4 4
+          <UV> { 1 1 }
+          <Normal> { 0.57735 -0.57735 0.57735 }
+        }
+        <Vertex> 42 {
+          4 4 -4
+          <UV> { 0 0 }
+          <Normal> { 0.57735 0.57735 -0.57735 }
+        }
+        <Vertex> 43 {
+          4 4 -4
+          <UV> { 1 0 }
+          <Normal> { 0.57735 0.57735 -0.57735 }
+        }
+        <Vertex> 44 {
+          4 4 -4
+          <UV> { 1 0 }
+          <Normal> { 0.57735 0.57735 -0.57735 }
+        }
+        <Vertex> 45 {
+          4 4 4
+          <UV> { 0 0 }
+          <Normal> { 0.57735 0.57735 0.57735 }
+        }
+        <Vertex> 46 {
+          4 4 4
+          <UV> { 1 1 }
+          <Normal> { 0.57735 0.57735 0.57735 }
+        }
+        <Vertex> 47 {
+          4 4 4
+          <UV> { 1 0 }
+          <Normal> { 0.57735 0.57735 0.57735 }
+        }
+      }
+      <Polygon> {
+        <RGBA> { 0.7 0.7 0.7 1 }
+        <TRef> { tref1 }
+        <MRef> { mref1 }
+        <VertexRef> { 36 42 30 24 <Ref> { cube_obj } }
+      }
+      <Polygon> {
+        <RGBA> { 0.7 0.7 0.7 1 }
+        <TRef> { tref1 }
+        <MRef> { mref1 }
+        <VertexRef> { 27 39 37 25 <Ref> { cube_obj } }
+      }
+      <Polygon> {
+        <RGBA> { 0.7 0.7 0.7 1 }
+        <TRef> { tref1 }
+        <MRef> { mref1 }
+        <VertexRef> { 31 33 28 26 <Ref> { cube_obj } }
+      }
+      <Polygon> {
+        <RGBA> { 0.7 0.7 0.7 1 }
+        <TRef> { tref1 }
+        <MRef> { mref1 }
+        <VertexRef> { 40 45 43 38 <Ref> { cube_obj } }
+      }
+      <Polygon> {
+        <RGBA> { 0.7 0.7 0.7 1 }
+        <TRef> { tref1 }
+        <MRef> { mref1 }
+        <VertexRef> { 44 46 34 32 <Ref> { cube_obj } }
+      }
+      <Polygon> {
+        <RGBA> { 0.7 0.7 0.7 1 }
+        <TRef> { tref1 }
+        <MRef> { mref1 }
+        <VertexRef> { 35 47 41 29 <Ref> { cube_obj } }
+      }
+    }
+  }
+}
+
+
