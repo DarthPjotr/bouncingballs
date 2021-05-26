@@ -91,7 +91,7 @@ class MyApp(ShowBase):
 
     def set_camera(self):
         cam_pos = self.box.center.copy()
-        cam_pos[self.box.Y] = -150
+        cam_pos[self.box.Y] = -2000
         self.camera.setPos(*cam_pos)
         self.camera.setHpr(0, 0, 0)
 
@@ -187,13 +187,21 @@ class MyApp(ShowBase):
 
     def create_box(self, sizes, nballs, radius):
         self.box = Box(sizes)
-        arr = ArrangeParticles(self.box, )
+        arr = ArrangeParticles(self.box)
         # balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
-        balls = arr.create_simplex()
+        # balls = arr.create_simplex()
+        # balls = arr.create_kube_planes(100, 10)
+        # balls = arr.create_n_mer(15, 3, charge=1)
+        # balls = arr.test_interaction_simple(10000)
+        self.box.set_interaction(2000)
+        self.box.set_friction(0.025)
+        balls = arr.random_balls(12, 1, 30, 1, charge=1)
+        balls = arr.random_balls(12, 1, 30, 1, charge=-1)
         # for i in range(nballs):
         #     pos = self.box.random_position()
         #     speed = self.box.random(2)
-        #     ball = self.box.add_particle(1, radius, pos, speed)
+        #     charge=0
+        #     ball = self.box.add_particle(1, radius, pos, speed, charge=charge)
     
         # plane = Plane(self.box, [1,1,1], self.box.center)
         # self.box.planes.append(plane)
@@ -236,9 +244,14 @@ class MyApp(ShowBase):
             scale = ball.radius * 0.30
             sphere = self.loader.loadModel("models/Sphere_HighPoly")
             material = Material()
-            material.setShininess(1.0) 
-            color = [c/255 for c in ball.color] 
-            color.append(1)
+            material.setShininess(1.0)
+            if ball.charge > 0:
+                color = [0,1,0,1]
+            elif ball.charge < 0:
+                color = [1,0,0,1]
+            else:
+                color = [c/255 for c in ball.color] 
+                color.append(1)
             material.setAmbient(Vec4(*color))
             material.setSpecular(Vec4(0,1,1,1))
             sphere.setScale(scale, scale, scale)

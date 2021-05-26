@@ -1645,7 +1645,8 @@ class ArrangeParticles:
             if rand_r:
                 radius = round(mass)
             if rand_c:
-                charge = random.randint(-1, 1)
+                # charge = random.randint(-1, 1)
+                charge = random.choice([-1, 1])
 
             speed = self.box.random(max_speed)
             ball = self.box.add_particle(mass, radius, None, speed, charge, None)
