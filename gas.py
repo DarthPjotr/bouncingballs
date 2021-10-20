@@ -4,7 +4,7 @@ Ideal gas in n-dimensional box
 import itertools
 import numpy
 from numpy import linalg
-from pyglet.window.key import E, F
+# from pyglet.window.key import E, F
 # from scipy.spatial import ConvexHull, QhullError
 import scipy.spatial as sp
 import networkx as nx
@@ -53,7 +53,7 @@ class Field:
         self.box = box
         position = self.box.nullvector.copy()
         speed = self.box.nullvector.copy()
-        self.dummy_ball = Particle(self.box, 1, 1, position, speed, 1, [0,0,0])
+        self.dummy_ball = Particle(self.box, 1, 1, position, speed, 1, False, [0,0,0])
         self.equation = self.nofield
 
     def _template(self, position=None, ball=None):
@@ -2398,9 +2398,7 @@ class Test():
             #     print(p)
 
 
-        
-
-if __name__ == "__main__": 
+def main():
     print("START")
 
     t = Test()
@@ -2416,3 +2414,6 @@ if __name__ == "__main__":
     t.test_shapes()
 
     print("END")
+
+if __name__ == "__main__": 
+    main()
