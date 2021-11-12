@@ -67,7 +67,7 @@ class MyApp(ShowBase):
         self.setBackgroundColor(*color/3)
 
 
-    def set_background(self):
+    def set_background_old(self):
         # Load the environment model.
         worldLight = AmbientLight("world light")
         worldLight.setColor(Vec4(1, 1, 1, 1))
@@ -87,6 +87,27 @@ class MyApp(ShowBase):
         self.world.setTwoSided(True)
         self.world.setTexture(texture, 1)
         #self.world.setShaderAuto()
+
+    def set_background(self):
+        # Load the environment model.
+        worldLight = AmbientLight("world light")
+        worldLight.setColor(Vec4(1, 1, 1, 1))
+        texture = self.loader.loadModel("models/Sphere_HighPoly")
+        # texture.setWrapU(Texture.WM_repeat)
+        # texture.setWrapV(Texture.WM_repeat)
+        self.world = self.loader.loadModel("models/test")
+        # Reparent the model to render.
+        self.world.reparentTo(self.render)
+
+        self.worldLightNodePath = self.render.attachNewNode(worldLight)
+        self.world.setLight(self.worldLightNodePath)
+        # self.scene.setColorScale(100, 100, 0, 10)
+        # Apply scale and position transforms on the model.
+        self.world.setScale(1000, 1000, 1000)
+        self.world.setPos(0, 0, 0)
+        self.world.setTwoSided(True)
+        # self.world.setTexture(texture, 1)
+        # self.world.setShaderAuto()
 
 
     def set_camera(self):
@@ -135,11 +156,15 @@ class MyApp(ShowBase):
 
         self.accept('escape', sys.exit)
         self.accept('p', self.task_toggle_pauze)
+        
+        self.accept('k', self.task_kick)
     
     def task_toggle_pauze(self):
         self.pauze = not self.pauze
         return Task.cont
 
+    def task_kick(self):
+        self.box.kick_all()
 
     def task_move_camera(self, key="", mouse=""):
         v = 8
