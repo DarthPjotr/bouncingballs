@@ -216,7 +216,7 @@ class MyApp(ShowBase):
 
     def create_box(self, sizes, nballs, radius):
         self.box = Box(sizes, torus=False)
-        self.box.merge = False
+        self.box.merge = True
         arr = ArrangeParticles(self.box)
         # balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
         # balls = arr.create_simplex()
@@ -226,6 +226,8 @@ class MyApp(ShowBase):
         self.box.set_interaction(-500)
         # self.box.set_friction(0.025)
         balls = arr.random_balls(30, 1, 10, 5, charge=1)
+        ball = self.box.add_particle(1, 20, self.box.center, speed=None, charge=1, fixed=True, color=[255,255,255])
+        balls.append(ball)
         # balls = arr.random_balls(30, 1, 10, 5, charge=-1)
         # balls = arr.random_balls(12, 1, 30, 1, charge=-1)
         # for i in range(nballs):

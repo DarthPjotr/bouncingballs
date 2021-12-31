@@ -1162,7 +1162,15 @@ class Particle:
             Ir = Is + Ib
             V = Ir / M
 
-            P = (self.position + ball.position)/2
+            fixed = False
+            if ball.fixed:
+                P = ball.position
+                fixed = True
+            elif self.fixed:
+                P = self.position
+                fixed = True
+            else:
+                P = (self.position + ball.position)/2
 
             self.speed = V
             self.position = P
@@ -1170,6 +1178,7 @@ class Particle:
             self.radius = R
             self.charge = C
             self.color = color
+            self.fixed = fixed
 
             self.box.merged_particles.append(self)
             self.box.particles.remove(ball)
