@@ -158,6 +158,7 @@ class MyApp(ShowBase):
         self.accept('p', self.task_toggle_pauze)
         
         self.accept('k', self.task_kick)
+        self.accept('m', self.task_center)
     
     def task_toggle_pauze(self):
         self.pauze = not self.pauze
@@ -165,6 +166,9 @@ class MyApp(ShowBase):
 
     def task_kick(self):
         self.box.kick_all()
+
+    def task_center(self):
+        self.box.center_all()
 
     def task_move_camera(self, key="", mouse=""):
         v = 8
@@ -211,17 +215,19 @@ class MyApp(ShowBase):
         return Task.cont
 
     def create_box(self, sizes, nballs, radius):
-        self.box = Box(sizes)
+        self.box = Box(sizes, torus=False)
+        self.box.merge = False
         arr = ArrangeParticles(self.box)
         # balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
         # balls = arr.create_simplex()
         # balls = arr.create_kube_planes(100, 10)
         # balls = arr.create_n_mer(15, 3, charge=1)
         # balls = arr.test_interaction_simple(10000)
-        self.box.set_interaction(2000)
-        self.box.set_friction(0.025)
-        balls = arr.random_balls(12, 1, 30, 1, charge=1)
-        balls = arr.random_balls(12, 1, 30, 1, charge=-1)
+        self.box.set_interaction(-500)
+        # self.box.set_friction(0.025)
+        balls = arr.random_balls(30, 1, 10, 5, charge=1)
+        # balls = arr.random_balls(30, 1, 10, 5, charge=-1)
+        # balls = arr.random_balls(12, 1, 30, 1, charge=-1)
         # for i in range(nballs):
         #     pos = self.box.random_position()
         #     speed = self.box.random(2)
@@ -277,6 +283,7 @@ class MyApp(ShowBase):
             else:
                 color = [c/255 for c in ball.color] 
                 color.append(1)
+            ball.color = [255*c for c in color[:3]]
             material.setAmbient(Vec4(*color))
             material.setSpecular(Vec4(0,1,1,1))
             sphere.setScale(scale, scale, scale)
@@ -314,11 +321,29 @@ class MyApp(ShowBase):
 
         self.box.go(steps=1)
 
+        for ball in self.box.merged_particles:
+            sphere = ball.object
+            scale = ball.radius * 0.30
+            sphere.setScale(scale, scale, scale)
+            material = Material()
+            material.setShininess(1.0)
+            color = [c/255 for c in ball.color] 
+            color.append(1)
+            material.setAmbient(Vec4(*color))
+            material.setSpecular(Vec4(0,1,1,1))
+            sphere.setMaterial(material)
+        self.box.merged_particles.clear()
+
+        for ball in self.box.delete_particles:
+            sphere = ball.object
+            sphere.removeNode()
+        self.box.delete_particles.clear()
+        
         for ball in self.box.particles:
             sphere = ball.object
             pos = ball.position # - self.box.center
             sphere.setPos(*pos)
-        
+
         for i, spring in enumerate(self.box.springs):
             p1 = spring.p1.object
             p2 = spring.p2.object

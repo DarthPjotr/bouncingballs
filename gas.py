@@ -246,9 +246,12 @@ class Box:
         self.gravity = self.nullvector.copy()
         self.friction = 0.0
         self.interaction = 0.0
+        self.merge = False
         # content of the box
         self.walls = []
         self.particles = []
+        self.merged_particles = []
+        self.delete_particles = []
         self.springs = []
         self.rods = []
         # dynamic properties
@@ -328,6 +331,7 @@ class Box:
         box = {}
         box["sizes"] = [float(f) for f in self.box_sizes] # list(self.box_sizes)
         box['torus'] = self.torus
+        box['merge'] = self.merge
         box["gravity"] = [float(f) for f in self.gravity] # list(self.gravity)
         box["friction"] = float(self.friction)
         box["interaction"] = float(self.interaction)
@@ -727,9 +731,13 @@ class Box:
                 ball.wrap()
             else:
                 ball.bounce()      
-            # collide the balls
-            for ball2 in self.particles[i:]:
-                if ball.collide(ball2): bounced = True
+            # collide or merge the balls
+            if self.merge == False:
+                for ball2 in self.particles[i:]:
+                    if ball.collide(ball2): bounced = True
+            else:
+                for ball2 in self.particles[i:]:
+                    if ball.merge(ball2): bounced = True
         
         # apply rods
         for rod in self.rods:
@@ -1114,6 +1122,63 @@ class Particle:
         
         # self.impuls = self.mass * self.speed
         return collided
+    
+    def merge(self, ball):
+        """
+        Handles particle merge (inelastic collision)
+
+        Args:
+            p2 (Particle): particle to check collision with
+
+        Returns:
+            boolean: True when merge occured
+        """
+        merged = False
+
+        if not self.fast_collision_check(ball):
+            merged = False
+            return merged
+
+        # dposition = self.position - p2.position
+        dposition = self.displacement(ball.position)
+        distance2 = dposition.dot(dposition)
+
+        # only collide when particles are moving towards each other: 
+        # dot product of speed difference and position different < 0
+        dspeed = self.speed - ball.speed
+        dot_speed_pos = dspeed.dot(dposition)
+
+        dmin = self.radius + ball.radius
+        if distance2 > 0 and distance2 < dmin*dmin and dot_speed_pos < 0: # and d2 < distance2:
+            D = self.box.dimensions
+            R = (self.radius**D + ball.radius**D)**(1/D)
+            C = self.charge + ball.charge
+            # color = [c for c in numpy.array(self.color)*0.7]
+            color = 0.8* (numpy.array(self.color) + numpy.array(ball.color))/2
+
+            Is = self.mass * self.speed
+            Ib = ball.mass * ball.speed
+            M = self.mass + ball.mass
+            Ir = Is + Ib
+            V = Ir / M
+
+            P = (self.position + ball.position)/2
+
+            self.speed = V
+            self.position = P
+            self.mass = M
+            self.radius = R
+            self.charge = C
+            self.color = color
+
+            self.box.merged_particles.append(self)
+            self.box.particles.remove(ball)
+            self.box.delete_particles.append(ball)
+            merged = True
+        
+        # self.impuls = self.mass * self.speed
+        return merged
+
         
     def bounce_simple(self):
         """
@@ -1771,7 +1836,7 @@ class ArrangeParticles:
 
         for i in range(nballs):
             position = kube.random_position() + dcenter
-            ball = self.box.add_particle(1, 5, position)
+            ball = self.box.add_particle(10, 50, position)
             balls.append(ball)
         
         return balls
@@ -2088,6 +2153,7 @@ def load_gas(data):
         box.set_friction(b['friction'])
         box.set_interaction(b['interaction'])
         box.torus = b['torus']
+        box.merge = b['merge']
     except KeyError:
         pass
 
