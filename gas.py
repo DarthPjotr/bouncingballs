@@ -1686,6 +1686,17 @@ class ArrangeParticles:
             box (Box): The box
         """        
         self.box = box
+    
+    def set_charge_colors(self, balls):
+        for ball in balls:
+            if ball.charge >= 1:
+                ball.color = [0,255,0]
+            elif ball.charge <= -1:
+                ball.color = [255,0,0]
+            else:
+                ball.color = [0,0,255]
+
+        return balls
 
     def random_balls(self, nballs: int, mass=None, radius=None, max_speed=VMAX, charge=0):
         """
@@ -1849,9 +1860,6 @@ class ArrangeParticles:
             balls.append(ball)
         
         return balls
-
-
-
 
     def create_n_mer(self, nballs, n=2, star=False, circle=False, charge=0):
         """

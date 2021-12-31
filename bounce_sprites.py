@@ -50,7 +50,7 @@ DIMENSIONS = 3
 SPEED = 3
 
 # because it looks better with soft SpriteCircle add bit to sprite radius
-D_SPRITE_RADIUS = 10
+D_SPRITE_RADIUS = 3
 
 MAXCOLOR = 255
 INVMAXCOLOR = 1/MAXCOLOR
@@ -380,6 +380,16 @@ class MyGame(arcade.Window):
 
         self.arrow_list = None
         self.arrow_list = arcade.ShapeElementList()
+
+        for ball in self.box.delete_particles:
+            ball.object.kill()    
+        self.box.delete_particles.clear()
+    
+        for ball in self.box.merged_particles:
+            # ball.object.radius = ball.radius
+            pass
+        self.box.merged_particles.clear()
+
         for i, ball in enumerate(self.box.particles):
             #arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
             end = ball.position + 10*ball.speed
