@@ -381,14 +381,17 @@ class MyGame(arcade.Window):
         self.arrow_list = None
         self.arrow_list = arcade.ShapeElementList()
 
-        for ball in self.box.delete_particles:
-            ball.object.kill()    
-        self.box.delete_particles.clear()
+        while self.box.delete_particles:
+            ball = self.box.delete_particles.pop()
+            ball.object.kill()
     
-        for ball in self.box.merged_particles:
-            # ball.object.radius = ball.radius
-            pass
-        self.box.merged_particles.clear()
+        while self.box.merged_particles:
+            ball = self.box.merged_particles.pop()
+            ball.object.kill()
+            # ball.object = self.add_ball(ball.mass, ball.radius, ball.posistion, ball.speed, ball.charge, ball.fixed, ball.color)
+            ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, [int(c) for c in ball.color], True)
+            self.ball_list.append(ball.object) 
+
 
         for i, ball in enumerate(self.box.particles):
             #arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
