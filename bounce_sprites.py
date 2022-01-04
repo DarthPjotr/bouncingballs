@@ -232,12 +232,15 @@ class MyGame(arcade.Window):
         # plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
         # self.box.planes.append(plane)
 
-        # # balls = arrangement.random_balls(10, charge=-1)
+        self.box.set_interaction(500)
+        balls = arrangement.random_balls(1, 1, 300, 2, charge=0)
+        # balls += arrangement.random_balls(5, 1, 30, 1, charge=1)
+        # balls = arrangement.set_charge_colors(balls)
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)
         # for ball in balls:
         #     ball.color = arcade.color.RED
-        balls = arrangement.create_kube_planes(500, 50)
-        self.box.merge = True
+        # balls = arrangement.create_kube_planes(500, 50)
+        self.box.merge = False
         
         # balls = arrangement.create_pendulum()
 
@@ -295,7 +298,8 @@ class MyGame(arcade.Window):
             if ball.fixed:
                 ball.object = arcade.SpriteCircle(int(ball.radius)+5, ball.color, False)
             else:
-                ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
+                # ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
+                ball.object = arcade.SpriteCircle(int(ball.radius), ball.color, False)
             self.ball_list.append(ball.object)
 
     def add_ball(self, mass, radius, position=None, speed=None, charge=0, fixed=False, color=None):
@@ -366,6 +370,8 @@ class MyGame(arcade.Window):
         arcade.start_render()
         self._frames += 1
 
+#         arcade.draw_text("Test", 50, 50)
+
         if self.box.field is not None and self.box.field.equation != self.box.field.nofield:
             self.draw_field()
 
@@ -388,14 +394,14 @@ class MyGame(arcade.Window):
         while self.box.merged_particles:
             ball = self.box.merged_particles.pop()
             ball.object.kill()
-            # ball.object = self.add_ball(ball.mass, ball.radius, ball.posistion, ball.speed, ball.charge, ball.fixed, ball.color)
-            ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, [int(c) for c in ball.color], True)
+            # +D_SPRITE_RADIUS
+            ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
             self.ball_list.append(ball.object) 
 
 
         for i, ball in enumerate(self.box.particles):
             #arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
-            end = ball.position + 10*ball.speed
+            end = ball.position + 3*ball.speed
             # arcade.draw_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
             arrow = arcade.create_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
             self.arrow_list.append(arrow)
@@ -407,6 +413,7 @@ class MyGame(arcade.Window):
                 output = "+"
             if ball.charge != 0 and len(output) > 0 and self.box.interaction != 0:
                 arcade.draw_text(output, ball.position[0]+5, ball.position[1]-10, arcade.color.WHITE, 20, font_name="Calibri Bold")
+                pass
             
             # output = str(i)
             # arcade.draw_text(output, ball.position[0]-0, ball.position[1]+0, arcade.color.WHITE, 8, font_name="Calibri Bold")

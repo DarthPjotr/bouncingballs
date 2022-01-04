@@ -58,7 +58,8 @@ class MyApp(ShowBase):
         self.render.setLight(self.ambientLightNodePath)
         self.render.setShaderAuto()
 
-        color = np.array([0.3, 0.7, 0.9])
+        #color = np.array([0.3, 0.7, 0.9])
+        color = np.array([0, 0, 0])
         # expfog = Fog("Scene-wide exponential Fog object")
         # expfog.setMode(1)
         # expfog.setColor(*color)
@@ -216,7 +217,7 @@ class MyApp(ShowBase):
 
     def create_box(self, sizes, nballs, radius):
         self.box = Box(sizes, torus=False)
-        self.box.merge = False
+        self.box.merge = True
         arr = ArrangeParticles(self.box)
         # balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
         # balls = arr.create_simplex()
@@ -226,9 +227,9 @@ class MyApp(ShowBase):
         self.box.set_interaction(500)
         # self.box.set_friction(0.025)
         balls = arr.random_balls(30, 1, 10, 5, charge=1)
-        balls = arr.random_balls(30, 1, 10, 5, charge=0)
-        ball = self.box.add_particle(1, 20, self.box.center, speed=None, charge=-10, fixed=True, color=[255,255,255])
-        balls.append(ball)
+        balls += arr.random_balls(30, 1, 10, 5, charge=-1)
+        # ball = self.box.add_particle(1, 20, self.box.center, speed=None, charge=-10, fixed=True, color=[255,255,255])
+        # balls.append(ball)
         arr.set_charge_colors(balls)
         # balls = arr.random_balls(30, 1, 10, 5, charge=-1)
         # balls = arr.random_balls(12, 1, 30, 1, charge=-1)
@@ -247,10 +248,10 @@ class MyApp(ShowBase):
             p1 = self.box.vertices[i]
             p2 = self.box.vertices[j]
             lines = LineSegs()
-            lines.setColor(0, 1, 0, 1)
+            lines.setColor(0, 0, 1, 1)
             lines.moveTo(*p1)
             lines.drawTo(*p2)
-            lines.setThickness(2)
+            lines.setThickness(1)
             node = lines.create()
             # node.setAntiAlias(8, 1)
             np = NodePath(node)
@@ -321,7 +322,8 @@ class MyApp(ShowBase):
 
         self.box.go(steps=1)
 
-        for ball in self.box.merged_particles:
+        while self.box.merged_particles:
+            ball = self.box.merged_particles.pop()
             sphere = ball.object
             scale = ball.radius * 0.30
             sphere.setScale(scale, scale, scale)
@@ -332,12 +334,11 @@ class MyApp(ShowBase):
             material.setAmbient(Vec4(*color))
             material.setSpecular(Vec4(0,1,1,1))
             sphere.setMaterial(material)
-        self.box.merged_particles.clear()
 
-        for ball in self.box.delete_particles:
+        while self.box.delete_particles:
+            ball = self.box.delete_particles.pop()
             sphere = ball.object
             sphere.removeNode()
-        self.box.delete_particles.clear()
         
         for ball in self.box.particles:
             sphere = ball.object

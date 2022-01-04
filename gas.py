@@ -886,7 +886,7 @@ class Plane:
     
     def intersect_line(self, point, vector):
         """
-        Calculates intersetcion point between line and the plane
+        Calculates intersection point between line and the plane
 
         Args:
             point (numpy.array): a point on the line
@@ -1154,7 +1154,8 @@ class Particle:
             R = (self.radius**D + ball.radius**D)**(1/D)
             C = self.charge + ball.charge
             # color = [c for c in numpy.array(self.color)*0.7]
-            color = 0.8* (numpy.array(self.color) + numpy.array(ball.color))/2
+            color = 0.8 * (numpy.array(self.color) + numpy.array(ball.color))/2
+            color = tuple([int(c) for c in color])
 
             Is = self.mass * self.speed
             Ib = ball.mass * ball.speed
@@ -1236,10 +1237,10 @@ class Particle:
 
         for plane in self.box.planes:
             vn = self.speed @ plane.unitnormal
-            dp = plane.distance(self.position)
+            dp = abs(plane.distance(self.position))
 
             # is the particle close enough to bounce of the wall?
-            if  dp < self.radius or dp < abs(vn):
+            if  dp < self.radius: # or dp < abs(vn):
                 intersection = plane.intersect_line(self.position, self.speed)
                 if intersection is None:
                     continue
@@ -1252,6 +1253,7 @@ class Particle:
                     dp = (self.speed @ plane.unitnormal) * plane.unitnormal
                     dn = self.speed - dp
                     self.speed = 2*dn - self.speed
+                    self.position += self.speed
                     
                     momentum = self.mass * (old_speed - self.speed)
                     self.box.momentum += momentum
@@ -1694,7 +1696,7 @@ class ArrangeParticles:
             elif ball.charge <= -1:
                 ball.color = [255,0,0]
             else:
-                ball.color = [0,0,255]
+                ball.color = [255,255,0]
 
         return balls
 
