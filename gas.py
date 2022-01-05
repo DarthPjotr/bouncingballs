@@ -1240,20 +1240,24 @@ class Particle:
             dp = abs(plane.distance(self.position))
 
             # is the particle close enough to bounce of the wall?
-            if  dp < self.radius: # or dp < abs(vn):
+            if  dp < self.radius or dp < abs(vn):
                 intersection = plane.intersect_line(self.position, self.speed)
                 if intersection is None:
                     continue
-                p2 = (self.position + self.speed)
-                p2i = p2 - intersection
+                # p2 = (self.position + self.speed)
+                # p2i = p2 - intersection
+
 
                 # does particle move towards the wall?
-                if (p2i @ p2i) < (self.speed @ self.speed):
+                # TODO: p2i does not account for ball radius
+                # if (p2i @ p2i) < (self.speed @ self.speed):
+                # if (self.speed - p2i) @ (self.speed - p2i) < self.radius * self.radius:
+                if True:
                     bounced = True
                     dp = (self.speed @ plane.unitnormal) * plane.unitnormal
                     dn = self.speed - dp
                     self.speed = 2*dn - self.speed
-                    self.position += self.speed
+                    # self.position += self.speed
                     
                     momentum = self.mass * (old_speed - self.speed)
                     self.box.momentum += momentum
@@ -2117,7 +2121,29 @@ class ArrangeParticles:
         balls.extend(balls_)
 
         return balls
+    
+    def test_walls(self):
+        normal = self.box.nullvector.copy()
+        normal[0] = 1
+        normal[1] = 0.3
+        wall = Plane(self.box, normal, self.box.center)
+        self.box.planes.append(wall)
 
+        balls = []
+        position = self.box.center.copy()
+        position += self.box.center/2
+        # position[0] += self.box.center[0]/2
+        speed = self.box.onevector.copy()
+        ball = self.box.add_particle(1, 50, position, speed=speed, charge=0, fixed=False, color=[0,0,255])
+        balls.append(ball)
+
+        position = self.box.center.copy()
+        position -= self.box.center/2 
+        speed = -35 * self.box.onevector.copy()
+        ball = self.box.add_particle(1, 10, position, speed=speed, charge=0, fixed=False, color=[255,255,0])
+        balls.append(ball)
+
+        return balls
 
     def test_rod(self, length=150, interaction=0):
         self.box.set_interaction(interaction)

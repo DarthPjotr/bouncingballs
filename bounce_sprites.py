@@ -91,7 +91,7 @@ class MyGame(arcade.Window):
         self.bounced = False
         self.quiet = False
         self.text = True
-        self.draw_planes = False
+        self.draw_planes = True
         self.left_mouse_down = False
         self.mouse_dx = 0
         self.mouse_dy = 0
@@ -232,8 +232,8 @@ class MyGame(arcade.Window):
         # plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
         # self.box.planes.append(plane)
 
-        self.box.set_interaction(500)
-        balls = arrangement.random_balls(1, 1, 300, 2, charge=0)
+        # self.box.set_interaction(500)
+        # balls = arrangement.random_balls(1, 1, 300, 2, charge=0)
         # balls += arrangement.random_balls(5, 1, 30, 1, charge=1)
         # balls = arrangement.set_charge_colors(balls)
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)
@@ -243,6 +243,7 @@ class MyGame(arcade.Window):
         self.box.merge = False
         
         # balls = arrangement.create_pendulum()
+        balls = arrangement.test_walls()
 
         self.add_balls(balls)
         # self.add_planes(self.box.planes[2*self.box.dimensions:])
