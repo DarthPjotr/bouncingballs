@@ -241,6 +241,7 @@ class MyGame(arcade.Window):
         #     ball.color = arcade.color.RED
         # balls = arrangement.create_kube_planes(500, 50)
         self.box.merge = False
+        self.box.torus = False
         
         # balls = arrangement.create_pendulum()
         balls = arrangement.test_walls()
