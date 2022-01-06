@@ -1237,25 +1237,25 @@ class Particle:
         old_speed = self.speed.copy()
 
         for plane in self.box.planes:
-            vn = self.speed @ plane.unitnormal
-            dp = abs(plane.distance(self.position))
+            speed2plane = self.speed @ plane.unitnormal
+            distance2plane = abs(plane.distance(self.position))
 
             # is the particle close enough to bounce of the wall?
-            if  dp < self.radius or dp < abs(vn):
-                intersection = plane.intersect_line(self.position, self.speed)
-                if intersection is None:
+            if  distance2plane < self.radius or distance2plane < abs(speed2plane):
+                hitpoint = plane.intersect_line(self.position, self.speed)
+                if hitpoint is None:
                     continue
 
-                pni = plane.intersect_line(self.position, plane.unitnormal)
-                vpn = self.position - pni
+                normalpoint = plane.intersect_line(self.position, plane.unitnormal)
+                vnormalpoint = self.position - normalpoint
 
                 # does particle move towards the wall?
-                if (vpn@self.speed) < 0:
+                if (vnormalpoint @ self.speed) < 0:
                     bounced = True
-                    dp = (self.speed @ plane.unitnormal) * plane.unitnormal
-                    dn = self.speed - dp
-                    self.speed = 2*dn - self.speed
-                    # self.position += self.speed
+                    vspeed2plane = (self.speed @ plane.unitnormal) * plane.unitnormal
+                    #dn = self.speed - vspeed2plane
+                    #self.speed = 2*dn - self.speed
+                    self.speed = self.speed - 2*vspeed2plane
                     
                     momentum = self.mass * (old_speed - self.speed)
                     self.box.momentum += momentum

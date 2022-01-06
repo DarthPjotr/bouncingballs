@@ -224,7 +224,7 @@ class MyApp(ShowBase):
         # balls = arr.create_kube_planes(100, 10)
         # balls = arr.create_n_mer(15, 3, charge=1)
         # balls = arr.test_interaction_simple(10000)
-        self.box.set_interaction(500)
+        self.box.set_interaction(1500)
         # self.box.set_friction(0.025)
         balls = arr.random_balls(30, 1, 10, 5, charge=1)
         balls += arr.random_balls(30, 1, 10, 5, charge=-1)
@@ -248,7 +248,7 @@ class MyApp(ShowBase):
             p1 = self.box.vertices[i]
             p2 = self.box.vertices[j]
             lines = LineSegs()
-            lines.setColor(0, 0, 1, 1)
+            lines.setColor(0.7, 0.7, 0.7, 1)
             lines.moveTo(*p1)
             lines.drawTo(*p2)
             lines.setThickness(1)
