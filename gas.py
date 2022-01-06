@@ -1049,6 +1049,7 @@ class Particle:
             self.speed = self.box.nullvector.copy()
 
         self.position += self.speed
+        # return
 
         for i, x in enumerate(self.box.nullvector):
             if self.position[i] < x:
@@ -1244,15 +1245,12 @@ class Particle:
                 intersection = plane.intersect_line(self.position, self.speed)
                 if intersection is None:
                     continue
-                # p2 = (self.position + self.speed)
-                # p2i = p2 - intersection
 
+                pni = plane.intersect_line(self.position, plane.unitnormal)
+                vpn = self.position - pni
 
                 # does particle move towards the wall?
-                # TODO: p2i does not account for ball radius
-                # if (p2i @ p2i) < (self.speed @ self.speed):
-                # if (self.speed - p2i) @ (self.speed - p2i) < self.radius * self.radius:
-                if True:
+                if (vpn@self.speed) < 0:
                     bounced = True
                     dp = (self.speed @ plane.unitnormal) * plane.unitnormal
                     dn = self.speed - dp
