@@ -1049,7 +1049,8 @@ class Particle:
             self.speed = self.box.nullvector.copy()
 
         self.position += self.speed
-        # return
+        if self.box.torus:
+            return
 
         for i, x in enumerate(self.box.nullvector):
             if self.position[i] < x:
@@ -1260,33 +1261,6 @@ class Particle:
                     momentum = self.mass * (old_speed - self.speed)
                     self.box.momentum += momentum
                     self.box._normal_momentum += abs(momentum @ plane.unitnormal)
-        return bounced
-
-    def __bounce(self):
-        """
-        Check and handles particle hitting the box walls
-
-        Args:
-            box (Box): the box
-
-        Returns:
-            boolean: True if hit occured
-        """
-        bounced = False
-        old_speed = self.speed.copy()
-
-        for plane in self.box.planes:
-            vn = self.speed @ plane.unitnormal
-            dp = abs(plane.distance(self.position))
-            if  dp < self.radius or dp < vn:
-                bounced = True
-                dp = (self.speed @ plane.unitnormal) * plane.unitnormal
-                dn = self.speed - dp
-                self.speed = 2*dn - self.speed
-                
-                momentum = self.mass * (old_speed - self.speed)
-                self.box.momentum += momentum
-                self.box._normal_momentum += abs(momentum @ plane.unitnormal)
         return bounced
 
     def displacement(self, position):
@@ -2134,6 +2108,8 @@ class ArrangeParticles:
         speed = self.box.onevector.copy()
         ball = self.box.add_particle(1, 50, position, speed=speed, charge=0, fixed=False, color=[0,0,255])
         balls.append(ball)
+
+        return balls
 
         position = self.box.center.copy()
         position -= self.box.center/2 
