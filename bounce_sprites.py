@@ -402,7 +402,7 @@ class MyGame(arcade.Window):
 
         for i, ball in enumerate(self.box.particles):
             #arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
-            end = ball.position + 3*ball.speed
+            end = ball.position + ball.speed
             # arcade.draw_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
             arrow = arcade.create_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
             self.arrow_list.append(arrow)
