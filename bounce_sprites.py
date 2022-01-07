@@ -45,12 +45,16 @@ GRAVITY = 0.0
 FRICTION = 0.00
 INTERACTION = 10000.0
 TORUS = False
-DIMENSIONS = 3
+DIMENSIONS = 2
 # HEIGHT = 30
 SPEED = 3
 
 # because it looks better with soft SpriteCircle add bit to sprite radius
-D_SPRITE_RADIUS = 3
+FUZZIE = False
+if FUZZIE:
+    D_SPRITE_RADIUS = 3
+else:
+    D_SPRITE_RADIUS = 0
 
 MAXCOLOR = 255
 INVMAXCOLOR = 1/MAXCOLOR
@@ -245,6 +249,7 @@ class MyGame(arcade.Window):
         
         # balls = arrangement.create_pendulum()
         balls = arrangement.test_walls()
+        # balls = arrangement.test_rod()
 
         self.add_balls(balls)
         # self.add_planes(self.box.planes[2*self.box.dimensions:])
@@ -300,13 +305,13 @@ class MyGame(arcade.Window):
             if ball.fixed:
                 ball.object = arcade.SpriteCircle(int(ball.radius)+5, ball.color, False)
             else:
-                # ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
-                ball.object = arcade.SpriteCircle(int(ball.radius), ball.color, False)
+                ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, FUZZIE)
+                # ball.object = arcade.SpriteCircle(int(ball.radius), ball.color, False)
             self.ball_list.append(ball.object)
 
     def add_ball(self, mass, radius, position=None, speed=None, charge=0, fixed=False, color=None):
         ball = self.box.add_particle(mass, radius, position, speed, charge, fixed, color)
-        ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
+        ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, FUZZIE)
         self.ball_list.append(ball.object) 
 
         return ball

@@ -1012,6 +1012,82 @@ class Plane:
         
         return edges
 
+    def pass_through(self, ball):
+        return False
+
+class Membrane(Plane):
+    def __init__(self, box: Box, normal=None, point=None, points=None) -> None:
+        self._filter = self.no_filter
+        self.hole_size = 15
+        self.max_speed = 0
+        self._bounced = 0
+        super().__init__(box, normal=normal, point=point, points=points)
+    
+    def no_filter(self, ball):
+        return False
+
+    def pass_through(self, ball):
+        # res = super().pass_through(ball)
+        res = self._filter(ball)
+        return res
+    
+    def mass_filter(self, ball):
+        return False
+    
+    def size_filter(self, ball):
+        if ball.radius < self.hole_size:
+            return True 
+        return False
+    
+    def speed_filter(self, ball):
+        if ball.speed < self.max_speed:
+            return True
+        return False
+
+    def dynamic_speed_filter(self, ball):
+        res = False
+        self._bounced += 1
+        speed = math.sqrt(ball.speed@ball.speed)
+        if speed < self.max_speed:
+            res = True
+        
+        self.max_speed = speed + (self.max_speed * (self._bounced - 1))/self._bounced
+        return res
+    
+    def maxwells_demon_filter(self, ball):
+        res = False
+        self._bounced += 1
+
+        direction = ball.speed @ self.unitnormal
+        speed2 = ball.speed @ ball.speed
+        speed = math.sqrt(speed2)
+
+        max_speed2 = (self.max_speed * self.max_speed)
+        if direction == 0:
+            res = False
+        elif direction > 0:
+            if speed2 > max_speed2:
+                res = True
+        elif direction < 0:
+            if speed2 < max_speed2:
+                res = True
+        else:
+            res = False
+        
+        if res:
+            # self.max_speed = speed + (self.max_speed * (self._bounced - 1))/self._bounced
+            pass
+
+        return res
+    
+    def out(self):
+
+        membrane = super().out()
+        membrane['pass_through_function'] = self._filter.__name__
+        membrane['hole_size'] = self.hole_size
+        membrane['max_speed'] = self.max_speed
+        return membrane
+
 
 class Particle:
     """
@@ -1243,6 +1319,9 @@ class Particle:
 
             # is the particle close enough to bounce of the wall?
             if  distance2plane < self.radius or distance2plane < abs(speed2plane):
+                if plane.pass_through(self):
+                    continue
+
                 hitpoint = plane.intersect_line(self.position, self.speed)
                 if hitpoint is None:
                     continue
@@ -1486,164 +1565,54 @@ class Spring:
         self.p1.speed += dv1
         self.p2.speed += dv2
 
-class Rod:
-    def __init__(self, box, lenght, p1, p2, vcenter=None, vrot=None) -> None:
-        self.box = box
-        self.length = lenght
-        self.p1 = p1
-        self.p2 = p2
-
-        if vcenter is None:
-            vcenter = numpy.zeros(self.box.dimensions)
-        self.vcenter = vcenter
-        if vrot is None:
-            vrot = numpy.zeros(self.box.dimensions)
-        self.vrot = vrot
-        self.results = ()
-        # self.hit(self.p1, self.p2)
-        # self.hit(self.p2, self.p1)
+class Rod(Spring):
+    """
+    A Rod is a Spring with a fixed length
+    """
+    def __init__(self, length, p1, p2) -> None:
+        super().__init__(length=length, strength=0.01, damping=0, p1=p1, p2=p2)
 
     def __str__(self) -> str:
         return "{} {}".format(self.length, (self.p1.index(), self.p2.index()))
 
-    def pull_old(self):
-        # dpos = self.p1.displacement(self.p2.position)
-        dpos = self.p1.position - self.p2.position
-        R2 = dpos @ dpos
-        V1r = self.p1.speed.dot(dpos)*dpos/R2
-        V2r = self.p2.speed.dot(dpos)*dpos/R2
-        V1p = self.p1.speed - V1r
-        V2p = self.p2.speed - V2r
-        dVr = V1r - V2r
-
-
-        self.p1.speed = V1p + dVr
-        self.p2.speed = V2p + dVr
-    
-
-    def hit_(self):
-        hit = False
-        C1 = (self.p1.position + self.p2.position)/2
-        vc1 = vc2 = vr1 = vr2 = self.box.nullvector.copy()
-
-        dv1 = self.p1.speed - self.vcenter - self.vrot
-        dv2 = self.p2.speed - self.vcenter + self.vrot
-        print(dv1, dv2)
-
-        if not dv2 @ dv2 < 0.001:
-            p2n = self.p2.position + dv2
-            dp = (p2n - self.p1.position)
-            p1n = p2n - (self.length * dp/math.sqrt(dp @ dp))
-            C2 = (p1n + p2n)/2
-            vc2 = C2 - C1
-            vr2 = (p2n - vc2) - self.p2.position
-            hit = True
-
-        if not dv1 @ dv1 < 0.001:
-            p1n = self.p1.position + dv1
-            dp = (p1n - self.p2.position)
-            p2n = p1n - (self.length * dp/math.sqrt(dp @ dp))
-            C2 = (p2n + p1n)/2
-            vc1 = C2 - C1
-            vr1 = (p1n - vc1) - self.p1.position
-            hit = True
-
-
-        self.vcenter += vc1 + vc2
-        self.vrot += vr1 + vr2
-
-        return hit
-
-    def hit__(self, p1, p2):
-        hit = False
-        C1 = (p1.position + p2.position)/2
-        vc1 = self.box.nullvector.copy()
-        vc2 = self.box.nullvector.copy()
-        vr1 = self.box.nullvector.copy()
-        vr2 = self.box.nullvector.copy()
-
-        dv = p1.speed - self.vcenter - self.vrot
-        if not dv @ dv < 0.0001:
-            p1n = p1.position + dv
-            dp = (p1n - p2.position)
-            p2n = p1n - (self.length * dp/math.sqrt(dp @ dp))
-            C2 = (p2n + p1n)/2
-            vc1 = C2 - C1
-            vr1 = dv - vc1
-            # vr2_ = (p2n - p2.position) - vc1
-            # print(vr2_ - vr1)
-            hit = True
-
-
-        self.vcenter += vc1 + vc2
-        self.vrot += vr1 + vr2
-
-        return hit
-
-    def hit(self, p1, p2):
-        hit = False
-        C = (p1.position + p2.position) / 2
-
-        vcenter1 = self.box.nullvector.copy()
-        vcenter2 = self.box.nullvector.copy()
-        vrot1 = self.box.nullvector.copy()
-        vrot2 = self.box.nullvector.copy()
-
-        dv = p1.speed - self.vcenter - self.vrot
-        if (dv @ dv) > 0.0001:
-            vcd1 = (p1.position + p1.speed/2) - C         
-            vcenter1 = (p1.speed @ vcd1) * vcd1 / (vcd1 @ vcd1)
-            vrot1 = p1.speed - vcenter1
-            hit = True
-
-        dv = p2.speed - self.vcenter + self.vrot
-        if (dv @ dv) > 0.0001:
-            vcd2 = (p2.position + p2.speed/2) - C
-            vcenter2 = (p2.speed @ vcd2) * vcd2 / (vcd2 @ vcd2)
-            vrot2 = p2.speed - vcenter2
-            hit = True
-
-        if hit:
-            self.vcenter = vcenter1 + vcenter2
-            self.vrot = vrot1 + vrot2
-            # vrot = self.vrot.copy()
-
-            # p1n = p1.position + self.vrot
-            # dpn = p1n - C
-            # p1n = C + (self.length/2) * dpn / (math.sqrt(dpn @ dpn))
-            # self.vrot = p1n - p1.position
-
-            # p1n = p1.position + self.vrot
-            # p2n = p2.position - self.vrot
-            # dpn = p1n - p2n
-
-            # print(math.sqrt(dpn @ dpn), self.length, self.vrot - vrot)
-        # print(vcenter1, vrot1, vcenter2, vrot2, self.vcenter, self.vrot)
-
-        return hit
-
-    def rotate(self):
-        # self.vcenter = self.box.nullvector.copy()
-
-        # dp2 = self.p1.position - self.p2.position
-        dp2 = (self.p1.position + self.vrot) - (self.p2.position - self.vrot)
-        vrotp = (self.vrot @ dp2) * dp2 / (dp2 @ dp2)
-
-        self.vrot -= 2*vrotp
-    
     def pull(self):
-        h1 = h2 = False
-        h1 = self.hit(self.p1, self.p2)
-        # h2 = self.hit(self.p2, self.p1)
-        if not h1:
-        # if True:
-            self.rotate()
-            pass
+        super().pull()
+        self._correct_by_length()
 
-        self.p1.speed = self.vcenter + self.vrot
-        self.p2.speed = self.vcenter - self.vrot
-        # print(self.p1.speed, self.p2.speed, self.vcenter, self.vrot)
+
+    def _correct_by_length(self):
+        #correct for fixed length
+        # vrod = self.p2.displacement(self.p1.position)
+        # vrod = self.p2.position - self.p1.position
+        # crod = (self.p2.position + self.p1.position)/2
+        # vnormalrod = vrod / (vrod@vrod)
         
+        # speed1_rod = self.p1.speed @ vnormalrod
+        # speed2_rod = self.p2.speed @ vnormalrod
+
+        pos1new = self.p1.position + self.p1.speed
+        pos2new = self.p2.position + self.p2.speed
+        vd = pos2new - pos1new
+        cposnew = (pos1new + pos2new)/2
+        vnormald = vd / math.sqrt(vd@vd)
+
+        pos1corr = cposnew - (vnormald * self.length)/2
+        pos2corr = cposnew + (vnormald * self.length)/2
+        # disp = pos2corr - pos1corr
+        #l = math.sqrt(disp@disp)
+
+        self.p1.position = pos1corr - self.p1.speed
+        self.p2.position = pos2corr - self.p2.speed
+    
+    def _correct_by_center_and_rotation(self):
+        crod = (self.p2.position + self.p1.position)/2
+
+        pos1new = self.p1.position + self.p1.speed
+        pos2new = self.p2.position + self.p2.speed
+        cposnew = (pos1new + pos2new)/2
+
+        dcenter = cposnew - crod
+
 
     def out(self):
         rod = {}
@@ -2098,7 +2067,12 @@ class ArrangeParticles:
         normal = self.box.nullvector.copy()
         normal[0] = 1
         normal[1] = 0.3
-        wall = Plane(self.box, normal, self.box.center)
+        # wall = Plane(self.box, normal, self.box.center)
+        wall = Membrane(self.box, normal, self.box.center)
+        # wall.hole_size = 15
+        wall.max_speed = 4
+        wall._filter = wall.maxwells_demon_filter
+
         self.box.planes.append(wall)
 
         balls = []
@@ -2109,13 +2083,13 @@ class ArrangeParticles:
         ball = self.box.add_particle(1, 50, position, speed=speed, charge=0, fixed=False, color=[0,0,255])
         balls.append(ball)
 
-        return balls
-
         position = self.box.center.copy()
         position -= self.box.center/2 
-        speed = -35 * self.box.onevector.copy()
+        speed = -3 * self.box.onevector.copy()
         ball = self.box.add_particle(1, 10, position, speed=speed, charge=0, fixed=False, color=[255,255,0])
         balls.append(ball)
+
+        balls += self.random_balls(10, 1, 10, 2)
 
         return balls
 
@@ -2148,7 +2122,9 @@ class ArrangeParticles:
         balls.append(ball)
         b2 = ball
 
-        rod = Rod(self.box, length, b1, b2, vcenter=None, vrot=None)
+        rod = Rod(length, b1, b2)
+        # spring = Spring(length, 1.0, 0, b1, b2)
+        # self.box.rods.append(rod)
         self.box.rods.append(rod)
         
         return balls
@@ -2210,7 +2186,13 @@ def load_gas(data):
         for p in b["planes"]:
             normal = p["normal"]
             point = p["point"]
-            plane = Plane(box, normal, point)
+            if p.haskey('pass_through_function'):
+                plane = Membrane(box, normal, point)
+                plane._filter = getattr(plane, p['pass_through_function'])
+                plane.hole_size = p['hole_size']
+                plane.max_speed = p['max_speed']
+            else:
+                plane = Plane(box, normal, point)
             box.planes.append(plane)
 
     return box

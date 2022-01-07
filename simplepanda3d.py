@@ -217,17 +217,21 @@ class MyApp(ShowBase):
 
     def create_box(self, sizes, nballs, radius):
         self.box = Box(sizes, torus=False)
-        self.box.merge = True
+        self.box.merge = False
         arr = ArrangeParticles(self.box)
         # balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
         # balls = arr.create_simplex()
         # balls = arr.create_kube_planes(100, 10)
         # balls = arr.create_n_mer(15, 3, charge=1)
         # balls = arr.test_interaction_simple(10000)
-        self.box.set_interaction(1500)
+        self.box.set_interaction(-500)
         # self.box.set_friction(0.025)
-        balls = arr.random_balls(30, 1, 10, 5, charge=1)
-        balls += arr.random_balls(30, 1, 10, 5, charge=-1)
+        balls = arr.random_balls(30, 1, 40, 5, charge=0)
+        # balls = arr.create_kube_planes(500, 20)
+        # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
+        # balls.append(ball)
+
+        # balls += arr.random_balls(30, 1, 10, 5, charge=-1)
         # ball = self.box.add_particle(1, 20, self.box.center, speed=None, charge=-10, fixed=True, color=[255,255,255])
         # balls.append(ball)
         arr.set_charge_colors(balls)
@@ -260,19 +264,20 @@ class MyApp(ShowBase):
             np.reparentTo(self.render)
         
         # draw extra planes
-        for plane in self.box.planes[2*self.box.dimensions:]:
-            for (i,j) in plane.edges:
-                p1 = plane.box_intersections[i]
-                p2 = plane.box_intersections[j]
-                lines = LineSegs()
-                # lines.setColor(1, 1, 1, 1)
-                lines.moveTo(*p1)
-                lines.drawTo(*p2)
-                lines.setThickness(2)
-                node = lines.create()
-                np = NodePath(node)
-                # np.setColor((1, 1, 1, 1))
-                np.reparentTo(self.render)
+        if False:
+            for plane in self.box.planes[2*self.box.dimensions:]:
+                for (i,j) in plane.edges:
+                    p1 = plane.box_intersections[i]
+                    p2 = plane.box_intersections[j]
+                    lines = LineSegs()
+                    # lines.setColor(1, 1, 1, 1)
+                    lines.moveTo(*p1)
+                    lines.drawTo(*p2)
+                    lines.setThickness(2)
+                    node = lines.create()
+                    np = NodePath(node)
+                    # np.setColor((1, 1, 1, 1))
+                    np.reparentTo(self.render)
         
         # create spheres
         self.spheres = []
