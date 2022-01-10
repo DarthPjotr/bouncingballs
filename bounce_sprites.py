@@ -104,30 +104,31 @@ class MyGame(arcade.Window):
         self._MAX = 0
         self._output = {}
 
-    def load(self, path):
+    def load(self, file):
         self.ball_list = None
         self.ball_list = arcade.SpriteList(use_spatial_hash=False)
-        if isinstance(path, str):
-            file = open(path)
-        else:
-            file = path
         
         data = yaml.load(file, Loader=yaml.FullLoader)
-        file.close()
 
         # ugly ...
-        global TEXT_REFRESH, TICK_RATE, D_SPRITE_RADIUS
+        global TEXT_REFRESH, TICK_RATE, D_SPRITE_RADIUS, FUZZIE
         try:
             config = data['config']
+        except KeyError:
+            pass
+
+        try:
             self.fps = config['fps']
             self.quiet = config['quiet']
             self.pause = config['pause']
             self.text = config['text']
-            TEXT_REFRESH = config['textrefresh']
-            TICK_RATE = config['tickrate']
-            D_SPRITE_RADIUS = config['spriteradius']
         except KeyError:
             pass
+
+        TEXT_REFRESH = config.get('textrefresh', TEXT_REFRESH)
+        TICK_RATE = config.get('tickrate', TICK_RATE)
+        D_SPRITE_RADIUS = config.get('spriteradius', D_SPRITE_RADIUS)
+        FUZZIE = config.get('fuzzie', FUZZIE)
 
         self.set_update_rate(1/self.fps)
 
@@ -144,20 +145,14 @@ class MyGame(arcade.Window):
         config['textrefresh'] = TEXT_REFRESH
         config['tickrate'] = TICK_RATE
         config['spriteradius'] = D_SPRITE_RADIUS
+        config['fuzzie'] = FUZZIE
         out = {"config": config}
         box = self.box.out()
         return {**out, **box}
     
-    def save(self, path):
-        if isinstance(path, str):
-            file = open(path)
-        else:
-            file = path
-        
+    def save(self, file):     
         out = self.out()
-
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
-        file.close()
               
     def setup(self):
         if ASK_LOAD:
@@ -618,13 +613,20 @@ class MyGame(arcade.Window):
             # quit
             self.close()
         elif symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
-            file = loaddialog()
-            self.load(file)
-            file.close()
+            with loaddialog() as file:
+                self.load(file)
+            
+            if not file.closed:
+                print("File not closed")
+            # file = loaddialog()
+            # self.load(file)
+            # file.close()
         elif symbol == arcade.key.S and modifiers & arcade.key.MOD_CTRL:
-            file = savedialog()
-            self.save(file)
-            file.close()
+            with savedialog() as file:
+                self.save(file)
+            # file = savedialog()
+            # self.save(file)
+            # file.close()
         else:
             self._do_rotation(symbol)
         return super().on_key_press(symbol, modifiers)

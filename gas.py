@@ -1128,6 +1128,7 @@ class Particle:
         if self.box.torus:
             return
 
+        # Put the particle back in the box. Usefull when the box is resized 
         for i, x in enumerate(self.box.nullvector):
             if self.position[i] < x:
                 self.position[i] = 1.0*(x + self.radius)
@@ -1167,7 +1168,7 @@ class Particle:
         using vectors generalizes to any number of dimensions
 
         Args:
-            p2 (Particle): particle to check collision with
+            ball (Particle): particle to check collision with
 
         Returns:
             boolean: True when collision occured
@@ -1206,7 +1207,7 @@ class Particle:
         Handles particle merge (inelastic collision)
 
         Args:
-            p2 (Particle): particle to check collision with
+            ball (Particle): particle to check collision with
 
         Returns:
             boolean: True when merge occured
@@ -2129,14 +2130,12 @@ class ArrangeParticles:
         
         return balls
 
-def load(path):
-    if isinstance(path, str):
-        file = open(path)
-    else:
-        file = path
-    
+def save(box, file):
+    out = box.out()
+    yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
+
+def load(file):
     data = yaml.load(file, Loader=yaml.FullLoader)
-    file.close()
     box = load_gas(data)
     return box
 
@@ -2186,7 +2185,7 @@ def load_gas(data):
         for p in b["planes"]:
             normal = p["normal"]
             point = p["point"]
-            if p.haskey('pass_through_function'):
+            if 'pass_through_function' in p:
                 plane = Membrane(box, normal, point)
                 plane._filter = getattr(plane, p['pass_through_function'])
                 plane.hole_size = p['hole_size']
@@ -2197,15 +2196,7 @@ def load_gas(data):
 
     return box
 
-def save(box, path):
-    if isinstance(path, str):
-        file = open(path)
-    else:
-        file = path
-    out = box.out()
 
-    yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
-    file.close()
 
 class Test():
     def test_shapes(self):
@@ -2386,11 +2377,13 @@ class Test():
         arrangement = ArrangeParticles(box)
         balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
 
-        save(box, FILE)
+        with open(FILE) as file:
+            save(box, file)
 
     def test_load_yaml(self):
         FILE = "D:\\temp\\box.yml"
-        box = load(FILE)
+        with open(FILE) as file:
+            box = load(file)
         print(box)
 
         for p in box.particles:
