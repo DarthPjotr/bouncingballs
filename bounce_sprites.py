@@ -45,14 +45,14 @@ GRAVITY = 0.0
 FRICTION = 0.00
 INTERACTION = 10000.0
 TORUS = False
-DIMENSIONS = 2
+DIMENSIONS = 3
 # HEIGHT = 30
 SPEED = 3
 
 # because it looks better with soft SpriteCircle add bit to sprite radius
-FUZZIE = False
+FUZZIE = True
 if FUZZIE:
-    D_SPRITE_RADIUS = 3
+    D_SPRITE_RADIUS = 5
 else:
     D_SPRITE_RADIUS = 0
 
@@ -86,7 +86,8 @@ class MyGame(arcade.Window):
         self.ball_list = arcade.SpriteList(use_spatial_hash=False)
         self.plane_list = arcade.ShapeElementList()
         self.arrow_list = arcade.ShapeElementList()
-        # self.text_list = arcade.ShapeElementList()
+        self.trail_list = arcade.ShapeElementList()
+
         self.set_visible()
         self._frames = 0
 
@@ -115,6 +116,7 @@ class MyGame(arcade.Window):
         try:
             config = data['config']
         except KeyError:
+            config = {}
             pass
 
         try:
@@ -223,7 +225,7 @@ class MyGame(arcade.Window):
         #self.box.planes.append(plane)
 
         # self.box.set_gravity(-0.3, normal[:DIMENSIONS])
-        # self.box.set_friction(0.1)
+        # self.box.set_friction(0.001)
 
         # normal = [0,1,0,1,1,1]
         # point = [500, 700, 540]# self.box.center
@@ -231,9 +233,9 @@ class MyGame(arcade.Window):
         # plane = Plane(self.box, normal=normal[:DIMENSIONS], point=point)
         # self.box.planes.append(plane)
 
-        # self.box.set_interaction(500)
-        # balls = arrangement.random_balls(1, 1, 300, 2, charge=0)
-        # balls += arrangement.random_balls(5, 1, 30, 1, charge=1)
+        # self.box.set_interaction(1500)
+        # balls = arrangement.random_balls(10, 1, 10, 2, charge=-1)
+        # balls += arrangement.random_balls(10, 1, 10, 2, charge=1)
         # balls = arrangement.set_charge_colors(balls)
         # # balls = arrangement.create_n_mer(20, 2,charge=-None)
         # for ball in balls:
@@ -241,12 +243,14 @@ class MyGame(arcade.Window):
         # balls = arrangement.create_kube_planes(500, 50)
         self.box.merge = False
         self.box.torus = False
+        self.box.trail = 10
+        self.box.set_interaction(0)
         
         # balls = arrangement.create_pendulum()
         balls = arrangement.test_walls()
         # balls = arrangement.test_rod()
 
-        self.add_balls(balls)
+        # self.add_balls(balls)
         # self.add_planes(self.box.planes[2*self.box.dimensions:])
 
         # for i, ball in enumerate(self.box.particles):
@@ -268,7 +272,7 @@ class MyGame(arcade.Window):
         # balls = arrangement.test_rod(150)
         # balls = arrangement.test_fixed_charge(10000)
 
-        # self.add_balls(balls)
+        self.add_balls(balls)
         #self.box.kick_all()
 
         # balls = arrangement.create_box(200, charge=1)
@@ -297,10 +301,11 @@ class MyGame(arcade.Window):
 
     def add_balls(self, balls=list):
         for ball in balls:
+            color = tuple([int(c) for c in ball.color])
             if ball.fixed:
-                ball.object = arcade.SpriteCircle(int(ball.radius)+5, ball.color, False)
+                ball.object = arcade.SpriteCircle(int(ball.radius)+5, color, False)
             else:
-                ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, FUZZIE)
+                ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, color, FUZZIE)
                 # ball.object = arcade.SpriteCircle(int(ball.radius), ball.color, False)
             self.ball_list.append(ball.object)
 
@@ -388,6 +393,9 @@ class MyGame(arcade.Window):
 
         self.arrow_list = None
         self.arrow_list = arcade.ShapeElementList()
+        # if self.box.trail > 0:
+        self.trail_list = None
+        self.trail_list = arcade.ShapeElementList()
 
         while self.box.delete_particles:
             ball = self.box.delete_particles.pop()
@@ -400,13 +408,16 @@ class MyGame(arcade.Window):
             ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
             self.ball_list.append(ball.object) 
 
-
         for i, ball in enumerate(self.box.particles):
             #arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
             end = ball.position + ball.speed
             # arcade.draw_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
             arrow = arcade.create_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
             self.arrow_list.append(arrow)
+            if ball.positions:
+                positions = [(p[0], p[1]) for p in ball.positions]
+                trail = arcade.create_line_strip(positions, arcade.color.GRAY, 1)
+                self.trail_list.append(trail)
 
             output = ""
             if ball.charge < 0:
@@ -443,6 +454,7 @@ class MyGame(arcade.Window):
 
         self.arrow_list.draw()
         self.ball_list.draw()
+        self.trail_list.draw()
         #if self.draw_planes:
         if True:
             self.plane_list.draw()

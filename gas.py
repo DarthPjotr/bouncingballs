@@ -260,6 +260,8 @@ class Box:
         self.momentum = self.nullvector.copy()
         self._normal_momentum = 0
         self.ticks = 0
+        # other properties
+        self.trail = 0
 
     def _get_vertices(self):
         """
@@ -332,6 +334,7 @@ class Box:
         box["sizes"] = [float(f) for f in self.box_sizes] # list(self.box_sizes)
         box['torus'] = self.torus
         box['merge'] = self.merge
+        box['trail'] = self.trail
         box["gravity"] = [float(f) for f in self.gravity] # list(self.gravity)
         box["friction"] = float(self.friction)
         box["interaction"] = float(self.interaction)
@@ -1019,7 +1022,7 @@ class Membrane(Plane):
     def __init__(self, box: Box, normal=None, point=None, points=None) -> None:
         self._filter = self.no_filter
         self.hole_size = 15
-        self.max_speed = 0
+        self.max_speed = 4
         self._bounced = 0
         super().__init__(box, normal=normal, point=point, points=points)
     
@@ -1062,7 +1065,7 @@ class Membrane(Plane):
         speed2 = ball.speed @ ball.speed
         speed = math.sqrt(speed2)
 
-        max_speed2 = (self.max_speed * self.max_speed)
+        max_speed2 = (self.max_speed * self.max_speed)/9
         if direction == 0:
             res = False
         elif direction > 0:
@@ -1075,13 +1078,12 @@ class Membrane(Plane):
             res = False
         
         if res:
-            # self.max_speed = speed + (self.max_speed * (self._bounced - 1))/self._bounced
+            self.max_speed = (speed + self.max_speed * (self._bounced - 1))/self._bounced
             pass
 
         return res
     
     def out(self):
-
         membrane = super().out()
         membrane['pass_through_function'] = self._filter.__name__
         membrane['hole_size'] = self.hole_size
@@ -1110,7 +1112,9 @@ class Particle:
         self.mass = mass
         self.radius = radius
         self.position = numpy.array(position, dtype=float)
+        self.positions = []
         self.speed = numpy.array(speed, dtype=float)
+        self.speeds = []
         self.charge = charge
         self.color = tuple(color)
         self.fixed = fixed
@@ -1123,6 +1127,14 @@ class Particle:
         """
         if self.fixed:
             self.speed = self.box.nullvector.copy()
+        
+        if self.box.trail > 0:
+            if self.box.ticks % 1 == 0:
+                self.positions.insert(0, self.position.copy())
+                self.positions = self.positions[:self.box.trail]
+
+                self.speeds.insert(0, self.speed.copy())
+                self.speeds = self.positions[:self.box.trail]
 
         self.position += self.speed
         if self.box.torus:
@@ -2142,31 +2154,19 @@ def load(file):
 def load_gas(data):
     b = data["box"]
     box = Box(b["sizes"])
-    try:
-        box.gravity = numpy.array(b['gravity'])
-        box.set_friction(b['friction'])
-        box.set_interaction(b['interaction'])
-        box.torus = b['torus']
-        box.merge = b['merge']
-    except KeyError:
-        pass
 
-    if "particles" in b.keys():
+    box.gravity = numpy.array(b.get('gravity', box.nullvector.copy()))
+    box.set_friction(b.get('friction', 0))
+    box.set_interaction(b.get('interaction', 0))
+    box.torus = b.get('torus', False)
+    box.merge = b.get('merge', False)
+    box.trail = b.get('trail', 0)
+
+    if "particles" in b:
         for p in b['particles']:
-            try:
-                fixed = p["fixed"]
-            except KeyError:
-                fixed = False
-            
-            try: 
-                charge = p['charge']
-            except KeyError:
-                charge = 0
-
-            try:
-                color = p['color']
-            except KeyError:
-                color = None
+            fixed = p.get('fixed', False)
+            charge = p.get('charge', 0)
+            color = p.get('color', None)
             box.add_particle(p['mass'], p['radius'], p['position'], p['speed'], charge, fixed, color)
     
     if "springs" in b.keys():
@@ -2174,10 +2174,8 @@ def load_gas(data):
             ps = s['particles']
             p1 = box.particles[ps[0]]
             p2 = box.particles[ps[1]]
-            try: 
-                damping = s["damping"] 
-            except KeyError: 
-                damping = 0
+            damping = s.get('damping', 0)
+
             spring = Spring(s['length'], s['strength'], damping, p1, p2)
             box.springs.append(spring)
     
