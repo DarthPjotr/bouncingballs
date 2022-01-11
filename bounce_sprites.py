@@ -16,7 +16,6 @@ from tkinter import filedialog as fd
 from gas import *
 
 # Set up the constants
-
 ASK_LOAD = False
 
 UPDATE_RATE = 1/60

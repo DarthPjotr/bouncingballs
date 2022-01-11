@@ -264,7 +264,7 @@ class MyApp(ShowBase):
             np.reparentTo(self.render)
         
         # draw extra planes
-        if False:
+        if True:
             for plane in self.box.planes[2*self.box.dimensions:]:
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]
