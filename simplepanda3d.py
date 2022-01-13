@@ -3,23 +3,28 @@ import sys
 import numpy as np
 
 from direct.showbase.ShowBase import ShowBase
+# from direct.showbase.DirectObject import DirectObject
+from direct.gui.DirectGui import OnscreenText
 from direct.task import Task
-from direct.actor.Actor import Actor
-from direct.interval.IntervalGlobal import Sequence
-from panda3d.core import NodePath, Material, Fog
-from panda3d.core import Point3
+# from direct.actor.Actor import Actor
+# from direct.interval.IntervalGlobal import Sequence
+from panda3d.core import NodePath, Material, Fog, AntialiasAttrib
+# from panda3d.core import Point3
 from panda3d.core import AmbientLight, Texture
 from panda3d.core import Vec3, Vec4
 from panda3d.core import LineSegs
 from panda3d.core import DirectionalLight
 from panda3d.core import WindowProperties
+from panda3d.core import TextNode
+from panda3d.core import loadPrcFile
+# from panda3d.core import TextFont
 
 from gas import *
 
-
 class MyApp(ShowBase):
     def __init__(self):
-        ShowBase.__init__(self)
+        # ShowBase.__init__(self)
+        super().__init__()
         self.pauze = False
 
         # Disable the camera trackball controls.
@@ -36,14 +41,15 @@ class MyApp(ShowBase):
 
         self.register_key_and_mouse_events()
 
-        sizes = [800,600,800]
+        sizes = [1200, 900, 1000]
         nballs = 30
         radius = 8
         self.create_box(sizes, nballs, radius)
         self.draw_box()
 
         self.set_camera()
-
+        self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
+        self.textnode = self.draw_text("The Box:", 0.1, -0.1)
 
     def set_main_lighting(self):
         mainLight = DirectionalLight("main light")
@@ -51,7 +57,9 @@ class MyApp(ShowBase):
         self.mainLightNodePath = self.render.attachNewNode(mainLight)
         self.mainLightNodePath.setHpr(45, -80, 0)
         self.render.setLight(self.mainLightNodePath)
-
+        # self.render.setAntialias(AntialiasAttrib.M_multisample)
+        self.render.setAntialias(8|64)
+ 
         ambientLight = AmbientLight("ambient light")
         ambientLight.setColor(Vec4(0.5, 0.5, 0.5, 1))
         self.ambientLightNodePath = self.render.attachNewNode(ambientLight)
@@ -110,6 +118,20 @@ class MyApp(ShowBase):
         # self.world.setTexture(texture, 1)
         # self.world.setShaderAuto()
 
+    def draw_text(self, text, x, y):
+        # self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
+        textnode = OnscreenText(text=text,
+                     style=1, 
+                     fg=(1, 1, 1, 1), 
+                     # bg=(0, 0, 1, 1),
+                     # shadow=(1, 0, 0, 1),
+                     # frame=(0.5, 0.5, 0.5, 1),
+                     pos=(x, y), scale=.05,
+                     parent=self.a2dTopLeft, 
+                     align=TextNode.ALeft, 
+                     mayChange=True, 
+                     font=self.font)
+        return textnode
 
     def set_camera(self):
         cam_pos = self.box.center.copy()
@@ -224,9 +246,10 @@ class MyApp(ShowBase):
         # balls = arr.create_kube_planes(100, 10)
         # balls = arr.create_n_mer(15, 3, charge=1)
         # balls = arr.test_interaction_simple(10000)
-        self.box.set_interaction(-500)
-        # self.box.set_friction(0.025)
-        balls = arr.random_balls(30, 1, 40, 5, charge=0)
+        self.box.set_interaction(1500)
+        self.box.set_friction(0.01)
+        balls = arr.random_balls(20, 1, 40, 5, charge=1)
+        balls += arr.random_balls(20, 1, 40, 5, charge=-1)
         # balls = arr.create_kube_planes(500, 20)
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
         # balls.append(ball)
@@ -296,6 +319,7 @@ class MyApp(ShowBase):
             sphere.setMaterial(material)
             sphere.reparentTo(self.render)
             sphere.setPos(*ball.position)
+            # sphere.setAntiAlias(8,1)
             ball.object = sphere
             # sphere.setColor(0, 100, 100, 10)
             self.spheres.append(sphere)
@@ -358,9 +382,18 @@ class MyApp(ShowBase):
             ray.lookAt(p2)
             d = (p1.getPos(self.render) - p2.getPos(self.render)).length()
             ray.setScale(d)
+        
+        charge = sum(p.charge for p in self.box.particles)
+        output = "Ticks: {}\nDimensions: {}\nBalls: {}\nCharge: {}".format(self.box.ticks, self.box.dimensions, len(self.box.particles), charge)
+        self.textnode.text = output
 
         return Task.cont
 
+def main():
+    loadPrcFile("config/Config.prc")
+    app = MyApp()
+    app.run()
 
-app = MyApp()
-app.run()
+if __name__ == '__main__':
+    main()
+
