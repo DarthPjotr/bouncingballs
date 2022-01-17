@@ -262,6 +262,7 @@ class Box:
         self.ticks = 0
         # other properties
         self.trail = 0
+        self.skip_trail = 1
 
     def _get_vertices(self):
         """
@@ -1129,7 +1130,7 @@ class Particle:
             self.speed = self.box.nullvector.copy()
         
         if self.box.trail > 0:
-            if self.box.ticks % 1 == 0:
+            if self.box.ticks % self.box.skip_trail == 0:
                 self.positions.insert(0, self.position.copy())
                 self.positions = self.positions[:self.box.trail]
 
@@ -1835,7 +1836,7 @@ class ArrangeParticles:
         Returns:
             list: list of balls
         """        
-        radius = 5
+        radius = 20
         lspring = 150
         balls = []
         alternate = False

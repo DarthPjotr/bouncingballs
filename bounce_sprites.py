@@ -77,7 +77,7 @@ class MyGame(arcade.Window):
     """ Main application class. """
 
     def __init__(self):
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True, visible=False, update_rate=UPDATE_RATE)  
+        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True, visible=False, update_rate=UPDATE_RATE, antialiasing=True, samples=16)  
         self.center_window()
         self.background = None
         self.fps = 1/UPDATE_RATE
