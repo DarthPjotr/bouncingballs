@@ -29,11 +29,12 @@ class MyApp(ShowBase):
 
         # Disable the camera trackball controls.
         self.disableMouse()
+        # self.useDrive()
 
         properties = WindowProperties()
         properties.setSize(1800, 900)
 
-        # self.render.setAntiAlias(8, 1)
+        self.render.setAntialias(8|64)
         self.win.requestProperties(properties)
 
         self.set_main_lighting()
@@ -41,7 +42,10 @@ class MyApp(ShowBase):
 
         self.register_key_and_mouse_events()
 
-        sizes = [1200, 900, 1000]
+        self.draw_planes = False
+        self.trails = []
+
+        sizes = [1200, 900, 1000, 400]
         nballs = 30
         radius = 8
         self.create_box(sizes, nballs, radius)
@@ -57,9 +61,7 @@ class MyApp(ShowBase):
         self.mainLightNodePath = self.render.attachNewNode(mainLight)
         self.mainLightNodePath.setHpr(45, -80, 0)
         self.render.setLight(self.mainLightNodePath)
-        # self.render.setAntialias(AntialiasAttrib.M_multisample)
-        self.render.setAntialias(8|64)
- 
+        
         ambientLight = AmbientLight("ambient light")
         ambientLight.setColor(Vec4(0.5, 0.5, 0.5, 1))
         self.ambientLightNodePath = self.render.attachNewNode(ambientLight)
@@ -132,9 +134,27 @@ class MyApp(ShowBase):
                      mayChange=True, 
                      font=self.font)
         return textnode
+    
+    def move_line(self, line, start, end):
+        line.setPos(start)
+        line.lookAt(end)
+        d = (start - end).length()
+        if d > 0:
+            line.setScale(d)
+    
+    def draw_trails(self, ball):
+        i = ball.index()
+        trail = self.trails[i]
+        start = ball.position
+        start = Vec3(*start[:3])
+        for i, end in enumerate(ball.positions):
+            line = trail[i]
+            end = Vec3(*end[:3])
+            self.move_line(line, start, end)
+            start = end
 
     def set_camera(self):
-        cam_pos = self.box.center.copy()
+        cam_pos = self.box.center.copy()[:3]
         cam_pos[self.box.Y] = -2000
         self.camera.setPos(*cam_pos)
         self.camera.setHpr(0, 0, 0)
@@ -182,6 +202,7 @@ class MyApp(ShowBase):
         
         self.accept('k', self.task_kick)
         self.accept('m', self.task_center)
+        self.accept('h', self.task_stop)
     
     def task_toggle_pauze(self):
         self.pauze = not self.pauze
@@ -192,6 +213,9 @@ class MyApp(ShowBase):
 
     def task_center(self):
         self.box.center_all()
+
+    def task_stop(self):
+        self.box.stop_all()
 
     def task_move_camera(self, key="", mouse=""):
         v = 8
@@ -240,16 +264,24 @@ class MyApp(ShowBase):
     def create_box(self, sizes, nballs, radius):
         self.box = Box(sizes, torus=False)
         self.box.merge = False
+        self.box.trail = 10
+        self.box.skip_trail = 5
         arr = ArrangeParticles(self.box)
+        balls = []
         # balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
         # balls = arr.create_simplex()
-        # balls = arr.create_kube_planes(100, 10)
-        # balls = arr.create_n_mer(15, 3, charge=1)
+        # balls += arr.create_kube_planes(800, 10)
+        # balls = arr.create_n_mer(15, 2, charge=None)
         # balls = arr.test_interaction_simple(10000)
-        self.box.set_interaction(1500)
-        self.box.set_friction(0.01)
-        balls = arr.random_balls(20, 1, 40, 5, charge=1)
-        balls += arr.random_balls(20, 1, 40, 5, charge=-1)
+        # balls = arr.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
+        # balls = arr.test_interaction(30000/9, M0=40, V0=7/3, D=200, ratio=0.1)
+        self.box.set_interaction(5000)
+        self.box.set_friction(0.02)
+        gravity = self.box.nullvector.copy()
+        gravity[2] = -1
+        self.box.set_gravity(0.5, gravity)
+        balls += arr.random_balls(15, 1, 40, 5, charge=2)
+        balls += arr.random_balls(30, 1, 40, 5, charge=-1)
         # balls = arr.create_kube_planes(500, 20)
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
         # balls.append(ball)
@@ -274,10 +306,10 @@ class MyApp(ShowBase):
         for (i, j) in self.box.edges:
             p1 = self.box.vertices[i]
             p2 = self.box.vertices[j]
-            lines = LineSegs()
+            lines = LineSegs("edge[{},{}]".format(i,j))
             lines.setColor(0.7, 0.7, 0.7, 1)
-            lines.moveTo(*p1)
-            lines.drawTo(*p2)
+            lines.moveTo(*p1[:3])
+            lines.drawTo(*p2[:3])
             lines.setThickness(1)
             node = lines.create()
             # node.setAntiAlias(8, 1)
@@ -287,15 +319,15 @@ class MyApp(ShowBase):
             np.reparentTo(self.render)
         
         # draw extra planes
-        if True:
+        if self.draw_planes == True:
             for plane in self.box.planes[2*self.box.dimensions:]:
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]
                     p2 = plane.box_intersections[j]
-                    lines = LineSegs()
+                    lines = LineSegs("edge[{},{}]".format(i,j))
                     # lines.setColor(1, 1, 1, 1)
-                    lines.moveTo(*p1)
-                    lines.drawTo(*p2)
+                    lines.moveTo(*p1[:3])
+                    lines.drawTo(*p2[:3])
                     lines.setThickness(2)
                     node = lines.create()
                     np = NodePath(node)
@@ -318,7 +350,7 @@ class MyApp(ShowBase):
             sphere.setScale(scale, scale, scale)
             sphere.setMaterial(material)
             sphere.reparentTo(self.render)
-            sphere.setPos(*ball.position)
+            sphere.setPos(*ball.position[:3])
             # sphere.setAntiAlias(8,1)
             ball.object = sphere
             # sphere.setColor(0, 100, 100, 10)
@@ -329,16 +361,34 @@ class MyApp(ShowBase):
         for i, spring in enumerate(self.box.springs):
             p1 = spring.p1.object
             p2 = spring.p2.object
-            line = LineSegs()
-            # lines.setColor(1, 1, 1, 1)
+            line = LineSegs("spring[{}]".format(i))
+            lines.setColor(0, 1, 0, 1)
             line.moveTo((0,0,0))
             line.drawTo((0,1,0))
             line.setThickness(2)
             node = line.create()
             np = NodePath(node)
             np.reparentTo(self.render)
-            np.setColor(0,1,0,1)
+            # np.setColor(0,1,0,1)
             self.springs.append(np)
+        
+        # create trails
+        # self.trails = []
+        for i, ball in enumerate(self.box.particles):
+            trail = []
+            for j in range(self.box.trail):
+                line = LineSegs("trail[{},{}]".format(i, j))
+                line.setColor(0.3, 0.3, 0.3, 1)
+                line.moveTo((0,0,0))
+                line.drawTo((0,1,0))
+                line.setThickness(1)
+                
+                node = line.create()
+                np = NodePath(node)
+                np.reparentTo(self.render)
+                # np.setColor(0,0.5,0,1)
+                trail.append(np)
+            self.trails.append(trail)   
 
         self.taskMgr.add(self.task_box_go, 'move')
         # self.taskMgr.doMethodLater(1, self.task_box_go, 'move')
@@ -372,16 +422,20 @@ class MyApp(ShowBase):
         for ball in self.box.particles:
             sphere = ball.object
             pos = ball.position # - self.box.center
-            sphere.setPos(*pos)
+            sphere.setPos(*pos[:3])
+            if self.box.trail > 0:
+                self.draw_trails(ball)
 
         for i, spring in enumerate(self.box.springs):
             p1 = spring.p1.object
             p2 = spring.p2.object
             ray = self.springs[i]
-            ray.setPos(p1.getPos())
-            ray.lookAt(p2)
-            d = (p1.getPos(self.render) - p2.getPos(self.render)).length()
-            ray.setScale(d)
+            self.move_line(ray, p1.getPos(), p2.getPos())
+            # ray.setPos(p1.getPos())
+            # ray.lookAt(p2)
+            # d = (p1.getPos(self.render) - p2.getPos(self.render)).length()
+            # ray.setScale(d)
+    
         
         charge = sum(p.charge for p in self.box.particles)
         output = "Ticks: {}\nDimensions: {}\nBalls: {}\nCharge: {}".format(self.box.ticks, self.box.dimensions, len(self.box.particles), charge)
