@@ -17,6 +17,7 @@ from panda3d.core import DirectionalLight
 from panda3d.core import WindowProperties
 from panda3d.core import TextNode
 from panda3d.core import loadPrcFile
+from panda3d.core import TransparencyAttrib
 # from panda3d.core import TextFont
 
 from gas import *
@@ -264,7 +265,7 @@ class MyApp(ShowBase):
     def create_box(self, sizes, nballs, radius):
         self.box = Box(sizes, torus=False)
         self.box.merge = False
-        self.box.trail = 10
+        self.box.trail = 0
         self.box.skip_trail = 5
         arr = ArrangeParticles(self.box)
         balls = []
@@ -275,13 +276,13 @@ class MyApp(ShowBase):
         # balls = arr.test_interaction_simple(10000)
         # balls = arr.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
         # balls = arr.test_interaction(30000/9, M0=40, V0=7/3, D=200, ratio=0.1)
-        self.box.set_interaction(5000)
+        self.box.set_interaction(10000)
         self.box.set_friction(0.02)
         gravity = self.box.nullvector.copy()
-        gravity[2] = -1
+        gravity[3] = 1
         self.box.set_gravity(0.5, gravity)
-        balls += arr.random_balls(15, 1, 40, 5, charge=2)
-        balls += arr.random_balls(30, 1, 40, 5, charge=-1)
+        balls += arr.random_balls(15, 1, 40, 5, charge=1)
+        balls += arr.random_balls(15, 1, 40, 5, charge=-1)
         # balls = arr.create_kube_planes(500, 20)
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
         # balls.append(ball)
@@ -351,6 +352,8 @@ class MyApp(ShowBase):
             sphere.setMaterial(material)
             sphere.reparentTo(self.render)
             sphere.setPos(*ball.position[:3])
+            if self.box.dimensions > 3:
+                sphere.setTransparency(TransparencyAttrib.M_dual, 1)
             # sphere.setAntiAlias(8,1)
             ball.object = sphere
             # sphere.setColor(0, 100, 100, 10)
@@ -423,6 +426,11 @@ class MyApp(ShowBase):
             sphere = ball.object
             pos = ball.position # - self.box.center
             sphere.setPos(*pos[:3])
+            if self.box.dimensions > 3:
+                transparency = pos[3]/self.box.box_sizes[3]
+                color = sphere.getColor()
+                color[3] = transparency
+                sphere.setColor(color)
             if self.box.trail > 0:
                 self.draw_trails(ball)
 
