@@ -20,7 +20,153 @@ from panda3d.core import loadPrcFile
 from panda3d.core import TransparencyAttrib
 # from panda3d.core import TextFont
 
+from panda3d.core import Triangulator
+from panda3d.core import GeomVertexFormat
+from panda3d.core import GeomVertexData
+from panda3d.core import Geom
+from panda3d.core import GeomVertexWriter
+from panda3d.core import GeomTriangles
+from panda3d.core import GeomNode
+
 from gas import *
+
+class Polygon__():
+    def __init__(self, vertices=[]):
+        self.vertices=list(tuple(v) for v in vertices)
+
+    def addVertex(self, x, y):
+        self.vertices.append((x,y))
+
+    def makeNode(self, pointmap=(lambda x,y: (x,y,0))):
+        vt=tuple(self.vertices)
+        t=Triangulator()
+        fmt=GeomVertexFormat.getV3cp()
+        vdata = GeomVertexData('name', fmt, Geom.UHStatic)
+        vertex = GeomVertexWriter(vdata, 'vertex')
+        color = GeomVertexWriter(vdata, 'color')
+
+        for x,y in vt:
+            t.addPolygonVertex(t.addVertex(x,y))
+            vertex.addData3f(pointmap(x,y))
+        t.triangulate()
+        prim = GeomTriangles(Geom.UHStatic)
+
+        for n in range(t.getNumTriangles()):
+            prim.addVertices(t.getTriangleV0(n),t.getTriangleV1(n),t.getTriangleV2(n))
+
+        prim.closePrimitive()
+        geom = Geom(vdata)
+        geom.addPrimitive(prim) 
+        node = GeomNode('gnode')
+        node.addGeom(geom)
+
+        return node
+
+    def create(self):
+        vt=tuple(self.vertices)
+        t=Triangulator()
+        fmt=GeomVertexFormat.getV3cp()
+        vdata = GeomVertexData('name', fmt, Geom.UHStatic)
+        vertex = GeomVertexWriter(vdata, 'vertex')
+        color = GeomVertexWriter(vdata, 'color')
+
+        # for x,y,z in vt:
+        for p in vt:
+            t.addPolygonVertex(t.addVertex(*p[:2]))
+            vertex.addData3f(*p[:3])
+        t.triangulate()
+        prim = GeomTriangles(Geom.UHStatic)
+
+        for n in range(t.getNumTriangles()):
+            prim.addVertices(t.getTriangleV0(n),t.getTriangleV1(n),t.getTriangleV2(n))
+
+        prim.closePrimitive()
+        geom = Geom(vdata)
+        geom.addPrimitive(prim) 
+        node = GeomNode('gnode')
+        node.addGeom(geom)
+
+        return node
+
+class Polygon():
+    def __init__(self, vertices=[]):
+        self.vertices=list(tuple(v) for v in vertices)
+        self.normal = self._get_normal()
+        # self.vertices = list(tuple(v) for v in self.order_vertices())
+
+
+    def _get_normal(self):
+        """
+        Calculates the normal vector from points on the plane
+
+        Args:
+            points (list of numpy.array): the points
+
+        Returns:
+            numpy.array: unit normal vector
+        """   
+        points = [numpy.array(v) for v in self.vertices]     
+        shape = numpy.shape(points)
+        ones = numpy.ones(shape)
+        i = 0
+        while linalg.det(points[:3]) == 0 and i < 100:
+            points += ones
+            i += 1
+
+        size = len(points)
+        normal = linalg.solve(points[:3], numpy.array([1,1,1]))
+        unitnormal = normal/math.sqrt(normal@normal)
+
+        if not (numpy.allclose(points[size-3:]@normal, numpy.array([1,1,1]))):
+            raise ValueError("not all points in one plane")
+        
+        return unitnormal
+
+    def addVertex(self, x, y):
+        self.vertices.append((x,y))
+
+    def create(self):
+        xyzero = False
+        for i, x in enumerate(self.normal):
+            if x == 1:
+                xyzero = True
+                break
+
+        vt=tuple(self.vertices)
+
+        t=Triangulator()
+        fmt=GeomVertexFormat.getV3cp()
+        vdata = GeomVertexData('name', fmt, Geom.UHStatic)
+        vertex = GeomVertexWriter(vdata, 'vertex')
+        color = GeomVertexWriter(vdata, 'color')
+
+        for point in vt:
+            (x,y,z) = point
+            v = (x,y)
+            if not xyzero:
+                v = (x,y)
+            elif i == 0:
+                v = (y,z)
+            elif i == 1:
+                v = (x,z)
+            elif i == 2:
+                v = (x,y)
+                    
+            t.addPolygonVertex(t.addVertex(*v))
+            vertex.addData3f(x,y,z)
+        t.triangulate()
+        prim = GeomTriangles(Geom.UHStatic)
+
+        for n in range(t.getNumTriangles()):
+            prim.addVertices(t.getTriangleV0(n),t.getTriangleV1(n),t.getTriangleV2(n))
+
+        prim.closePrimitive()
+        geom = Geom(vdata)
+        geom.addPrimitive(prim) 
+        node = GeomNode('gnode')
+        node.addGeom(geom)
+
+        return node
 
 class MyApp(ShowBase):
     def __init__(self):
@@ -43,10 +189,10 @@ class MyApp(ShowBase):
 
         self.register_key_and_mouse_events()
 
-        self.draw_planes = False
+        self.draw_planes = True
         self.trails = []
 
-        sizes = [1200, 900, 1000, 400]
+        sizes = [1200, 900, 1000]
         nballs = 30
         radius = 8
         self.create_box(sizes, nballs, radius)
@@ -276,14 +422,17 @@ class MyApp(ShowBase):
         # balls = arr.test_interaction_simple(10000)
         # balls = arr.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
         # balls = arr.test_interaction(30000/9, M0=40, V0=7/3, D=200, ratio=0.1)
-        self.box.set_interaction(10000)
-        self.box.set_friction(0.02)
-        gravity = self.box.nullvector.copy()
-        gravity[3] = 1
-        self.box.set_gravity(0.5, gravity)
-        balls += arr.random_balls(15, 1, 40, 5, charge=1)
-        balls += arr.random_balls(15, 1, 40, 5, charge=-1)
-        # balls = arr.create_kube_planes(500, 20)
+        
+        # self.box.set_interaction(10000)
+        # self.box.set_friction(0.02)
+        # gravity = self.box.nullvector.copy()
+        # gravity[3] = 1
+        # self.box.set_gravity(0.5, gravity)
+        # balls += arr.random_balls(15, 1, 40, 5, charge=1)
+        balls += arr.random_balls(15, 1, 40, 5, charge=0)
+
+        
+        balls = arr.create_kube_planes(500, 20)
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
         # balls.append(ball)
 
@@ -300,6 +449,9 @@ class MyApp(ShowBase):
         #     ball = self.box.add_particle(1, radius, pos, speed, charge=charge)
     
         # plane = Plane(self.box, [1,1,1], self.box.center)
+        # self.box.planes.append(plane)
+
+        # plane = Plane(self.box, [1,0,0], self.box.center/2)
         # self.box.planes.append(plane)
         
     def draw_box(self):
@@ -322,6 +474,14 @@ class MyApp(ShowBase):
         # draw extra planes
         if self.draw_planes == True:
             for plane in self.box.planes[2*self.box.dimensions:]:
+                poly = Polygon(plane.box_intersections)
+                node = poly.create()
+                np = NodePath(node)
+                np.reparentTo(self.render)
+                np.setTwoSided(True)
+                np.setTransparency(TransparencyAttrib.M_dual, 1)
+                np.setColor(0.5,0.5,1,0.3)
+
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]
                     p2 = plane.box_intersections[j]

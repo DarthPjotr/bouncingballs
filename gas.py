@@ -5,7 +5,7 @@ import itertools
 import numpy
 from numpy import linalg
 # from pyglet.window.key import E, F
-# from scipy.spatial import ConvexHull, QhullError
+from scipy.spatial import ConvexHull
 import scipy.spatial as sp
 import networkx as nx
 import random
@@ -933,7 +933,8 @@ class Plane:
                     points.append(intersection)
         
         # points = self._sort_by_distance(points)
-        points = self._sort_by_planes(points)
+        # points = self._sort_by_planes(points)
+        points = self._sort_convexhull(points)
 
         return points
     
@@ -976,6 +977,26 @@ class Plane:
         
         return points
     
+    def _sort_convexhull(self, points):
+        if len(points) < 2:
+            return points
+        
+        # project points on X,Y or Z plane as long as i has a non zero value for the normal
+        for i, x in enumerate(self.unitnormal):
+            if x != 0:
+                break
+    
+        projected = [numpy.delete(p, i) for p in points]
+
+        hull = ConvexHull(projected)
+        vertices = hull.vertices
+
+        sorter = []
+        for v in vertices:
+            sorter.append(points[v])
+
+        return sorter
+    
     def _sort_by_planes(self, points):
         sorted = []
 
@@ -997,7 +1018,7 @@ class Plane:
         points = sorted
         return points
     
-    def _edges(self):
+    def _edges__(self):
         """
         Calculates the edges
 
@@ -1013,6 +1034,22 @@ class Plane:
                 if len([t for t in p0==p1 if t]) == self.box.dimensions - 2:
                     if (i,j) not in edges and (j,i) not in edges:
                         edges.append((i,j))
+        
+        return edges
+
+    def _edges(self):
+        """
+        Calculates the edges
+
+        Returns:
+            list of (int, int): list of edges
+        """        
+        edges = []
+        size = len(self.box_intersections)
+
+        for i, p in enumerate(self.box_intersections):
+            edge = (i, (i-1) % size)
+            edges.append(edge)
         
         return edges
 
