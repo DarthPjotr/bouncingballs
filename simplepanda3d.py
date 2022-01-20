@@ -30,70 +30,12 @@ from panda3d.core import GeomNode
 
 from gas import *
 
-class Polygon__():
-    def __init__(self, vertices=[]):
-        self.vertices=list(tuple(v) for v in vertices)
-
-    def addVertex(self, x, y):
-        self.vertices.append((x,y))
-
-    def makeNode(self, pointmap=(lambda x,y: (x,y,0))):
-        vt=tuple(self.vertices)
-        t=Triangulator()
-        fmt=GeomVertexFormat.getV3cp()
-        vdata = GeomVertexData('name', fmt, Geom.UHStatic)
-        vertex = GeomVertexWriter(vdata, 'vertex')
-        color = GeomVertexWriter(vdata, 'color')
-
-        for x,y in vt:
-            t.addPolygonVertex(t.addVertex(x,y))
-            vertex.addData3f(pointmap(x,y))
-        t.triangulate()
-        prim = GeomTriangles(Geom.UHStatic)
-
-        for n in range(t.getNumTriangles()):
-            prim.addVertices(t.getTriangleV0(n),t.getTriangleV1(n),t.getTriangleV2(n))
-
-        prim.closePrimitive()
-        geom = Geom(vdata)
-        geom.addPrimitive(prim) 
-        node = GeomNode('gnode')
-        node.addGeom(geom)
-
-        return node
-
-    def create(self):
-        vt=tuple(self.vertices)
-        t=Triangulator()
-        fmt=GeomVertexFormat.getV3cp()
-        vdata = GeomVertexData('name', fmt, Geom.UHStatic)
-        vertex = GeomVertexWriter(vdata, 'vertex')
-        color = GeomVertexWriter(vdata, 'color')
-
-        # for x,y,z in vt:
-        for p in vt:
-            t.addPolygonVertex(t.addVertex(*p[:2]))
-            vertex.addData3f(*p[:3])
-        t.triangulate()
-        prim = GeomTriangles(Geom.UHStatic)
-
-        for n in range(t.getNumTriangles()):
-            prim.addVertices(t.getTriangleV0(n),t.getTriangleV1(n),t.getTriangleV2(n))
-
-        prim.closePrimitive()
-        geom = Geom(vdata)
-        geom.addPrimitive(prim) 
-        node = GeomNode('gnode')
-        node.addGeom(geom)
-
-        return node
 
 class Polygon():
     def __init__(self, vertices=[]):
-        self.vertices=list(tuple(v) for v in vertices)
+        # self.vertices=list(tuple(v) for v in vertices)
+        self.vertices=numpy.array(vertices)
         self.normal = self._get_normal()
-        # self.vertices = list(tuple(v) for v in self.order_vertices())
-
 
     def _get_normal(self):
         """
@@ -105,7 +47,7 @@ class Polygon():
         Returns:
             numpy.array: unit normal vector
         """   
-        points = [numpy.array(v) for v in self.vertices]     
+        points = [v for v in self.vertices]     
         shape = numpy.shape(points)
         ones = numpy.ones(shape)
         i = 0
@@ -122,9 +64,6 @@ class Polygon():
         
         return unitnormal
 
-    def addVertex(self, x, y):
-        self.vertices.append((x,y))
-
     def create(self):
         xyzero = False
         for i, x in enumerate(self.normal):
@@ -132,7 +71,7 @@ class Polygon():
                 xyzero = True
                 break
 
-        vt=tuple(self.vertices)
+        # vt=tuple(self.vertices)
 
         t=Triangulator()
         fmt=GeomVertexFormat.getV3cp()
@@ -140,7 +79,7 @@ class Polygon():
         vertex = GeomVertexWriter(vdata, 'vertex')
         color = GeomVertexWriter(vdata, 'color')
 
-        for point in vt:
+        for point in self.vertices:
             (x,y,z) = point
             v = (x,y)
             if not xyzero:
@@ -474,13 +413,18 @@ class MyApp(ShowBase):
         # draw extra planes
         if self.draw_planes == True:
             for plane in self.box.planes[2*self.box.dimensions:]:
-                poly = Polygon(plane.box_intersections)
-                node = poly.create()
-                np = NodePath(node)
-                np.reparentTo(self.render)
-                np.setTwoSided(True)
-                np.setTransparency(TransparencyAttrib.M_dual, 1)
-                np.setColor(0.5,0.5,1,0.3)
+                if self.box.dimensions == 3:
+                    vertices = plane.box_intersections
+                    poly = Polygon(vertices)
+                    node = poly.create()
+                    np = NodePath(node)
+                    np.reparentTo(self.render)
+                    np.setTwoSided(True)
+                    np.setTransparency(TransparencyAttrib.M_dual, 1)
+                    color = (0.5, 0.5, 1, 0.3)
+                    color = (random.random(), random.random(),random.random(), 0.3)
+                    np.setColor(*color)
+                    # np.setColor(0.5,0.5,1,0.3)
 
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]

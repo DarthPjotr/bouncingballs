@@ -765,7 +765,7 @@ class Plane:
     """
     Plane
     """    
-    def __init__(self, box: Box, normal=None, point=None, points=None) -> None:
+    def __init__(self, box: Box, normal=None, point=None, points=None, color=None) -> None:
         """
         Creates plane
 
@@ -796,6 +796,10 @@ class Plane:
                 # self._test_normal(points)
         else:
             raise TypeError("missing required argument")
+        
+        if color is None:
+            color = [0,0,128]
+        self.color = color
         
         self._set_params()
     
@@ -850,6 +854,7 @@ class Plane:
         plane = {}
         plane["normal"] = [float(f) for f in self.unitnormal]
         plane["point"] = [float(f) for f in self.point]
+        plane["color"] = [int(i) for i in self.color]
         return plane
     
     def intersection(self, planes):
@@ -2221,13 +2226,14 @@ def load_gas(data):
         for p in b["planes"]:
             normal = p["normal"]
             point = p["point"]
+            color = p.get('color', None)
             if 'pass_through_function' in p:
                 plane = Membrane(box, normal, point)
                 plane._filter = getattr(plane, p['pass_through_function'])
                 plane.hole_size = p['hole_size']
                 plane.max_speed = p['max_speed']
             else:
-                plane = Plane(box, normal, point)
+                plane = Plane(box, normal, point, color)
             box.planes.append(plane)
 
     return box
