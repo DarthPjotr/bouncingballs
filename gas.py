@@ -7,7 +7,6 @@ from numpy import linalg
 # from pyglet.window.key import E, F
 from scipy.spatial import ConvexHull
 import scipy.spatial as sp
-import networkx as nx
 import random
 import math
 from math import sin, cos, acos
@@ -203,10 +202,6 @@ class Field:
             ball.speed = dspeed
         return vector
 
-class Shape(nx.Graph):
-    def __init__(self, incoming_graph_data, **attr):
-        super().__init__(incoming_graph_data=incoming_graph_data, **attr)
-
 
 class Box:
     """
@@ -228,6 +223,7 @@ class Box:
         # shape of the box
         self.box_sizes = numpy.array(box_sizes, dtype=float)
         self.torus = torus
+        self.color = (200,200,200)
         # calculated properties based on box_sizes
         self.dimensions = len(self.box_sizes)
         self.onevector = numpy.array([1.0]*self.dimensions)
@@ -310,7 +306,9 @@ class Box:
             point = sum(points)/len(points)
             normal = self.nullvector.copy()
             normal[i] = 1
-            plane = Plane(self, point=point, normal=normal) #points=points[:self.dimensions])
+            plane = Plane(self, point=point, normal=normal)
+            plane.color = self.color
+            #points=points[:self.dimensions])
             # plane.point = point
             self.planes.append(plane)
 
@@ -321,6 +319,7 @@ class Box:
             normal = self.nullvector.copy()
             normal[i] = 1
             plane = Plane(self, point=point, normal=normal) # points=points[:self.dimensions])
+            plane.color = self.color
             # plane.point = point
             self.planes.append(plane)
 
@@ -334,6 +333,7 @@ class Box:
         box = {}
         box["sizes"] = [float(f) for f in self.box_sizes] # list(self.box_sizes)
         box['torus'] = self.torus
+        box['color'] = self.color
         box['merge'] = self.merge
         box['trail'] = self.trail
         box["gravity"] = [float(f) for f in self.gravity] # list(self.gravity)
@@ -893,7 +893,7 @@ class Plane:
         v = point - self.point
         return v @ self.unitnormal
     
-    def intersect_line(self, point, vector):
+    def intersect_line__(self, point, vector):
         """
         Calculates intersection point between line and the plane
 
@@ -912,6 +912,26 @@ class Plane:
             return None
         else:
             d = dt / dn
+        
+        return point + vector * d
+
+    def intersect_line(self, point, vector):
+        """
+        Calculates intersection point between line and the plane
+
+        Args:
+            point (numpy.array): a point on the line
+            vector (numpy.array): the vector of the line
+
+        Returns:
+            numpy.array: the intersection point
+        """ 
+        dn = vector @ self.unitnormal
+        if dn == 0:
+            # line parallel to or on plane, no solution
+            return None
+        dt = (self.point - point) @ self.unitnormal
+        d = dt / dn
         
         return point + vector * d
     
@@ -2204,6 +2224,7 @@ def load_gas(data):
     box.torus = b.get('torus', False)
     box.merge = b.get('merge', False)
     box.trail = b.get('trail', 0)
+    box.color = b.get('color', (200,200,200))
 
     if "particles" in b:
         for p in b['particles']:
@@ -2239,60 +2260,7 @@ def load_gas(data):
     return box
 
 
-
 class Test():
-    def test_shapes(self):
-        box = Box([10, 20, 30, 40])
-        shape = Shape(box.edges)
-        
-        print(shape.nodes)
-        print(shape.edges)
-        print(nx.cycle_basis(shape))
-        print("\n")
-        for n in shape.nodes:
-        #     pass
-        # if True:
-            cycle = nx.find_cycle(shape, n, "ignore")
-            print(n, cycle)
-            for (i,j, _) in cycle:
-                print (i,j, box.vertices[i], box.vertices[j])
-            print("\n")
-        
-        cycles = []
-        planes = []
-        for i, cycle in enumerate(nx.simple_cycles(shape.to_directed())):
-            if len(cycle) > box.dimensions-1:
-                # print(i, cycle)
-                points = [box.vertices[n] for n in cycle[:box.dimensions]]
-                try:
-                    plane = Plane(box, points=points)
-                except Exception:
-                    continue
-
-                flat = True
-                d = 0
-                for n in cycle[box.dimensions:]:
-                    d = abs(plane.distance(box.vertices[n]))
-                    if d > 0.001 :
-                        flat = False
-                        # print("skip", d)
-                        break
-                
-                cycle.sort()
-                if flat and cycle not in cycles:
-                    # print(d, cycle)
-                    cycles.append(cycle)
-                    planes.append(plane)
-        
-
-
-        print("\nPlanes:")
-        for i, c in enumerate(cycles):
-            print(planes[i])
-            print(c)
-
-
-
     def test_plane(self):
         planes = []
         box = Box([10,20,30])
@@ -2440,7 +2408,7 @@ class Test():
     
     def plane(self):
         # sizes = [1000, 900, 1080]
-        sizes = [100, 200, 300, 400]
+        sizes = [100, 200, 300]
         box = Box(sizes)
         print(box.vertices)
         print(box.edges)
@@ -2453,6 +2421,8 @@ class Test():
         normal = numpy.array([1,2,0,1])
 
         normal = [1,1,1,1]
+
+        normal = normal[:box.dimensions]
         point = box.center
         plane = Plane(box, normal=normal, point=point)
         # print(plane)
@@ -2512,8 +2482,8 @@ def main():
     # t.test_load_yaml()
     # t.test_displacement()
     # t.normal()
-    # t.plane()
-    t.test_shapes()
+    t.plane()
+    # t.test_shapes()
 
     print("END")
 

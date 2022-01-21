@@ -2,6 +2,9 @@ from math import pi, sin, cos
 import sys
 import numpy as np
 
+import tkinter
+from tkinter import filedialog as fd
+
 from direct.showbase.ShowBase import ShowBase
 # from direct.showbase.DirectObject import DirectObject
 from direct.gui.DirectGui import OnscreenText
@@ -29,6 +32,20 @@ from panda3d.core import GeomTriangles
 from panda3d.core import GeomNode
 
 from gas import *
+
+def loaddialog():
+    root = tkinter.Tk()
+    root.withdraw()
+    file = fd.askopenfile(parent=root, title="Load", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")])
+    root.destroy()
+    return file
+
+def savedialog():
+    root = tkinter.Tk()
+    root.withdraw()
+    file = fd.asksaveasfile(mode="w", parent=root, title="Save", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")], defaultextension=".yml")
+    root.destroy()
+    return file
 
 
 class Polygon():
@@ -178,7 +195,6 @@ class MyApp(ShowBase):
         # self.render.setFog(expfog)
         self.setBackgroundColor(*color/3)
 
-
     def set_background_old(self):
         # Load the environment model.
         worldLight = AmbientLight("world light")
@@ -272,7 +288,25 @@ class MyApp(ShowBase):
         self.accept('k', self.task_kick)
         self.accept('m', self.task_center)
         self.accept('h', self.task_stop)
+        self.accept('l', self.task_load)
+        self.accept('o', self.task_save)
         self.accept('escape', sys.exit)
+
+    def task_load(self):   
+        with loaddialog() as file:
+            self.load(file)
+        
+        if not file.closed:
+            print("File not closed")
+        return Task.cont
+
+    def task_save(self):
+        with savedialog() as file:
+            self.save(file)
+
+        if not file.closed:
+            print("File not closed")
+        return Task.cont
     
     def task_toggle_pauze(self):
         self.pauze = not self.pauze
@@ -330,12 +364,22 @@ class MyApp(ShowBase):
         pos += vzn * speed
         
         return pos
+    
+    def load(self, file):
+        file.close
+        print("LOAD")
+        pass
+
+    def save(self, file):
+        file.close
+        print("SAVE")
+        pass
 
     def create_box(self, sizes, nballs, radius):
         self.box = Box(sizes, torus=False)
-        self.box.merge = False
-        self.box.trail = 0
-        self.box.skip_trail = 5
+        self.box.merge = True
+        self.box.trail = 20
+        self.box.skip_trail = 4
         arr = ArrangeParticles(self.box)
         balls = []
         # balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
@@ -346,16 +390,16 @@ class MyApp(ShowBase):
         # balls = arr.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
         # balls = arr.test_interaction(30000/9, M0=40, V0=7/3, D=200, ratio=0.1)
         
-        # self.box.set_interaction(10000)
+        self.box.set_interaction(10000)
         # self.box.set_friction(0.02)
         # gravity = self.box.nullvector.copy()
         # gravity[3] = 1
         # self.box.set_gravity(0.5, gravity)
         # balls += arr.random_balls(15, 1, 40, 5, charge=1)
-        balls += arr.random_balls(15, 1, 40, 5, charge=0)
+        balls += arr.random_balls(30, 1, 40, 5, charge=None)
 
         
-        balls = arr.create_kube_planes(500, 20)
+        # balls = arr.create_kube_planes(500, 20)
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
         # balls.append(ball)
 
@@ -374,8 +418,9 @@ class MyApp(ShowBase):
         # plane = Plane(self.box, [1,1,1], self.box.center)
         # self.box.planes.append(plane)
 
-        # plane = Plane(self.box, [1,0,0], self.box.center/2)
-        # self.box.planes.append(plane)
+        plane = Plane(self.box, [1,0,0], self.box.center/2)
+        plane.color = [0,255,0]
+        self.box.planes.append(plane)
         
     def draw_box(self):
         # draw box
@@ -397,17 +442,24 @@ class MyApp(ShowBase):
         # draw extra planes
         if self.draw_planes == True:
             for plane in self.box.planes[2*self.box.dimensions:]:
+            # for plane in self.box.planes:
                 if self.box.dimensions == 3:
                     vertices = plane.box_intersections
+                    if not vertices:
+                        continue
                     poly = Polygon(vertices)
                     node = poly.create()
                     np = NodePath(node)
                     np.reparentTo(self.render)
                     np.setTwoSided(True)
                     np.setTransparency(TransparencyAttrib.M_dual, 1)
-                    color = (0.5, 0.5, 1, 0.3)
-                    color = (random.random(), random.random(),random.random(), 0.3)
-                    np.setColor(*color)
+                    if not plane.color:
+                        color = (0.5, 0.5, 1)
+                        color = (random.random(), random.random(),random.random())
+                    else:
+                        color = [c/255 for c in plane.color]
+                    transparency = 0.3
+                    np.setColor(*color, transparency)
                     # np.setColor(0.5,0.5,1,0.3)
 
                 for (i,j) in plane.edges:
@@ -469,7 +521,9 @@ class MyApp(ShowBase):
             trail = []
             for j in range(self.box.trail):
                 line = LineSegs("trail[{},{}]".format(i, j))
-                line.setColor(0.3, 0.3, 0.3, 1)
+                color = [c/255 for c in ball.color] 
+                line.setColor(*color, 1)
+                # line.setColor(0.3, 0.3, 0.3, 1)
                 line.moveTo((0,0,0))
                 line.drawTo((0,1,0))
                 line.setThickness(1)
