@@ -8,7 +8,7 @@ from direct.gui.DirectGui import OnscreenText
 from direct.task import Task
 # from direct.actor.Actor import Actor
 # from direct.interval.IntervalGlobal import Sequence
-from panda3d.core import NodePath, Material, Fog, AntialiasAttrib
+from panda3d.core import NodePath, Material, Fog, AntialiasAttrib, PandaNode
 # from panda3d.core import Point3
 from panda3d.core import AmbientLight, Texture
 from panda3d.core import Vec3, Vec4
@@ -142,11 +142,26 @@ class MyApp(ShowBase):
         self.textnode = self.draw_text("The Box:", 0.1, -0.1)
 
     def set_main_lighting(self):
+        # floorTex = self.loader.loadTexture('maps/envir-ground.jpg')
+        # floor = self.render.attachNewNode(PandaNode("floor"))
+        # floor.setTexture(floorTex)
+        # floor.flattenStrong()
+
         mainLight = DirectionalLight("main light")
         mainLight.setColor(Vec4(0.3, 0.3, 0.3, 1))
         self.mainLightNodePath = self.render.attachNewNode(mainLight)
+
+        mainLight.setShadowCaster(True)
+
         self.mainLightNodePath.setHpr(45, -80, 0)
         self.render.setLight(self.mainLightNodePath)
+        
+        # self.mainLightNodePath.node().setScene(self.render)
+        # self.mainLightNodePath.node().setShadowCaster(True)
+        # self.mainLightNodePath.node().showFrustum()
+        # self.mainLightNodePath.node().getLens().setFov(40)
+        # self.mainLightNodePath.node().getLens().setNearFar(10, 100)
+        # self.render.setLight(self.mainLightNodePath)
         
         ambientLight = AmbientLight("ambient light")
         ambientLight.setColor(Vec4(0.5, 0.5, 0.5, 1))
@@ -246,49 +261,18 @@ class MyApp(ShowBase):
         self.camera.setHpr(0, 0, 0)
 
     def register_key_and_mouse_events(self):
-        key = 'arrow_left'
-        self.accept(key, self.task_move_camera, [key, ""])
-        self.accept(key+"-repeat", self.task_move_camera, [key, ""])
+        keys = ['w', 's', 'a', 'd', 'c', 'arrow_left', 'arrow_right', 'arrow_up', 'arrow_down']
+        for key in keys:
+                # params = [key]
+                self.accept(key, self.task_move_camera, [key, "", 10])
+                self.accept(key+"-repeat", self.task_move_camera,  [key, "", 10])
+                self.accept("shift-"+key+"-repeat", self.task_move_camera,  [key, "", 20])
 
-        key = 'arrow_right'
-        self.accept(key, self.task_move_camera, [key, ""])
-        self.accept(key+"-repeat", self.task_move_camera, [key, ""])
-
-        key = 'arrow_up'
-        self.accept(key, self.task_move_camera, [key, ""])
-        self.accept(key+"-repeat", self.task_move_camera, [key, ""])
-
-        key = 'arrow_down'
-        self.accept(key, self.task_move_camera, [key, ""])
-        self.accept(key+"-repeat", self.task_move_camera, [key, ""])
-    
-        key = 'c'
-        self.accept(key, self.task_move_camera, [key, ""])
-        # self.accept(key+"-repeat", self.move_camera, [key, ""])
-
-        mouse = 'w'
-        self.accept(mouse, self.task_move_camera, ["", mouse])
-        self.accept(mouse+"-repeat", self.task_move_camera, ["", mouse])
-
-        mouse = 's'
-        self.accept(mouse, self.task_move_camera, ["", mouse])
-        self.accept(mouse+"-repeat", self.task_move_camera, ["", mouse])
-
-        mouse = 'a'
-        self.accept(mouse, self.task_move_camera, ["", mouse])
-        self.accept(mouse+"-repeat", self.task_move_camera, ["", mouse])
-
-        mouse = 'd'
-        self.accept(mouse, self.task_move_camera, ["", mouse])
-        self.accept(mouse+"-repeat", self.task_move_camera, ["", mouse])
-
-
-        self.accept('escape', sys.exit)
         self.accept('p', self.task_toggle_pauze)
-        
         self.accept('k', self.task_kick)
         self.accept('m', self.task_center)
         self.accept('h', self.task_stop)
+        self.accept('escape', sys.exit)
     
     def task_toggle_pauze(self):
         self.pauze = not self.pauze
@@ -296,56 +280,56 @@ class MyApp(ShowBase):
 
     def task_kick(self):
         self.box.kick_all()
+        return Task.cont
 
     def task_center(self):
         self.box.center_all()
+        return Task.cont
 
     def task_stop(self):
         self.box.stop_all()
+        return Task.cont
 
-    def task_move_camera(self, key="", mouse=""):
-        v = 8
+    def task_move_camera(self, key="", mouse="", speed=10):
+
         pos = np.array(self.camera.getPos())
         dir = self.render.getRelativeVector(self.camera, Vec3.forward())
 
-        dx = np.array([dir[1],-dir[0],0]) * v
-        dy = dir * v
-        dz = np.array([0,0,1]) * v
+        dx = np.array([dir[1],-dir[0],0]) * speed
+        dy = dir * speed
+        dz = np.array([0,0,1]) * speed
 
-        if key == 'arrow_left':
+        # lef right
+        if key == 'a':
             pos -= dx
-        elif key == 'arrow_right':
+        elif key == 'd':
             pos += dx
+        # forward backward
         elif key == 'arrow_up':
             pos += dy
         elif key == 'arrow_down':
             pos -= dy
-        # elif key == 'c':
-        #     self.camera.lookAt(Vec3(*self.box.center[:3]))
-
-        if mouse == "w":
-            pos += dz
-        elif mouse == "s":
-            pos -= dz
+        # up down
+        elif key == "w":
+            pos = self.up_down(pos, speed)
+            # pos += dz
+        elif key == "s":
+            pos = self.up_down(pos, -speed)
+            # pos -= dz
         
-
-        # hpr = np.array(self.camera.getHpr())
-        # dh = np.array([v,0,0])
-        # dp = np.array([0,v,0])
-        # if mouse == "w":
-        #     hpr -= dp
-        # elif mouse == "s":
-        #     hpr += dp
-        # elif mouse == 'a':
-        #     hpr += dh
-        # elif mouse == 'd':
-        #     hpr -= dh
-
         self.camera.setPos(*pos)
-        # self.camera.setHpr(*hpr)
         self.camera.setR(0)
         self.camera.lookAt(Vec3(*self.box.center[:3]))
         return Task.cont
+    
+    def up_down(self, pos, speed):
+        nz = np.array([0,0,1])
+        center = pos - np.array(self.box.center[:3])
+        vz = np.cross(center, np.cross(nz, center))
+        vzn = vz/math.sqrt(vz@vz)
+        pos += vzn * speed
+        
+        return pos
 
     def create_box(self, sizes, nballs, radius):
         self.box = Box(sizes, torus=False)
