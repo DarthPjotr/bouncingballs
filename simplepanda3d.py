@@ -389,7 +389,7 @@ class MyApp(ShowBase):
 
     def create_box(self, sizes, nballs, radius):
         self.box = Box(sizes, torus=False)
-        self.box.merge = True
+        self.box.merge = False
         self.box.trail = 20
         self.box.skip_trail = 4
         arr = ArrangeParticles(self.box)
@@ -400,15 +400,15 @@ class MyApp(ShowBase):
         # balls = arr.create_n_mer(15, 2, charge=None)
         # balls = arr.test_interaction_simple(10000)
         # balls = arr.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
-        # balls = arr.test_interaction(30000/9, M0=40, V0=7/3, D=200, ratio=0.1)
+        balls = arr.test_interaction(30000/9, M0=40, V0=7/3, D=200, ratio=0.1)
         
-        self.box.set_interaction(10000)
+        self.box.set_interaction(30000/9, 2)
         # self.box.set_friction(0.02)
         # gravity = self.box.nullvector.copy()
         # gravity[3] = 1
         # self.box.set_gravity(0.5, gravity)
         # balls += arr.random_balls(15, 1, 40, 5, charge=1)
-        balls += arr.random_balls(30, 1, 40, 5, charge=None)
+        # balls += arr.random_balls(30, 1, 40, 5, charge=None)
 
         
         # balls = arr.create_kube_planes(500, 20)
@@ -430,9 +430,9 @@ class MyApp(ShowBase):
         # plane = Plane(self.box, [1,1,1], self.box.center)
         # self.box.planes.append(plane)
 
-        plane = Plane(self.box, [1,0,0], self.box.center/2)
-        plane.color = [0,255,0]
-        self.box.planes.append(plane)
+        # plane = Plane(self.box, [1,0,0], self.box.center/2)
+        # plane.color = [0,255,0]
+        # self.box.planes.append(plane)
 
     def clear(self):
         for np in self.boxnode.children:
