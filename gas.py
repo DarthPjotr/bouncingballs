@@ -243,6 +243,7 @@ class Box:
         self.friction = 0.0
         self.interaction = 0.0
         self.merge = False
+        self.interaction_power = 2
         # content of the box
         self.walls = []
         self.particles = []
@@ -343,6 +344,7 @@ class Box:
         box["particles"] = [ball.out() for ball in self.particles]
         box["springs"] = [spring.out() for spring in self.springs]
         box["planes"] = [plane.out() for plane in self.planes[2*self.dimensions:]]
+        box["interaction_power"] = self.interaction_power
 
         output = {"box": box}
 
@@ -601,7 +603,7 @@ class Box:
         particle.speed -= particle.speed*self.friction
         return particle
     
-    def set_interaction(self, interaction):
+    def set_interaction(self, interaction, power=2):
         """
         Sets the interaction between particles
 
@@ -612,6 +614,7 @@ class Box:
             float: the interaction
         """
         self.interaction = interaction
+        self.interaction_power = power
         return self.interaction
     
     def avg_momentum(self):
@@ -1462,6 +1465,7 @@ class Particle:
 
         Args:
             box (Box): the box
+            power: float, default=2
 
         Returns:
             list: new speed vector
@@ -1481,9 +1485,13 @@ class Particle:
             dpos = self.displacement(ball.position)
             distance2 = dpos.dot(dpos)
             if distance2 > (self.radius+ball.radius)*(self.radius+ball.radius):
-                N = dpos/math.sqrt(distance2)
-                dspeed += self.charge*ball.charge*self.box.interaction*N/(mass*distance2)
-        
+                distance = math.sqrt(distance2)
+                unitnormal = dpos/distance
+                if self.box.interaction_power == 2:
+                    dspeed += self.charge*ball.charge*self.box.interaction*unitnormal/(mass*distance2)
+                else:
+                    dspeed += self.charge*ball.charge*self.box.interaction*unitnormal/(mass*(distance**self.box.interaction_power))
+
         self.speed += dspeed
         return self.speed
     
@@ -2228,6 +2236,7 @@ def load_gas(data):
     box.merge = b.get('merge', False)
     box.trail = b.get('trail', 0)
     box.color = b.get('color', (200,200,200))
+    box.interaction_power = b.get("interaction_power", 2)
 
     if "particles" in b:
         for p in b['particles']:
