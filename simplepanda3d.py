@@ -4,6 +4,7 @@ import numpy as np
 
 import tkinter
 from tkinter import filedialog as fd
+import yaml
 
 from direct.showbase.ShowBase import ShowBase
 # from direct.showbase.DirectObject import DirectObject
@@ -152,7 +153,10 @@ class MyApp(ShowBase):
         nballs = 30
         radius = 8
         self.create_box(sizes, nballs, radius)
+        self.boxnode = None
         self.draw_box()
+
+        self.taskMgr.add(self.task_box_go, 'move')
 
         self.set_camera()
         self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
@@ -365,15 +369,23 @@ class MyApp(ShowBase):
         
         return pos
     
+    def out(self):
+        config = {}
+
+        out = {'config': config}
+        box = self.box.out()
+        return {**out, **box}
+    
     def load(self, file):
-        file.close
-        print("LOAD")
-        pass
+        data = yaml.load(file, Loader=yaml.FullLoader)
+        config = data.get("config", {})
+        self.clear()
+        self.box = load_gas(data)
+        self.draw_box()
 
     def save(self, file):
-        file.close
-        print("SAVE")
-        pass
+        out = self.out()
+        yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
     def create_box(self, sizes, nballs, radius):
         self.box = Box(sizes, torus=False)
@@ -421,9 +433,17 @@ class MyApp(ShowBase):
         plane = Plane(self.box, [1,0,0], self.box.center/2)
         plane.color = [0,255,0]
         self.box.planes.append(plane)
+
+    def clear(self):
+        for np in self.boxnode.children:
+            np.removeNode()
+            np.clear()
         
     def draw_box(self):
         # draw box
+        self.boxnode = NodePath("the Box")
+        self.boxnode.reparentTo(self.render)
+
         for (i, j) in self.box.edges:
             p1 = self.box.vertices[i]
             p2 = self.box.vertices[j]
@@ -437,7 +457,8 @@ class MyApp(ShowBase):
             np = NodePath(node)
             #np.setAntiAlias(8, 1)
             #np.setColor((1, 1, 1, 1))
-            np.reparentTo(self.render)
+            # np.reparentTo(self.render)
+            np.reparentTo(self.boxnode)
         
         # draw extra planes
         if self.draw_planes == True:
@@ -450,7 +471,9 @@ class MyApp(ShowBase):
                     poly = Polygon(vertices)
                     node = poly.create()
                     np = NodePath(node)
-                    np.reparentTo(self.render)
+                    # np.reparentTo(self.render)
+                    np.reparentTo(self.boxnode)
+
                     np.setTwoSided(True)
                     np.setTransparency(TransparencyAttrib.M_dual, 1)
                     if not plane.color:
@@ -473,7 +496,8 @@ class MyApp(ShowBase):
                     node = lines.create()
                     np = NodePath(node)
                     # np.setColor((1, 1, 1, 1))
-                    np.reparentTo(self.render)
+                    # np.reparentTo(self.render)         
+                    np.reparentTo(self.boxnode)
         
         # create spheres
         self.spheres = []
@@ -490,7 +514,9 @@ class MyApp(ShowBase):
             material.setSpecular(Vec4(0,1,1,1))
             sphere.setScale(scale, scale, scale)
             sphere.setMaterial(material)
-            sphere.reparentTo(self.render)
+            # sphere.reparentTo(self.render)
+            sphere.reparentTo(self.boxnode)
+
             sphere.setPos(*ball.position[:3])
             if self.box.dimensions > 3:
                 sphere.setTransparency(TransparencyAttrib.M_dual, 1)
@@ -511,7 +537,9 @@ class MyApp(ShowBase):
             line.setThickness(2)
             node = line.create()
             np = NodePath(node)
-            np.reparentTo(self.render)
+            # np.reparentTo(self.render)
+            np.reparentTo(self.boxnode)
+
             # np.setColor(0,1,0,1)
             self.springs.append(np)
         
@@ -530,12 +558,14 @@ class MyApp(ShowBase):
                 
                 node = line.create()
                 np = NodePath(node)
-                np.reparentTo(self.render)
+                # np.reparentTo(self.render)  
+                np.reparentTo(self.boxnode)
+                # np.reparentTo(ball.object)
                 # np.setColor(0,0.5,0,1)
                 trail.append(np)
             self.trails.append(trail)   
 
-        self.taskMgr.add(self.task_box_go, 'move')
+        # self.taskMgr.add(self.task_box_go, 'move')
         # self.taskMgr.doMethodLater(1, self.task_box_go, 'move')
 
         return self.box.particles
@@ -561,8 +591,12 @@ class MyApp(ShowBase):
 
         while self.box.delete_particles:
             ball = self.box.delete_particles.pop()
+            index = self.box.delete_trails.pop()
             sphere = ball.object
+            trail = self.trails.pop(index)
             sphere.removeNode()
+            for np in trail:
+                np.removeNode()
         
         for ball in self.box.particles:
             sphere = ball.object

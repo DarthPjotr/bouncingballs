@@ -248,6 +248,7 @@ class Box:
         self.particles = []
         self.merged_particles = []
         self.delete_particles = []
+        self.delete_trails = []
         self.springs = []
         self.rods = []
         # dynamic properties
@@ -333,7 +334,7 @@ class Box:
         box = {}
         box["sizes"] = [float(f) for f in self.box_sizes] # list(self.box_sizes)
         box['torus'] = self.torus
-        box['color'] = self.color
+        box['color'] = [int(i) for i in self.color]
         box['merge'] = self.merge
         box['trail'] = self.trail
         box["gravity"] = [float(f) for f in self.gravity] # list(self.gravity)
@@ -1336,8 +1337,10 @@ class Particle:
             self.fixed = fixed
 
             self.box.merged_particles.append(self)
+            index = ball.index()
             self.box.particles.remove(ball)
             self.box.delete_particles.append(ball)
+            self.box.delete_trails.append(index)
             merged = True
         
         # self.impuls = self.mass * self.speed

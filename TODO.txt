@@ -1,0 +1,4 @@
+TODO
+# rename files
+# interaction add other powers, beside recipoke square . Eg based on dimension, D > 3 R = (D-1)
+# improve displacements based on modular arithmic
