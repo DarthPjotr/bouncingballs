@@ -16,7 +16,7 @@ from tkinter import filedialog as fd
 from gas import *
 
 # Set up the constants
-ASK_LOAD = False
+ASK_LOAD = True
 
 UPDATE_RATE = 1/60
 TEXT_REFRESH = 10
@@ -44,12 +44,12 @@ GRAVITY = 0.0
 FRICTION = 0.00
 INTERACTION = 10000.0
 TORUS = False
-DIMENSIONS = 3
+DIMENSIONS = 2
 # HEIGHT = 30
 SPEED = 3
 
 # because it looks better with soft SpriteCircle add bit to sprite radius
-FUZZIE = True
+FUZZIE = False
 if FUZZIE:
     D_SPRITE_RADIUS = 5
 else:
@@ -189,8 +189,12 @@ class MyGame(arcade.Window):
 
     def place_balls(self):
         balls = []
-
         arrangement = ArrangeParticles(self.box)
+
+        self.box.merge = False
+        self.box.torus = True
+        self.box.trail = 0
+        self.box.set_interaction(10000)
 
         # balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
         # self.add_balls(balls)
@@ -216,7 +220,7 @@ class MyGame(arcade.Window):
         #     else:
         #         ball.color = arcade.color.GREEN
         # self.add_balls(balls)
-        # balls = arrangement.random_balls(50, 3, 30, charge=0)
+        balls = arrangement.random_balls(15, 3, 30, charge=None)
         # # balls = arrangement.create_kube(400)
         # normal = [0,1,0,1,1,1]
         # point = self.box.center
@@ -240,13 +244,10 @@ class MyGame(arcade.Window):
         # for ball in balls:
         #     ball.color = arcade.color.RED
         # balls = arrangement.create_kube_planes(500, 50)
-        self.box.merge = False
-        self.box.torus = False
-        self.box.trail = 10
-        self.box.set_interaction(0)
+
         
         # balls = arrangement.create_pendulum()
-        balls = arrangement.test_walls()
+        # balls = arrangement.test_walls()
         # balls = arrangement.test_rod()
 
         # self.add_balls(balls)
@@ -255,7 +256,11 @@ class MyGame(arcade.Window):
         # for i, ball in enumerate(self.box.particles):
         #     print(i, ball.position, ball.speed)
 
-        # balls = arrangement.create_n_mer(4, 4, False, True, 1)
+        # balls = arrangement.create_n_mer(2, 2, False, False, 0)
+        # speed = [1,1,1]
+        # center = self.box.center
+        # center[0] = self.box.box_sizes[0] - 50
+        # balls = arrangement.test_spring(length=150, distance=160, center=center[:self.box.dimensions], speed=speed[:self.box.dimensions])
         # self.add_balls(balls)
 
         # balls = arrangement.create_n_mer(4, 4, False, True, 0)
@@ -271,6 +276,7 @@ class MyGame(arcade.Window):
         # balls = arrangement.test_rod(150)
         # balls = arrangement.test_fixed_charge(10000)
 
+        arrangement.set_charge_colors(balls)
         self.add_balls(balls)
         #self.box.kick_all()
 
@@ -446,6 +452,20 @@ class MyGame(arcade.Window):
                 alpha = 255*(pos/self.box.box_sizes[DALPHA]) % 255
                 color.append(alpha)
             arcade.draw_line(*spring.p1.position[:2], *spring.p2.position[:2], color=color, line_width=1)
+
+            # dpos = self.box.displacement(spring.p1.position, spring.p2.position)
+            # # start = spring.p1.position
+            # # end = spring.p1.position + dpos
+            # start = self.box.center
+            # end = self.box.center + dpos
+            # arcade.draw_line(*start[:2], *end[:2], color=(255,0,0), line_width=2)
+
+            # dpos = self.box._displacement(spring.p1.position, spring.p2.position)
+            # # start = spring.p1.position
+            # # end = spring.p1.position + dpos
+            # start = self.box.center
+            # end = self.box.center + dpos
+            # arcade.draw_line(*start[:2], *end[:2], color=(0,255,0), line_width=2)
         
         # draw rods
         for i, rod in enumerate(self.box.rods):

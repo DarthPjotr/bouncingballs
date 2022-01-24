@@ -503,8 +503,8 @@ class Box:
         # print(particle.out())
         self.particles.append(particle)
         return particle
-    
-    def displacement(self, pos1, pos2):
+
+    def _displacement(self, pos1, pos2):
         """
         Calculates displacement vector between two position vectors. 
         Accounts for wrapping around if self.torus == True.
@@ -534,6 +534,33 @@ class Box:
                         dpos = dpos2
                         dpos_dot = dpos_dot2
             return dpos
+
+    def displacement(self, pos1, pos2):
+        """
+        Calculates displacement vector between two position vectors. 
+        Accounts for wrapping around if self.torus == True.
+
+        Args:
+            pos1 (numpy.array): position 1
+            pos2 (numpy.array): position 2
+
+        Returns:
+            numpy.array: minimum vector from position 1 to 2
+        """  
+        dpos = pos1 - pos2   
+        if self.torus == True:
+            dpos = numpy.array([math.remainder(d,s/2) for (d,s) in zip(dpos, self.box_sizes)])
+            # dpos_wrap = []
+            # for (d,s) in zip(dpos, self.box_sizes/2):
+            #     w = math.fmod(d, s)
+            #     if abs(w - s) < abs(w):
+            #         w = w - s
+            #     elif abs(w + s) < abs(w):
+            #         w = w + s
+            #     dpos_wrap.append(w) 
+            # dpos = numpy.array(dpos_wrap)
+
+        return dpos
     
     def set_gravity(self, strength, direction=None):
         """
@@ -1007,7 +1034,7 @@ class Plane:
         return points
     
     def _sort_convexhull(self, points):
-        if len(points) < 2:
+        if len(points) < 3:
             return points
         
         # project points on X,Y or Z plane as long as i has a non zero value for the normal
@@ -2105,24 +2132,30 @@ class ArrangeParticles:
         
         return balls
 
-    def test_spring(self, length=150, distance=240, strength=0.03, interaction=0):
+    def test_spring(self, length=150, distance=240, strength=0.03, interaction=0 , center=None,speed=None):
         self.box.set_interaction(interaction)
+        if center is None:
+            center = self.box.center
+
+        if speed is None:
+            speed = self.box.nullvector.copy()
 
         balls = []
 
         dpos = self.box.nullvector.copy()
         dpos[0] = distance/2
-        pos = self.box.center + dpos
-        speed = self.box.nullvector.copy()
-        speed[0] = 0
+        pos = center + dpos
+        # speed = self.box.nullvector.copy()
+        # speed[0] = 0
+
         ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=-1, color=[255,0,0])
         balls.append(ball)
         b1 = ball
 
         dpos = self.box.nullvector.copy()
         dpos[0] = -distance/2
-        pos = self.box.center + dpos
-        speed[0] = -0
+        pos = center + dpos
+        # speed[0] = -0
         ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=1, color=[0,255,0])
         balls.append(ball)
         b2 = ball

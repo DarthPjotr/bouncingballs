@@ -149,7 +149,7 @@ class MyApp(ShowBase):
         self.draw_planes = True
         self.trails = []
 
-        sizes = [1200, 900, 1000]
+        sizes = [1200, 900, 1000, 500]
         nballs = 30
         radius = 8
         self.create_box(sizes, nballs, radius)
@@ -388,21 +388,23 @@ class MyApp(ShowBase):
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
     def create_box(self, sizes, nballs, radius):
-        self.box = Box(sizes, torus=False)
+        self.box = Box(sizes, torus=True)
         self.box.merge = False
-        self.box.trail = 20
-        self.box.skip_trail = 4
+        self.box.trail = 0
+        self.box.skip_trail = 1
         arr = ArrangeParticles(self.box)
         balls = []
+
+        self.box.set_interaction(10000)
         # balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
         # balls = arr.create_simplex()
         # balls += arr.create_kube_planes(800, 10)
-        # balls = arr.create_n_mer(15, 2, charge=None)
+        balls = arr.create_n_mer(10, 2, charge=0)
         # balls = arr.test_interaction_simple(10000)
         # balls = arr.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
-        balls = arr.test_interaction(30000/9, M0=40, V0=7/3, D=200, ratio=0.1)
+        # balls = arr.test_interaction(30000/9, M0=40, V0=7/3, D=200, ratio=0.1)
         
-        self.box.set_interaction(30000/9, 2)
+        # self.box.set_interaction(30000/9, 2)
         # self.box.set_friction(0.02)
         # gravity = self.box.nullvector.copy()
         # gravity[3] = 1
@@ -415,7 +417,7 @@ class MyApp(ShowBase):
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
         # balls.append(ball)
 
-        # balls += arr.random_balls(30, 1, 10, 5, charge=-1)
+        # balls += arr.random_balls(30, 1, 50, 5, charge=None)
         # ball = self.box.add_particle(1, 20, self.box.center, speed=None, charge=-10, fixed=True, color=[255,255,255])
         # balls.append(ball)
         arr.set_charge_colors(balls)
