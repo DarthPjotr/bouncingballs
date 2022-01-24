@@ -549,16 +549,7 @@ class Box:
         """  
         dpos = pos1 - pos2   
         if self.torus == True:
-            dpos = numpy.array([math.remainder(d,s/2) for (d,s) in zip(dpos, self.box_sizes)])
-            # dpos_wrap = []
-            # for (d,s) in zip(dpos, self.box_sizes/2):
-            #     w = math.fmod(d, s)
-            #     if abs(w - s) < abs(w):
-            #         w = w - s
-            #     elif abs(w + s) < abs(w):
-            #         w = w + s
-            #     dpos_wrap.append(w) 
-            # dpos = numpy.array(dpos_wrap)
+            dpos = numpy.array([math.remainder(d,s) for (d,s) in zip(dpos, self.box_sizes/2)])
 
         return dpos
     
