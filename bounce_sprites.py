@@ -16,7 +16,7 @@ from tkinter import filedialog as fd
 from gas import *
 
 # Set up the constants
-ASK_LOAD = True
+ASK_LOAD = False
 
 UPDATE_RATE = 1/60
 TEXT_REFRESH = 10
@@ -62,16 +62,18 @@ INVMAXCOLOR = 1/MAXCOLOR
 def loaddialog():
     root = tkinter.Tk()
     root.withdraw()
-    file = fd.askopenfile(parent=root, title="Load", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")])
+    # file = fd.askopenfile(parent=root, title="Load", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")])
+    path = fd.Open(parent=root, title="Load", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")]).show()
     root.destroy()
-    return file
+    return path
 
 def savedialog():
     root = tkinter.Tk()
     root.withdraw()
-    file = fd.asksaveasfile(mode="w", parent=root, title="Save", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")], defaultextension=".yml")
+    # file = fd.asksaveasfile(mode="w", parent=root, title="Save", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")], defaultextension=".yml")
+    path = fd.SaveAs(parent=root, title="Save", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")], defaultextension=".yml").show()
     root.destroy()
-    return file
+    return path
 
 class MyGame(arcade.Window):
     """ Main application class. """
@@ -644,20 +646,15 @@ class MyGame(arcade.Window):
             # quit
             self.close()
         elif symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
-            with loaddialog() as file:
-                self.load(file)
-            
-            if not file.closed:
-                print("File not closed")
-            # file = loaddialog()
-            # self.load(file)
-            # file.close()
+            path = loaddialog()
+            if path is not None and len(path) > 0:
+                with open(path) as file:
+                    self.load(file)
         elif symbol == arcade.key.S and modifiers & arcade.key.MOD_CTRL:
-            with savedialog() as file:
-                self.save(file)
-            # file = savedialog()
-            # self.save(file)
-            # file.close()
+            path = savedialog()
+            if path is not None and len(path) > 0:
+                with open(path) as file:
+                    self.save(file)
         else:
             self._do_rotation(symbol)
         return super().on_key_press(symbol, modifiers)
