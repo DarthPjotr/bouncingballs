@@ -129,40 +129,35 @@ class Polygon():
 
 class MyApp(ShowBase):
     def __init__(self):
-        # ShowBase.__init__(self)
         super().__init__()
+
+        # defaults
         self.pauze = False
-
-        # Disable the camera trackball controls.
-        self.disableMouse()
-        # self.useDrive()
-
-        properties = WindowProperties()
-        properties.setSize(1800, 900)
-
-        self.render.setAntialias(8|64)
-        self.win.requestProperties(properties)
-
-        self.set_main_lighting()
-        # self.set_background()
-
-        self.register_key_and_mouse_events()
-
         self.draw_planes = True
         self.trails = []
-
-        sizes = [1200, 900, 1000]
-        nballs = 30
-        radius = 8
-        self.create_box(sizes, nballs, radius)
         self.boxnode = None
+
+        # setup window
+        properties = WindowProperties()
+        properties.setSize(1800, 900)
+        self.win.requestProperties(properties)
+        self.render.setAntialias(8|64)
+    
+        # setup the box
+        self.create_box()
         self.draw_box()
 
-        self.taskMgr.add(self.task_box_go, 'move')
-
+        # setup camera lighting and text
         self.set_camera()
+        self.disableMouse()
+        self.set_main_lighting()
+        # self.set_background()
         self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
         self.textnode = self.draw_text("The Box:", 0.1, -0.1)
+    
+        # register events and tasks
+        self.register_key_and_mouse_events()
+        self.taskMgr.add(self.task_box_go, 'move')
 
     def set_main_lighting(self):
         # floorTex = self.loader.loadTexture('maps/envir-ground.jpg')
@@ -392,34 +387,47 @@ class MyApp(ShowBase):
         out = self.out()
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
-    def create_box(self, sizes, nballs, radius):
-        self.box = Box(sizes, torus=False)
+    def create_box(self):
+        sizes = [1200, 900, 1000]
+        self.box = Box(sizes)
+
+        self.box.torus = False
         self.box.merge = False
-        self.box.trail = 10
+        self.box.trail = 0
         self.box.skip_trail = 1
+
+        interaction = 500.0
+        power = 2
+        friction = 0.0
+        gravity_strength = 0.5
+        gravity_direction = self.box.nullvector.copy()
+        gravity_direction[self.box.Y] = 0
+
+        charge_colors = False
+
         arr = ArrangeParticles(self.box)
         balls = []
 
-        self.box.set_interaction(1000)
-        self.box.set_friction(0.0)
+        self.box.set_interaction(interaction, power)
+        self.box.set_friction(friction)
+        self.box.set_gravity(gravity_strength, gravity_direction)
+
         # balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
-        balls += arr.create_simplex(size=400, charge=-1)
-        ball = self.box.add_particle(1, 80, self.box.center, fixed=True, charge=4)
-        balls.append(ball)
+        # balls += arr.create_simplex(size=400, charge=-1)
+        # ball = self.box.add_particle(1, 80, self.box.center, fixed=True, charge=4)
+        # balls.append(ball)
+
         # balls += arr.create_simplex(charge=1)
         # balls += arr.create_simplex(charge=-1)
         # balls += arr.create_simplex(charge=-1)
+
         # balls += arr.create_kube_planes(800, 10)
         # balls += arr.create_n_mer(12, 4, star=True, charge=None)
-        # balls = arr.test_interaction_simple(10000)
-        # balls = arr.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
-        # balls = arr.test_interaction(30000/9, M0=40, V0=7/3, D=200, ratio=0.1)
+        # balls = arr.test_interaction_simple(10000, power)
+        # balls = arr.test_interaction(40000, power, M0=40, V0=6, D=350, ratio=0.1)
+        # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
         
         # self.box.set_interaction(30000/9, 2)
-        # self.box.set_friction(0.02)
-        # gravity = self.box.nullvector.copy()
-        # gravity[3] = 1
-        # self.box.set_gravity(0.5, gravity)
         # balls += arr.random_balls(15, 1, 40, 5, charge=1)
         # balls += arr.random_balls(30, 1, 40, 5, charge=None)
 
@@ -428,10 +436,9 @@ class MyApp(ShowBase):
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
         # balls.append(ball)
 
-        # balls += arr.random_balls(30, 1, 50, 5, charge=None)
+        balls += arr.random_balls(nballs=100, mass=None, radius=None, max_speed=5, charge=0)
         # ball = self.box.add_particle(1, 20, self.box.center, speed=None, charge=-10, fixed=True, color=[255,255,255])
         # balls.append(ball)
-        arr.set_charge_colors(balls)
         # balls = arr.random_balls(30, 1, 10, 5, charge=-1)
         # balls = arr.random_balls(12, 1, 30, 1, charge=-1)
         # for i in range(nballs):
@@ -446,6 +453,8 @@ class MyApp(ShowBase):
         # plane = Plane(self.box, [1,0,0], self.box.center/2)
         # plane.color = [0,255,0]
         # self.box.planes.append(plane)
+        if charge_colors:
+            arr.set_charge_colors(balls)
 
     def clear(self):
         for np in self.boxnode.children:
@@ -628,17 +637,13 @@ class MyApp(ShowBase):
             p2 = spring.p2.object
             ray = self.springs[i]
             self.move_line(ray, p1.getPos(), p2.getPos())
-            # ray.setPos(p1.getPos())
-            # ray.lookAt(p2)
-            # d = (p1.getPos(self.render) - p2.getPos(self.render)).length()
-            # ray.setScale(d)
-    
-        
+       
         charge = sum(p.charge for p in self.box.particles)
         output = "Ticks: {}\nDimensions: {}\nBalls: {}\nCharge: {}".format(self.box.ticks, self.box.dimensions, len(self.box.particles), charge)
         self.textnode.text = output
 
         return Task.cont
+
 
 def main():
     loadPrcFile("config/Config.prc")
@@ -647,4 +652,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

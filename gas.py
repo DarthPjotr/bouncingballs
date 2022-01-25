@@ -577,7 +577,8 @@ class Box:
         
         direction = numpy.array(direction)
         D2 = direction.dot(direction)
-        direction = direction/math.sqrt(D2)
+        if D2 > 0:
+            direction = direction/math.sqrt(D2)
         self.gravity = strength * direction
 
         return self.gravity
@@ -2033,8 +2034,8 @@ class ArrangeParticles:
 
         return balls
     
-    def test_interaction_simple(self, interaction):
-        self.box.set_interaction(interaction)
+    def test_interaction_simple(self, interaction, power=2):
+        self.box.set_interaction(interaction, power)
         balls = []
 
         dpos = self.box.nullvector.copy()
@@ -2054,11 +2055,10 @@ class ArrangeParticles:
 
         return balls
 
-    def test_interaction(self, interaction=20000, M0=40, V0=6, D=140, ratio=0.1):
-        self.box.set_interaction(interaction)
+    def test_interaction(self, interaction=20000, power=2, M0=40, V0=6, D=140, ratio=0.1):
+        self.box.set_interaction(interaction, power)
         balls = []
 
-    
         dpos = self.box.nullvector.copy()
         dpos[1] = D * ratio
         M = M0 * (1-ratio)
