@@ -144,7 +144,7 @@ class MyApp(ShowBase):
         self.draw_planes = True
         self.trails = []
         self.tick_rate = 1
-        self.quiet = False
+        self.quiet = True
         self.bounced = False
 
         self.boxnode = None
@@ -298,6 +298,7 @@ class MyApp(ShowBase):
             self.accept("shift-"+key+"-repeat", self.task_move_camera,  [key, "", 20])
 
         self.accept('p', self.task_toggle_pauze)
+        self.accept('o', self.task_quiet)
         self.accept('k', self.task_kick)
         self.accept('c', self.task_center)
         self.accept('h', self.task_stop)
@@ -305,6 +306,10 @@ class MyApp(ShowBase):
         self.accept('control-s', self.task_save)
         self.accept('escape', sys.exit)
         self.accept('q', sys.exit)
+    
+    def task_quiet(self):  
+        self.quiet = not(self.quiet)
+        return Task.cont
 
     def task_load(self): 
         path = loaddialog() 
