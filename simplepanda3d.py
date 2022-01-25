@@ -37,16 +37,18 @@ from gas import *
 def loaddialog():
     root = tkinter.Tk()
     root.withdraw()
-    file = fd.askopenfile(parent=root, title="Load", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")])
+    # file = fd.askopenfile(parent=root, title="Load", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")])
+    path = fd.Open(parent=root, title="Load", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")]).show()
     root.destroy()
-    return file
+    return path
 
 def savedialog():
     root = tkinter.Tk()
     root.withdraw()
-    file = fd.asksaveasfile(mode="w", parent=root, title="Save", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")], defaultextension=".yml")
+    # file = fd.asksaveasfile(mode="w", parent=root, title="Save", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")], defaultextension=".yml")
+    path = fd.SaveAs(parent=root, title="Save", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")], defaultextension=".yml").show()
     root.destroy()
-    return file
+    return path
 
 
 class Polygon():
@@ -149,7 +151,7 @@ class MyApp(ShowBase):
         self.draw_planes = True
         self.trails = []
 
-        sizes = [1200, 900, 1000, 500]
+        sizes = [1200, 900, 1000]
         nballs = 30
         radius = 8
         self.create_box(sizes, nballs, radius)
@@ -296,20 +298,23 @@ class MyApp(ShowBase):
         self.accept('o', self.task_save)
         self.accept('escape', sys.exit)
 
-    def task_load(self):   
-        with loaddialog() as file:
+    def task_load(self): 
+        path = loaddialog() 
+        if path is None or len(path) == 0:
+            return Task.cont
+
+        with open(path) as file:
             self.load(file)
         
-        if not file.closed:
-            print("File not closed")
         return Task.cont
 
-    def task_save(self):
-        with savedialog() as file:
-            self.save(file)
+    def task_save(self):  
+        path = savedialog()
+        if path is None or len(path) == 0:
+            return Task.cont
 
-        if not file.closed:
-            print("File not closed")
+        with open(path) as file:
+            self.save(file)
         return Task.cont
     
     def task_toggle_pauze(self):
@@ -388,18 +393,24 @@ class MyApp(ShowBase):
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
     def create_box(self, sizes, nballs, radius):
-        self.box = Box(sizes, torus=True)
+        self.box = Box(sizes, torus=False)
         self.box.merge = False
-        self.box.trail = 0
+        self.box.trail = 10
         self.box.skip_trail = 1
         arr = ArrangeParticles(self.box)
         balls = []
 
-        self.box.set_interaction(10000)
+        self.box.set_interaction(1000)
+        self.box.set_friction(0.0)
         # balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
-        # balls = arr.create_simplex()
+        balls += arr.create_simplex(size=400, charge=-1)
+        ball = self.box.add_particle(1, 80, self.box.center, fixed=True, charge=4)
+        balls.append(ball)
+        # balls += arr.create_simplex(charge=1)
+        # balls += arr.create_simplex(charge=-1)
+        # balls += arr.create_simplex(charge=-1)
         # balls += arr.create_kube_planes(800, 10)
-        balls = arr.create_n_mer(10, 2, charge=0)
+        # balls += arr.create_n_mer(12, 4, star=True, charge=None)
         # balls = arr.test_interaction_simple(10000)
         # balls = arr.test_interaction(40000, M0=40, V0=6, D=300, ratio=0.1)
         # balls = arr.test_interaction(30000/9, M0=40, V0=7/3, D=200, ratio=0.1)
