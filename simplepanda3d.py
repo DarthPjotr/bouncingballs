@@ -4,11 +4,13 @@ import numpy as np
 
 import tkinter
 from tkinter import filedialog as fd
+from tkinter.messagebox import showwarning
 import yaml
 
 from direct.showbase.ShowBase import ShowBase
 # from direct.showbase.DirectObject import DirectObject
 from direct.gui.DirectGui import OnscreenText
+# from direct.gui.DirectGui import OkDialog
 from direct.task import Task
 # from direct.actor.Actor import Actor
 # from direct.interval.IntervalGlobal import Sequence
@@ -49,6 +51,12 @@ def savedialog():
     path = fd.SaveAs(parent=root, title="Save", initialdir="D:\\temp", filetypes=[("YAML", "*.yml")], defaultextension=".yml").show()
     root.destroy()
     return path
+
+def warning(title, message):
+    root = tkinter.Tk()
+    root.withdraw()
+    showwarning(title, message)
+    root.destroy()
 
 
 class Polygon():
@@ -136,6 +144,8 @@ class MyApp(ShowBase):
         self.draw_planes = True
         self.trails = []
         self.boxnode = None
+        self.tick_rate = 1
+        self.quiet = True
 
         # setup window
         properties = WindowProperties()
@@ -278,20 +288,20 @@ class MyApp(ShowBase):
         self.camera.setHpr(0, 0, 0)
 
     def register_key_and_mouse_events(self):
-        keys = ['w', 's', 'a', 'd', 'c', 'arrow_left', 'arrow_right', 'arrow_up', 'arrow_down']
+        keys = ['w', 's', 'a', 'd', 'arrow_left', 'arrow_right', 'arrow_up', 'arrow_down']
         for key in keys:
-                # params = [key]
-                self.accept(key, self.task_move_camera, [key, "", 10])
-                self.accept(key+"-repeat", self.task_move_camera,  [key, "", 10])
-                self.accept("shift-"+key+"-repeat", self.task_move_camera,  [key, "", 20])
+            self.accept(key, self.task_move_camera, [key, "", 10])
+            self.accept(key+"-repeat", self.task_move_camera,  [key, "", 10])
+            self.accept("shift-"+key+"-repeat", self.task_move_camera,  [key, "", 20])
 
         self.accept('p', self.task_toggle_pauze)
         self.accept('k', self.task_kick)
-        self.accept('m', self.task_center)
+        self.accept('c', self.task_center)
         self.accept('h', self.task_stop)
-        self.accept('l', self.task_load)
-        self.accept('o', self.task_save)
+        self.accept('control-l', self.task_load)
+        self.accept('control-s', self.task_save)
         self.accept('escape', sys.exit)
+        self.accept('q', sys.exit)
 
     def task_load(self): 
         path = loaddialog() 
@@ -379,9 +389,21 @@ class MyApp(ShowBase):
     def load(self, file):
         data = yaml.load(file, Loader=yaml.FullLoader)
         config = data.get("config", {})
-        self.clear()
-        self.box = load_gas(data)
-        self.draw_box()
+
+        # self.fps = config['fps']
+        self.quiet = config.get('quiet', True)
+        self.pause = config.get('pause', False)
+        # self.text = config['text']
+        self.tick_rate = config.get('tickrate', 1)
+
+        box = data["box"]
+        sizes = box["sizes"]
+        if len(sizes) > 2:
+            self.clear()
+            self.box = load_gas(data)
+            self.draw_box()
+        else:
+            warning("Warning", "2D boxes not supported")
 
     def save(self, file):
         out = self.out()
@@ -596,7 +618,7 @@ class MyApp(ShowBase):
         if self.pauze:
             return Task.cont
 
-        self.box.go(steps=1)
+        self.box.go(steps=self.tick_rate)
 
         while self.box.merged_particles:
             ball = self.box.merged_particles.pop()
