@@ -143,9 +143,12 @@ class MyApp(ShowBase):
         self.pauze = False
         self.draw_planes = True
         self.trails = []
-        self.boxnode = None
         self.tick_rate = 1
-        self.quiet = True
+        self.quiet = False
+        self.bounced = False
+
+        self.boxnode = None
+        self.sound = self.loader.load_sfx('sounds/c_bang1.wav')
 
         # setup window
         properties = WindowProperties()
@@ -458,7 +461,7 @@ class MyApp(ShowBase):
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
         # balls.append(ball)
 
-        balls += arr.random_balls(nballs=100, mass=None, radius=None, max_speed=5, charge=0)
+        balls += arr.random_balls(nballs=10, mass=1, radius=50, max_speed=5, charge=0)
         # ball = self.box.add_particle(1, 20, self.box.center, speed=None, charge=-10, fixed=True, color=[255,255,255])
         # balls.append(ball)
         # balls = arr.random_balls(30, 1, 10, 5, charge=-1)
@@ -618,7 +621,7 @@ class MyApp(ShowBase):
         if self.pauze:
             return Task.cont
 
-        self.box.go(steps=self.tick_rate)
+        self.bounced = self.box.go(steps=self.tick_rate)
 
         while self.box.merged_particles:
             ball = self.box.merged_particles.pop()
@@ -663,6 +666,9 @@ class MyApp(ShowBase):
         charge = sum(p.charge for p in self.box.particles)
         output = "Ticks: {}\nDimensions: {}\nBalls: {}\nCharge: {}".format(self.box.ticks, self.box.dimensions, len(self.box.particles), charge)
         self.textnode.text = output
+
+        if self.bounced and not(self.quiet):
+            self.sound.play()
 
         return Task.cont
 
