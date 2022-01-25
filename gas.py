@@ -17,23 +17,10 @@ from pprint import pp
 import locale
 locale.setlocale(locale.LC_ALL, '')
 
-# SCREEN_WIDTH = 700
-# SCREEN_HEIGHT = 500
-# SCREEN_DEPTH = 400
-
-# DIMENSIONS=2
-
-# BLACK = (0, 0, 0)
-# WHITE = (255, 255, 255)
-# BLUE = (0, 0, 255)
-# RED = (255, 0 ,0)
-# GREEN = (0, 255,0)
-
 VMAX = 3
 RADIUS = 1
 MASS = 1
 NBALLS = 20
-
 
 class Field:
     """
@@ -324,9 +311,6 @@ class Box:
             plane.color = self.color
             # plane.point = point
             self.planes.append(plane)
-
-    def __get_planes(self):       
-        pass
 
     def __str__(self) -> str:
         return str(self.box_sizes)
@@ -915,28 +899,6 @@ class Plane:
         point = numpy.array(point)
         v = point - self.point
         return v @ self.unitnormal
-    
-    def intersect_line__(self, point, vector):
-        """
-        Calculates intersection point between line and the plane
-
-        Args:
-            point (numpy.array): a point on the line
-            vector (numpy.array): the vector of the line
-
-        Returns:
-            numpy.array: the intersection point
-        """        
-        dt = (self.point - point) @ self.unitnormal
-        dn = vector @ self.unitnormal
-        if dt == 0:
-            return None
-        elif dn == 0:
-            return None
-        else:
-            d = dt / dn
-        
-        return point + vector * d
 
     def intersect_line(self, point, vector):
         """
