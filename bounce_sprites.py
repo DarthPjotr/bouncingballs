@@ -75,7 +75,7 @@ def savedialog():
     root.destroy()
     return path
 
-class MyGame(arcade.Window):
+class World(arcade.Window):
     """ Main application class. """
 
     def __init__(self):
@@ -97,7 +97,7 @@ class MyGame(arcade.Window):
         self.bounced = False
         self.quiet = False
         self.text = True
-        self.draw_planes = True
+        self._draw_planes = True
         self.left_mouse_down = False
         self.mouse_dx = 0
         self.mouse_dy = 0
@@ -169,16 +169,11 @@ class MyGame(arcade.Window):
             # else:
             #     self.box.resize([width ,height])
         else:
-            self.box = Box(BOX_DIMENSIONS[:DIMENSIONS], TORUS)
-            self.box.set_gravity(GRAVITY)
-            self.box.set_friction(FRICTION)
-            self.box.set_interaction(INTERACTION)
-            self.box.torus = TORUS
 
             # self.box.field = Field(self.box)
             # self.box.field.equation = None # self.box.field.nofield
 
-            self.place_balls()
+            self.setup_box()
 
     @staticmethod
     def getcolor(value, vmin, vmax):
@@ -189,14 +184,31 @@ class MyGame(arcade.Window):
         color = [round(c) for c in V]
         return color
 
-    def place_balls(self):
-        balls = []
-        arrangement = ArrangeParticles(self.box)
+    def setup_box(self):
+        sizes = BOX_DIMENSIONS[:DIMENSIONS]
+        sizes = [1200, 900, 1000]
+        self.box = Box(sizes)
 
+        self.box.torus = False # TORUS
         self.box.merge = False
-        self.box.torus = True
         self.box.trail = 0
-        self.box.set_interaction(10000)
+        self.box.skip_trail = 1
+
+        interaction = 500.0
+        power = 2
+        friction = 0.0
+        gravity_strength = 0.5
+        gravity_direction = self.box.nullvector.copy()
+        gravity_direction[self.box.Y] = 0
+
+        charge_colors = False
+
+        arrangement = ArrangeParticles(self.box)
+        balls = []
+
+        self.box.set_interaction(interaction, power)
+        self.box.set_friction(friction)
+        self.box.set_gravity(gravity_strength, gravity_direction)
 
         # balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
         # self.add_balls(balls)
@@ -323,11 +335,11 @@ class MyGame(arcade.Window):
 
         return ball
     
-    def add_planes(self, planes=list):
+    def draw_planes(self, planes=list):
         self.plane_list = None
         self.plane_list = arcade.ShapeElementList()
         for plane in planes:
-            if self.draw_planes:
+            if self._draw_planes:
                 for (i,j) in plane.edges:
                     p0 = plane.box_intersections[i]
                     p1 = plane.box_intersections[j]
@@ -476,7 +488,7 @@ class MyGame(arcade.Window):
         self.arrow_list.draw()
         self.ball_list.draw()
         self.trail_list.draw()
-        #if self.draw_planes:
+        #if self._draw_planes:
         if True:
             self.plane_list.draw()
         #self.sprite_list.draw_hit_boxes((255,255,255), 2)
@@ -597,7 +609,7 @@ class MyGame(arcade.Window):
                 }
         if symbol in action.keys():
             self.box.rotate_axis(*action[symbol])
-            self.add_planes(self.box.planes[2*self.box.dimensions:])
+            self.draw_planes(self.box.planes[2*self.box.dimensions:])
         
     def on_key_press(self, symbol: int, modifiers: int):
         if symbol == arcade.key.P:
@@ -642,7 +654,7 @@ class MyGame(arcade.Window):
         elif symbol == arcade.key.T:
             # display text
             self.text = not(self.text)
-        elif symbol == arcade.key.Q:
+        elif symbol == arcade.key.Q or symbol == arcade.key.ESCAPE:
             # quit
             self.close()
         elif symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
@@ -672,14 +684,14 @@ class MyGame(arcade.Window):
                                             self.background)
         numpy.array(self.get_size(),dtype=float)/2
 
-        self.add_planes(self.box.planes[2*self.box.dimensions:])
+        self.draw_planes(self.box.planes[2*self.box.dimensions:])
 
         return super().on_resize(width, height)
 
 
 def main():
-    window = MyGame()
-    window.setup()
+    world = World()
+    world.setup()
     arcade.run()
 
 

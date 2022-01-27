@@ -135,13 +135,13 @@ class Polygon():
 
         return node
 
-class MyApp(ShowBase):
+class World(ShowBase):
     def __init__(self):
         super().__init__()
 
         # defaults
         self.pauze = False
-        self.draw_planes = True
+        self._draw_planes = True
         self.trails = []
         self.tick_rate = 1
         self.quiet = True
@@ -157,7 +157,7 @@ class MyApp(ShowBase):
         self.render.setAntialias(8|64)
     
         # setup the box
-        self.create_box()
+        self.setup_box()
         self.draw_box()
 
         # setup camera lighting and text
@@ -298,7 +298,7 @@ class MyApp(ShowBase):
             self.accept("shift-"+key+"-repeat", self.task_move_camera,  [key, "", 20])
 
         self.accept('p', self.task_toggle_pauze)
-        self.accept('o', self.task_quiet)
+        self.accept('o', self.task_toggle_quiet)
         self.accept('k', self.task_kick)
         self.accept('c', self.task_center)
         self.accept('h', self.task_stop)
@@ -307,7 +307,7 @@ class MyApp(ShowBase):
         self.accept('escape', sys.exit)
         self.accept('q', sys.exit)
     
-    def task_quiet(self):  
+    def task_toggle_quiet(self):  
         self.quiet = not(self.quiet)
         return Task.cont
 
@@ -407,7 +407,7 @@ class MyApp(ShowBase):
         box = data["box"]
         sizes = box["sizes"]
         if len(sizes) > 2:
-            self.clear()
+            self.clear_box()
             self.box = load_gas(data)
             self.draw_box()
         else:
@@ -417,7 +417,7 @@ class MyApp(ShowBase):
         out = self.out()
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
-    def create_box(self):
+    def setup_box(self):
         sizes = [1200, 900, 1000]
         self.box = Box(sizes)
 
@@ -486,7 +486,7 @@ class MyApp(ShowBase):
         if charge_colors:
             arr.set_charge_colors(balls)
 
-    def clear(self):
+    def clear_box(self):
         for np in self.boxnode.children:
             np.removeNode()
             np.clear()
@@ -512,8 +512,14 @@ class MyApp(ShowBase):
             # np.reparentTo(self.render)
             np.reparentTo(self.boxnode)
         
+        self.draw_planes()
+        self.draw_spheres()
+        self.draw_springs()
+        self.draw_trails()
+        
+    def draw_planes(self):
         # draw extra planes
-        if self.draw_planes == True:
+        if self._draw_planes == True:
             for plane in self.box.planes[2*self.box.dimensions:]:
             # for plane in self.box.planes:
                 if self.box.dimensions == 3:
@@ -551,7 +557,8 @@ class MyApp(ShowBase):
                     # np.reparentTo(self.render)         
                     np.reparentTo(self.boxnode)
         
-        # create spheres
+    def draw_spheres(self):
+        # draw spheres
         self.spheres = []
         for ball in self.box.particles:
             scale = ball.radius * 0.30
@@ -576,14 +583,15 @@ class MyApp(ShowBase):
             ball.object = sphere
             # sphere.setColor(0, 100, 100, 10)
             self.spheres.append(sphere)
-        
-        # create springs
+    
+    def draw_springs(self):
+        # draw springs
         self.springs = []
         for i, spring in enumerate(self.box.springs):
             p1 = spring.p1.object
             p2 = spring.p2.object
             line = LineSegs("spring[{}]".format(i))
-            lines.setColor(0, 1, 0, 1)
+            line.setColor(0, 1, 0, 1)
             line.moveTo((0,0,0))
             line.drawTo((0,1,0))
             line.setThickness(2)
@@ -595,7 +603,8 @@ class MyApp(ShowBase):
             # np.setColor(0,1,0,1)
             self.springs.append(np)
         
-        # create trails
+    def draw_trails(self):
+        # draw trails
         # self.trails = []
         for i, ball in enumerate(self.box.particles):
             trail = []
@@ -680,8 +689,8 @@ class MyApp(ShowBase):
 
 def main():
     loadPrcFile("config/Config.prc")
-    app = MyApp()
-    app.run()
+    world = World()
+    world.run()
 
 if __name__ == '__main__':
     main()
