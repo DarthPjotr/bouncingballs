@@ -441,7 +441,7 @@ class World(ShowBase):
         self.box.trail = 0
         self.box.skip_trail = 1
 
-        interaction = 500.0
+        interaction = 5000.0
         power = 2
         friction = 0.0
         gravity_strength = 0.5
@@ -464,7 +464,8 @@ class World(ShowBase):
 
         # balls += arr.test_spring()
 
-        balls += arr.create_simplex(charge=0, vertices=6) # 12 = isocahedron
+        # balls += arr.create_simplex(charge=0, vertices=6) # 12 = isocahedron
+        balls += arr.shapes()
         # balls += arr.create_simplex(charge=1, vertices=18)
         # balls += arr.create_simplex(charge=1, vertices=5)
         # balls += arr.create_simplex(charge=-1, vertices=5)
@@ -540,9 +541,7 @@ class World(ShowBase):
             #np.setColor((1, 1, 1, 1))
             # np.reparentTo(self.render)
             np.reparentTo(self.boxnode)
-        
-
-        
+           
     def draw_planes(self):
         # draw extra planes
         if self._draw_planes == True:
@@ -628,6 +627,7 @@ class World(ShowBase):
 
             # np.setColor(0,1,0,1)
             self.springs.append((np, line))
+            # spring.object = (np, line)
         
     def draw_trails(self):
         # draw trails

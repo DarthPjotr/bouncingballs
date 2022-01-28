@@ -10,6 +10,7 @@ import scipy.spatial as sp
 import random
 import math
 from math import sin, cos, acos
+import networkx as nx
 
 import yaml
 from pprint import pp
@@ -248,6 +249,7 @@ class Box:
         # other properties
         self.trail = 0
         self.skip_trail = 1
+        self.object = None
 
     def _get_vertices(self):
         """
@@ -809,6 +811,7 @@ class Plane:
         self.color = color
         
         self._set_params()
+        self.object = None
     
     def _set_params(self):
         self.D = self.unitnormal @ self.point
@@ -1167,7 +1170,6 @@ class Particle:
         self.color = tuple(color)
         self.fixed = fixed
         self.object = None
-        # self.impuls = self.mass * self.speed
     
     def move(self):
         """
@@ -1571,6 +1573,7 @@ class Spring:
         self.p1 = p1
         self.p2 = p2
         self.fixed = self.p1.fixed and self.p2.fixed
+        self.object = None
     
     def __str__(self) -> str:
         return "{} {} {} {}".format(self.length, self.strength, self.damping, (self.p1.index(), self.p2.index()))
@@ -1710,6 +1713,37 @@ class ArrangeParticles:
                 ball.color = [255,0,0]
             else:
                 ball.color = [255,255,0]
+
+        return balls
+    
+    def shapes(self):
+        # G = nx.dodecahedral_graph()
+        # G = nx.graph_atlas(134)
+        # G = nx.truncated_cube_graph()
+        # G = nx.truncated_tetrahedron_graph()
+        # G = nx.cycle_graph(5)
+        G = nx.circular_ladder_graph(25)
+        # G = nx.circulant_graph(10,[1,4,6])
+        # G = nx.frucht_graph()
+        # G = nx.moebius_kantor_graph()
+        # G = nx.random_tree(10, None)
+        # G = nx.sudoku_graph(2)
+        # G = nx.pappus_graph()
+        # G = nx.octahedral_graph()
+
+        balls = []
+        length = 100
+        for i in G.nodes:
+            speed = self.box.nullvector.copy()
+            position = self.box.center + self.box.random() * length
+            ball = self.box.add_particle(mass=1, radius=10, position=None, speed=speed, charge=1)
+            balls.append(ball)
+        
+        for i, j in G.edges:
+            spring = Spring(length=length, strength=0.05, damping=0.01, p1=balls[i], p2=balls[j])
+            self.box.springs.append(spring)
+        
+        self.box.center_all()
 
         return balls
 

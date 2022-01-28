@@ -49,7 +49,7 @@ DIMENSIONS = 2
 SPEED = 3
 
 # because it looks better with soft SpriteCircle add bit to sprite radius
-FUZZIE = False
+FUZZIE = True
 if FUZZIE:
     D_SPRITE_RADIUS = 5
 else:
