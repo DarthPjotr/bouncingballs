@@ -149,6 +149,11 @@ class World(ShowBase):
 
         self.boxnode = None
         self.sound = self.loader.load_sfx('sounds/c_bang1.wav')
+        # self.sound = self.loader.load_sfx('sounds/Knife Hit Short - QuickSounds.com.mp3')
+        # self.sound = self.loader.load_sfx('sounds/Sword Hit Wood 1 - QuickSounds.com.mp3')
+        # self.sound = self.loader.load_sfx('sounds/Sword Stab Thin Wood - QuickSounds.com.mp3')
+        # self.sound = self.loader.load_sfx('sounds/Weapon Axe Hit Wood And Metal - QuickSounds.com.mp3')
+        # self.sound = self.loader.load_sfx('sounds/mixkit-wood-hard-hit-2182.wav')
 
         # setup window
         properties = WindowProperties()
@@ -319,6 +324,8 @@ class World(ShowBase):
         with open(path) as file:
             self.load(file)
         
+        self.set_camera()
+        
         return Task.cont
 
     def task_save(self):  
@@ -390,6 +397,10 @@ class World(ShowBase):
     def out(self):
         config = {}
 
+        config['quiet'] = self.quiet
+        config['pause'] = self.pause
+        config['tickrate'] = self.tick_rate
+ 
         out = {'config': config}
         box = self.box.out()
         return {**out, **box}
@@ -466,7 +477,7 @@ class World(ShowBase):
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
         # balls.append(ball)
 
-        balls += arr.random_balls(nballs=10, mass=1, radius=50, max_speed=5, charge=0)
+        balls += arr.random_balls(nballs=15, mass=1, radius=100, max_speed=5, charge=0)
         # ball = self.box.add_particle(1, 20, self.box.center, speed=None, charge=-10, fixed=True, color=[255,255,255])
         # balls.append(ball)
         # balls = arr.random_balls(30, 1, 10, 5, charge=-1)
@@ -490,12 +501,24 @@ class World(ShowBase):
         for np in self.boxnode.children:
             np.removeNode()
             np.clear()
+    
+    def _fix2d(self,vector):
+        if len(vector) < 3:
+            vector = numpy.append(vector, 0)
+        return vector
         
     def draw_box(self):
         # draw box
         self.boxnode = NodePath("the Box")
         self.boxnode.reparentTo(self.render)
 
+        self.draw_edges()
+        self.draw_planes()
+        self.draw_spheres()
+        self.draw_springs()
+        self.draw_trails()
+    
+    def draw_edges(self):
         for (i, j) in self.box.edges:
             p1 = self.box.vertices[i]
             p2 = self.box.vertices[j]
@@ -512,10 +535,7 @@ class World(ShowBase):
             # np.reparentTo(self.render)
             np.reparentTo(self.boxnode)
         
-        self.draw_planes()
-        self.draw_spheres()
-        self.draw_springs()
-        self.draw_trails()
+
         
     def draw_planes(self):
         # draw extra planes
@@ -625,9 +645,6 @@ class World(ShowBase):
                 # np.setColor(0,0.5,0,1)
                 trail.append(np)
             self.trails.append(trail)   
-
-        # self.taskMgr.add(self.task_box_go, 'move')
-        # self.taskMgr.doMethodLater(1, self.task_box_go, 'move')
 
         return self.box.particles
 
