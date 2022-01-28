@@ -1916,7 +1916,7 @@ class ArrangeParticles:
                     speed2 = speed + self.box.random(0.5)
                     b2 = self.box.add_particle(1, radius, pos2, speed2, charge)
                     balls.append(b2)
-                    spring = Spring(lspring, 0.15, 0.03, b1, b2)
+                    spring = Spring(lspring, 0.15, 0.00, b1, b2)
                     self.box.springs.append(spring)
                     if not star:
                         b1 = b2
