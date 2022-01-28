@@ -145,6 +145,7 @@ class World(ShowBase):
         # defaults
         self.pauze = False
         self._draw_planes = True
+        self.dynamic_string_coloring = False
         self.trails = []
         self.tick_rate = 1
         self.quiet = True
@@ -447,7 +448,7 @@ class World(ShowBase):
         gravity_direction = self.box.nullvector.copy()
         gravity_direction[self.box.Y] = 0
 
-        charge_colors = False
+        charge_colors = True
 
         arr = ArrangeParticles(self.box)
         balls = []
@@ -456,28 +457,28 @@ class World(ShowBase):
         self.box.set_friction(friction)
         self.box.set_gravity(gravity_strength, gravity_direction)
 
-        balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
+        # balls = arr.create_pendulum(0.1, np.array([0,0,-1]))
         # balls += arr.create_simplex(size=400, charge=-1)
         # ball = self.box.add_particle(1, 80, self.box.center, fixed=True, charge=4)
         # balls.append(ball)
 
         # balls += arr.test_spring()
 
-        # balls += arr.create_simplex(charge=1)
-        # balls += arr.create_simplex(charge=-1)
-        # balls += arr.create_simplex(charge=-1)
+        balls += arr.create_simplex(charge=0, vertices=6) # 12 = isocahedron
+        # balls += arr.create_simplex(charge=1, vertices=18)
+        # balls += arr.create_simplex(charge=1, vertices=5)
+        # balls += arr.create_simplex(charge=-1, vertices=5)
+        # balls += arr.create_simplex(charge=-1, vertices=5)
 
         # balls += arr.create_kube_planes(800, 10)
-        # balls += arr.create_n_mer(12, 4, star=True, charge=None)
+        # balls += arr.create_n_mer(12, 4, star=False, circle=True, charge=None)
         # balls = arr.test_interaction_simple(10000, power)
         # balls = arr.test_interaction(40000, power, M0=40, V0=6, D=350, ratio=0.1)
         # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
         
-        # self.box.set_interaction(30000/9, 2)
         # balls += arr.random_balls(15, 1, 40, 5, charge=1)
         # balls += arr.random_balls(30, 1, 40, 5, charge=None)
-
-        
+ 
         # balls = arr.create_kube_planes(500, 20)
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
         # balls.append(ball)
@@ -616,7 +617,7 @@ class World(ShowBase):
             p1 = spring.p1.object
             p2 = spring.p2.object
             line = LineSegs("spring[{}]".format(i))
-            line.setColor(0, 1, 0, 1)
+            line.setColor(0.4, 0.4, 0.4, 1)
             line.moveTo((0,0,0))
             line.drawTo((0,1,0))
             line.setThickness(2)
@@ -698,10 +699,11 @@ class World(ShowBase):
             p2 = spring.p2.object
             ray, line = self.springs[i]
 
-            color_index = 255 + 1/((spring.energy/10000) - 1/255)
-            color = colormap.mpl_colormap(color_index)
-            for i in range(line.getNumVertices()):
-                line.setVertexColor(i,*color[:3])
+            if self.dynamic_string_coloring:
+                color_index = 255 + 1/((spring.energy/10000) - 1/255)
+                color = colormap.mpl_colormap(color_index)
+                for i in range(line.getNumVertices()):
+                    line.setVertexColor(i,*color[:3])
 
             self.move_line(ray, p1.getPos(), p2.getPos())
        
