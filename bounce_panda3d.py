@@ -7,6 +7,9 @@ from tkinter import filedialog as fd
 from tkinter.messagebox import showwarning
 import yaml
 
+from palettable.scientific.diverging import Roma_20_r as colormap
+
+
 from direct.showbase.ShowBase import ShowBase
 # from direct.showbase.DirectObject import DirectObject
 from direct.gui.DirectGui import OnscreenText
@@ -453,10 +456,12 @@ class World(ShowBase):
         self.box.set_friction(friction)
         self.box.set_gravity(gravity_strength, gravity_direction)
 
-        # balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
+        balls = arr.create_pendulum(0.05, np.array([0,0,-1]))
         # balls += arr.create_simplex(size=400, charge=-1)
         # ball = self.box.add_particle(1, 80, self.box.center, fixed=True, charge=4)
         # balls.append(ball)
+
+        # balls += arr.test_spring()
 
         # balls += arr.create_simplex(charge=1)
         # balls += arr.create_simplex(charge=-1)
@@ -477,7 +482,7 @@ class World(ShowBase):
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
         # balls.append(ball)
 
-        balls += arr.random_balls(nballs=15, mass=1, radius=100, max_speed=5, charge=0)
+        # balls += arr.random_balls(nballs=15, mass=1, radius=100, max_speed=5, charge=0)
         # ball = self.box.add_particle(1, 20, self.box.center, speed=None, charge=-10, fixed=True, color=[255,255,255])
         # balls.append(ball)
         # balls = arr.random_balls(30, 1, 10, 5, charge=-1)
@@ -615,13 +620,13 @@ class World(ShowBase):
             line.moveTo((0,0,0))
             line.drawTo((0,1,0))
             line.setThickness(2)
-            node = line.create()
+            node = line.create(True)
             np = NodePath(node)
             # np.reparentTo(self.render)
             np.reparentTo(self.boxnode)
 
             # np.setColor(0,1,0,1)
-            self.springs.append(np)
+            self.springs.append((np, line))
         
     def draw_trails(self):
         # draw trails
@@ -691,7 +696,13 @@ class World(ShowBase):
         for i, spring in enumerate(self.box.springs):
             p1 = spring.p1.object
             p2 = spring.p2.object
-            ray = self.springs[i]
+            ray, line = self.springs[i]
+
+            color_index = 255 + 1/((spring.energy/10000) - 1/255)
+            color = colormap.mpl_colormap(color_index)
+            for i in range(line.getNumVertices()):
+                line.setVertexColor(i,*color[:3])
+
             self.move_line(ray, p1.getPos(), p2.getPos())
        
         charge = sum(p.charge for p in self.box.particles)

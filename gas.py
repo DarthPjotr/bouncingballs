@@ -1978,7 +1978,7 @@ class ArrangeParticles:
         lspring = 150
         pos = pos.copy()
         pos[Box.X] += lspring
-        ball1 = self.box.add_particle(10,10, pos, speed, color=[0,255,255])
+        ball1 = self.box.add_particle(10,20, pos, speed, color=[0,255,255])
         balls.append(ball1)
 
         spring = Spring(lspring, 10, 0.01, ancor, ball1)
@@ -1988,7 +1988,7 @@ class ArrangeParticles:
         pos = pos.copy()
         pos += self.box.random(lspring)
         # pos[Box.Z] = self.box.center[Box.Z]
-        ball2 = self.box.add_particle(10,10, pos, speed, color=[0,255,255])
+        ball2 = self.box.add_particle(10,20, pos, speed, color=[0,255,255])
         balls.append(ball2)
 
         spring = Spring(lspring, 10, 0.01, ball1, ball2)
