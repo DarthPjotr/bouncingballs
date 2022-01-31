@@ -1719,10 +1719,11 @@ class ArrangeParticles:
     def shapes(self):
         # G = nx.dodecahedral_graph()
         # G = nx.graph_atlas(134)
+        # G = nx.graph_atlas(1167)
         # G = nx.truncated_cube_graph()
         # G = nx.truncated_tetrahedron_graph()
         # G = nx.cycle_graph(5)
-        G = nx.circular_ladder_graph(25)
+        # G = nx.circular_ladder_graph(25)
         # G = nx.circulant_graph(10,[1,4,6])
         # G = nx.frucht_graph()
         # G = nx.moebius_kantor_graph()
@@ -1731,19 +1732,62 @@ class ArrangeParticles:
         # G = nx.pappus_graph()
         # G = nx.octahedral_graph()
 
+        # dim = (4,4,4)
+        dim = (2,2,4)
+        # dim = (3,3,3)
+        # dim = (2,2,2,2)
+        # dim = (3,3,6)
+        G = nx.grid_graph(dim=dim, periodic=False)
+        # G = nx.wheel_graph(40)
+        # G = nx.star_graph(21)
+
+        # G = nx.hexagonal_lattice_graph(4,3)
+        # G = nx.triangular_lattice_graph(3,4)
+        # G = nx.diamond_graph()
+
+        # G = nx.grid_2d_graph(3,4, periodic=False)
+        # G = nx.hypercube_graph(2)
+        # G = nx.random_geometric_graph(n=8, radius=8, dim=8, p=10)
+
         balls = []
         length = 100
-        for i in G.nodes:
+        for node in G.nodes:
+            try:
+                lnode = len(node)
+            except TypeError:
+                lnode = 1
+
+            if lnode > 2:
+                position = numpy.array(node[:self.box.dimensions])
+                position = (position * length) # + self.box.center
+            else:
+                position = self.box.center + self.box.random() * length
+
             speed = self.box.nullvector.copy()
-            position = self.box.center + self.box.random() * length
-            ball = self.box.add_particle(mass=1, radius=10, position=None, speed=speed, charge=1)
+            ball = self.box.add_particle(mass=1, radius=10, position=position, speed=speed, charge=1, fixed=False)
             balls.append(ball)
         
-        for i, j in G.edges:
-            spring = Spring(length=length, strength=0.05, damping=0.01, p1=balls[i], p2=balls[j])
-            self.box.springs.append(spring)
-        
+        for edge in G.edges:
+            if len(edge) == 2:
+                node1,node2 = edge
+                i = list(G.nodes).index(node1)
+                j = list(G.nodes).index(node2)
+                p1 = balls[i]
+                p2 = balls[j]
+                if numpy.all(p1.position == p2.position):
+                    p1.position += (self.box.onevector * 10)
+                spring = Spring(length=length, strength=0.05, damping=0.01, p1=p1, p2=p2)
+                self.box.springs.append(spring)
+            else:
+                print(edge)
+   
         self.box.center_all()
+        # for ball in balls:
+        #     ball.fixed = True
+        
+        for i in range(10):
+            ball = self.box.add_particle(1, 40, charge=-1)
+            balls.append(ball)
 
         return balls
 
@@ -1808,12 +1852,14 @@ class ArrangeParticles:
 
         if vertices is None:
             vertices = self.box.dimensions+1
+        
+        radius = size / 5
 
         balls = []
         for i in range(vertices):
             pos = center + self.box.random(size)
             speed = self.box.nullvector.copy()
-            ball = self.box.add_particle(1, 10, pos, speed, charge)
+            ball = self.box.add_particle(1, radius, pos, speed, charge)
             balls.append(ball)
 
         balls[0].speed = 5 * self.box.onevector.copy()
@@ -2004,7 +2050,7 @@ class ArrangeParticles:
         balls = []
 
         pos = self.box.center.copy()
-        pos[Box.Y] = self.box.box_sizes[Box.Y] - 150
+        # pos[Box.Y] = self.box.box_sizes[Box.Y]
         speed = self.box.nullvector.copy()
         ancor = self.box.add_particle(1, 1, pos, speed, charge=0, fixed=True, color=[255,255,255])
         balls.append(ancor)
@@ -2501,6 +2547,14 @@ class Test():
             # for p in results:
             #     print(p)
 
+    def shapes(self):
+        sizes = [100, 200, 300]
+        box = Box(sizes)
+        arr = ArrangeParticles(box)
+        balls = arr.shapes()
+
+        for i in range(100):
+            box.go()
 
 def main():
     print("START")
@@ -2514,7 +2568,7 @@ def main():
     # t.test_load_yaml()
     # t.test_displacement()
     # t.normal()
-    t.plane()
+    t.shapes()
     # t.test_shapes()
 
     print("END")

@@ -27,6 +27,7 @@ from panda3d.core import WindowProperties
 from panda3d.core import TextNode
 from panda3d.core import loadPrcFile
 from panda3d.core import TransparencyAttrib
+from panda3d.core import CardMaker, Spotlight
 # from panda3d.core import TextFont
 
 from panda3d.core import Triangulator
@@ -143,7 +144,7 @@ class World(ShowBase):
         super().__init__()
 
         # defaults
-        self.pauze = False
+        self.pause = False
         self._draw_planes = True
         self.dynamic_string_coloring = False
         self.trails = []
@@ -169,11 +170,15 @@ class World(ShowBase):
         self.setup_box()
         self.draw_box()
 
-        # setup camera lighting and text
+        # setup scene, camera lighting and text
+        
+        self.load_scene()
         self.set_camera()
         self.disableMouse()
         self.set_main_lighting()
+        self.set_spotligth()
         # self.set_background()
+        self.set_background()
         self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
         self.textnode = self.draw_text("The Box:", 0.1, -0.1)
     
@@ -182,33 +187,20 @@ class World(ShowBase):
         self.taskMgr.add(self.task_box_go, 'move')
 
     def set_main_lighting(self):
-        # floorTex = self.loader.loadTexture('maps/envir-ground.jpg')
-        # floor = self.render.attachNewNode(PandaNode("floor"))
-        # floor.setTexture(floorTex)
-        # floor.flattenStrong()
-
         mainLight = DirectionalLight("main light")
-        mainLight.setColor(Vec4(0.3, 0.3, 0.3, 1))
+        mainLight.setColor(Vec4(0.2, 0.2, 0.2, 1))
         self.mainLightNodePath = self.render.attachNewNode(mainLight)
-
         mainLight.setShadowCaster(True)
-
         self.mainLightNodePath.setHpr(45, -80, 0)
         self.render.setLight(self.mainLightNodePath)
         
-        # self.mainLightNodePath.node().setScene(self.render)
-        # self.mainLightNodePath.node().setShadowCaster(True)
-        # self.mainLightNodePath.node().showFrustum()
-        # self.mainLightNodePath.node().getLens().setFov(40)
-        # self.mainLightNodePath.node().getLens().setNearFar(10, 100)
-        # self.render.setLight(self.mainLightNodePath)
-        
-        ambientLight = AmbientLight("ambient light")
-        ambientLight.setColor(Vec4(0.5, 0.5, 0.5, 1))
-        self.ambientLightNodePath = self.render.attachNewNode(ambientLight)
-        self.render.setLight(self.ambientLightNodePath)
-        self.render.setShaderAuto()
+        # ambientLight = AmbientLight("ambient light")
+        # ambientLight.setColor(Vec4(0.2, 0.2, 0.2, 1))
+        # self.ambientLightNodePath = self.render.attachNewNode(ambientLight)
+        # self.render.setLight(self.ambientLightNodePath)
+        # self.render.setShaderAuto()
 
+    def set_background(self):
         #color = np.array([0.3, 0.7, 0.9])
         color = np.array([0, 0, 0])
         # expfog = Fog("Scene-wide exponential Fog object")
@@ -217,6 +209,54 @@ class World(ShowBase):
         # expfog.setExpDensity(0.0015)
         # self.render.setFog(expfog)
         self.setBackgroundColor(*color/3)
+    
+    def load_scene(self):
+        # Load the scene.
+        floorTex = self.loader.loadTexture('maps/grid.jpg')
+
+        cm = CardMaker('')
+        # cm.setFrame(-2, 2, -2, 2)
+        cm.setFrame(-0, self.box.box_sizes[0], -0, self.box.box_sizes[1])
+        # cm.setFrame(0, 0, self.box.box_sizes[0], self.box.box_sizes[1])
+        floor = self.render.attachNewNode(PandaNode("floor"))
+        for y in range(1):
+            for x in range(1):
+                nn = floor.attachNewNode(cm.generate())
+                nn.setP(-90)
+                # nn.setPos((x - 6) * 4, (y - 6) * 4, 0)
+                nn.setPos((x - 0) * 4, (y - 0) * 4, 0)
+        floor.setTexture(floorTex)
+        floor.flattenStrong()
+    
+    def set_spotligth(self):
+        self.light = self.render.attachNewNode(Spotlight("Spot"))
+        self.light.node().setScene(self.render)
+        self.light.node().setShadowCaster(True)
+        self.light.node().setColor(Vec4(0.3, 0.3, 0.3, 1))
+        # self.light.node().showFrustum()
+        self.light.node().getLens().setFov(40)
+        self.light.node().getLens().setNearFar(10, 10000)
+        pos = self.box.center.copy()
+        pos[1] = -500
+        pos[2] = 3000
+        self.light.setPos(*pos)
+        # self.light.setP(-60)
+        self.light.setHpr(45, -80, 0)
+        self.render.setLight(self.light)
+
+        self.alight = self.render.attachNewNode(AmbientLight("Ambient"))
+        self.alight.node().setColor(Vec4(0.2, 0.2, 0.2, 1))
+        self.render.setLight(self.alight)
+
+        # Important! Enable the shader generator.
+        self.render.setShaderAuto()
+
+        # default values
+        self.cameraSelection = 0
+        self.lightSelection = 0
+
+        # self.incrementCameraPosition(0)
+        # self.incrementLightPosition(0)
 
     def set_background_old(self):
         # Load the environment model.
@@ -239,7 +279,7 @@ class World(ShowBase):
         self.world.setTexture(texture, 1)
         #self.world.setShaderAuto()
 
-    def set_background(self):
+    def set_background_older(self):
         # Load the environment model.
         worldLight = AmbientLight("world light")
         worldLight.setColor(Vec4(1, 1, 1, 1))
@@ -282,7 +322,7 @@ class World(ShowBase):
         if d > 0:
             line.setScale(d)
     
-    def draw_trails(self, ball):
+    def draw_trail(self, ball):
         i = ball.index()
         trail = self.trails[i]
         start = ball.position
@@ -306,7 +346,7 @@ class World(ShowBase):
             self.accept(key+"-repeat", self.task_move_camera,  [key, "", 10])
             self.accept("shift-"+key+"-repeat", self.task_move_camera,  [key, "", 20])
 
-        self.accept('p', self.task_toggle_pauze)
+        self.accept('p', self.task_toggle_pause)
         self.accept('o', self.task_toggle_quiet)
         self.accept('k', self.task_kick)
         self.accept('c', self.task_center)
@@ -337,12 +377,12 @@ class World(ShowBase):
         if path is None or len(path) == 0:
             return Task.cont
 
-        with open(path) as file:
+        with open(path, "w") as file:
             self.save(file)
         return Task.cont
     
-    def task_toggle_pauze(self):
-        self.pauze = not self.pauze
+    def task_toggle_pause(self):
+        self.pause = not self.pause
         return Task.cont
 
     def task_kick(self):
@@ -433,7 +473,7 @@ class World(ShowBase):
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
     def setup_box(self):
-        sizes = [1200, 900, 1000]
+        sizes = [1200, 1000, 1200]
         self.box = Box(sizes)
 
         self.box.torus = False
@@ -446,9 +486,9 @@ class World(ShowBase):
         friction = 0.0
         gravity_strength = 0.5
         gravity_direction = self.box.nullvector.copy()
-        gravity_direction[self.box.Y] = 0
+        gravity_direction[self.box.Z] = 0
 
-        charge_colors = True
+        charge_colors = False
 
         arr = ArrangeParticles(self.box)
         balls = []
@@ -457,15 +497,18 @@ class World(ShowBase):
         self.box.set_friction(friction)
         self.box.set_gravity(gravity_strength, gravity_direction)
 
-        # balls = arr.create_pendulum(0.1, np.array([0,0,-1]))
-        # balls += arr.create_simplex(size=400, charge=-1)
+        # balls = arr.create_pendulum(0.2, np.array([0,0,-1]))
+        pos = self.box.center.copy()
+        pos[2] -= 100
+        balls += arr.create_simplex(size=200, position=pos, vertices=12, charge=0)
         # ball = self.box.add_particle(1, 80, self.box.center, fixed=True, charge=4)
         # balls.append(ball)
 
         # balls += arr.test_spring()
 
         # balls += arr.create_simplex(charge=0, vertices=6) # 12 = isocahedron
-        balls += arr.shapes()
+        # self.tick_rate = 10
+        # balls += arr.shapes()
         # balls += arr.create_simplex(charge=1, vertices=18)
         # balls += arr.create_simplex(charge=1, vertices=5)
         # balls += arr.create_simplex(charge=-1, vertices=5)
@@ -655,7 +698,7 @@ class World(ShowBase):
         return self.box.particles
 
     def task_box_go(self, task):
-        if self.pauze:
+        if self.pause:
             return Task.cont
 
         self.bounced = self.box.go(steps=self.tick_rate)
@@ -692,7 +735,7 @@ class World(ShowBase):
                 color[3] = transparency
                 sphere.setColor(color)
             if self.box.trail > 0:
-                self.draw_trails(ball)
+                self.draw_trail(ball)
 
         for i, spring in enumerate(self.box.springs):
             p1 = spring.p1.object
