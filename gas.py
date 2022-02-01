@@ -1720,7 +1720,7 @@ class ArrangeParticles:
         # G = nx.dodecahedral_graph()
         # G = nx.graph_atlas(134)
         # G = nx.graph_atlas(1167)
-        # G = nx.truncated_cube_graph()
+        G = nx.truncated_cube_graph()
         # G = nx.truncated_tetrahedron_graph()
         # G = nx.cycle_graph(5)
         # G = nx.circular_ladder_graph(25)
@@ -1737,7 +1737,7 @@ class ArrangeParticles:
         # dim = (3,3,3)
         # dim = (2,2,2,2)
         # dim = (3,3,6)
-        G = nx.grid_graph(dim=dim, periodic=False)
+        # G = nx.grid_graph(dim=dim, periodic=False)
         # G = nx.wheel_graph(40)
         # G = nx.star_graph(21)
 

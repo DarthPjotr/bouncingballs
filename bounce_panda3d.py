@@ -181,14 +181,22 @@ class World(ShowBase):
         self.set_background()
         self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
         self.textnode = self.draw_text("The Box:", 0.1, -0.1)
+
+        # properties for camera control
+        self.mouse1_down = False
+        self.mouse_x = 0
+        self.mouse_y = 0
+        self.mouse_x_old = 0
+        self.mouse_y_old = 0
     
         # register events and tasks
         self.register_key_and_mouse_events()
         self.taskMgr.add(self.task_box_go, 'move')
+        self.taskMgr.add(self.mousetask, 'mouse')
 
     def set_main_lighting(self):
         mainLight = DirectionalLight("main light")
-        mainLight.setColor(Vec4(0.2, 0.2, 0.2, 1))
+        mainLight.setColor(Vec4(0.3, 0.3, 0.3, 1))
         self.mainLightNodePath = self.render.attachNewNode(mainLight)
         mainLight.setShadowCaster(True)
         self.mainLightNodePath.setHpr(45, -80, 0)
@@ -198,41 +206,13 @@ class World(ShowBase):
         # ambientLight.setColor(Vec4(0.2, 0.2, 0.2, 1))
         # self.ambientLightNodePath = self.render.attachNewNode(ambientLight)
         # self.render.setLight(self.ambientLightNodePath)
-        # self.render.setShaderAuto()
+        self.render.setShaderAuto()
 
-    def set_background(self):
-        #color = np.array([0.3, 0.7, 0.9])
-        color = np.array([0, 0, 0])
-        # expfog = Fog("Scene-wide exponential Fog object")
-        # expfog.setMode(1)
-        # expfog.setColor(*color)
-        # expfog.setExpDensity(0.0015)
-        # self.render.setFog(expfog)
-        self.setBackgroundColor(*color/3)
-    
-    def load_scene(self):
-        # Load the scene.
-        floorTex = self.loader.loadTexture('maps/grid.jpg')
-
-        cm = CardMaker('')
-        # cm.setFrame(-2, 2, -2, 2)
-        cm.setFrame(-0, self.box.box_sizes[0], -0, self.box.box_sizes[1])
-        # cm.setFrame(0, 0, self.box.box_sizes[0], self.box.box_sizes[1])
-        floor = self.render.attachNewNode(PandaNode("floor"))
-        for y in range(1):
-            for x in range(1):
-                nn = floor.attachNewNode(cm.generate())
-                nn.setP(-90)
-                # nn.setPos((x - 6) * 4, (y - 6) * 4, 0)
-                nn.setPos((x - 0) * 4, (y - 0) * 4, 0)
-        floor.setTexture(floorTex)
-        floor.flattenStrong()
-    
     def set_spotligth(self):
         self.light = self.render.attachNewNode(Spotlight("Spot"))
         self.light.node().setScene(self.render)
         self.light.node().setShadowCaster(True)
-        self.light.node().setColor(Vec4(0.3, 0.3, 0.3, 1))
+        self.light.node().setColor(Vec4(0.1, 0.1, 0.1, 1))
         # self.light.node().showFrustum()
         self.light.node().getLens().setFov(40)
         self.light.node().getLens().setNearFar(10, 10000)
@@ -257,6 +237,36 @@ class World(ShowBase):
 
         # self.incrementCameraPosition(0)
         # self.incrementLightPosition(0)
+
+    def set_background(self):
+        # color = np.array([0.1, 0.1, 0.1])
+        # expfog = Fog("Scene-wide exponential Fog object")
+        # expfog.setMode(1)
+        # expfog.setColor(*color)
+        # expfog.setExpDensity(0.0015)
+        # self.render.setFog(expfog)
+
+        color = np.array([0, 0, 0])
+        self.setBackgroundColor(*color/3)
+    
+    def load_scene(self):
+        # Load the scene.
+        floorTex = self.loader.loadTexture('maps/grid.jpg')
+
+        cm = CardMaker('')
+        # cm.setFrame(-2, 2, -2, 2)
+        cm.setFrame(0, self.box.box_sizes[0], 0, self.box.box_sizes[1])
+        # cm.setFrame(0, 0, self.box.box_sizes[0], self.box.box_sizes[1])
+        floor = self.render.attachNewNode(PandaNode("floor"))
+        for y in range(1):
+            for x in range(1):
+                nn = floor.attachNewNode(cm.generate())
+                nn.setP(-90)
+                # nn.setPos((x - 6) * 4, (y - 6) * 4, 0)
+                nn.setPos((x - 0) * 4, (y - 0) * 4, 0)
+        floor.setTexture(floorTex)
+        floor.flattenStrong()
+    
 
     def set_background_old(self):
         # Load the environment model.
@@ -340,7 +350,7 @@ class World(ShowBase):
         self.camera.setHpr(0, 0, 0)
 
     def register_key_and_mouse_events(self):
-        keys = ['w', 's', 'a', 'd', 'arrow_left', 'arrow_right', 'arrow_up', 'arrow_down']
+        keys = ['w', 's', 'a', 'd', 'arrow_left', 'arrow_right', 'arrow_up', 'arrow_down', 'wheel_down', 'wheel_up', 'mouse1', 'mouse1-up']
         for key in keys:
             self.accept(key, self.task_move_camera, [key, "", 10])
             self.accept(key+"-repeat", self.task_move_camera,  [key, "", 10])
@@ -397,7 +407,7 @@ class World(ShowBase):
         self.box.stop_all()
         return Task.cont
 
-    def task_move_camera(self, key="", mouse="", speed=10):
+    def task_move_camera(self, key="", mouse="", speed=15):
 
         pos = np.array(self.camera.getPos())
         dir = self.render.getRelativeVector(self.camera, Vec3.forward())
@@ -412,21 +422,67 @@ class World(ShowBase):
         elif key == 'd':
             pos += dx
         # forward backward
-        elif key == 'arrow_up':
-            pos += dy
-        elif key == 'arrow_down':
-            pos -= dy
+        elif key == 'arrow_up' or key == 'wheel_up':
+            pos += dy*10
+        elif key == 'arrow_down' or key == 'wheel_down':
+            pos -= dy*10
         # up down
         elif key == "w":
             pos = self.up_down(pos, speed)
             # pos += dz
         elif key == "s":
             pos = self.up_down(pos, -speed)
-            # pos -= dz
-        
+            # pos -= dz'
+        elif key == 'mouse1':
+            self.mouse1_down = True
+            mw = self.mouseWatcherNode
+            self.mouse_x_old = mw.getMouseX()
+            self.mouse_y_old = mw.getMouseY()
+        elif key == 'mouse1-up':
+            self.mouse1_down = False
+    
         self.camera.setPos(*pos)
         self.camera.setR(0)
         self.camera.lookAt(Vec3(*self.box.center[:3]))
+        return Task.cont
+        
+    def mousetask(self, task):
+        if self.mouse1_down:
+            mw = self.mouseWatcherNode
+            speed = 5000
+            if  mw.hasMouse():
+                
+                if mw.is_button_down('shift'):
+                    speed = 1500
+                else:
+                    speed = 5000
+
+                pos = np.array(self.camera.getPos())
+                dir = self.render.getRelativeVector(self.camera, Vec3.forward())
+
+                self.mouse_x = mw.getMouseX() 
+                self.mouse_y = mw.getMouseY()
+
+                mouse_dx = self.mouse_x_old - self.mouse_x
+                mouse_dy = self.mouse_y_old - self.mouse_y
+
+                # dpos = numpy.array([mouse_dx, 0, mouse_dy]) * speed
+
+                dx = np.array([dir[1],-dir[0],0]) * mouse_dx
+                # dy = dir * mouse_dy
+                dpos = dx * speed
+                pos += dpos
+                
+                pos = self.up_down(pos, mouse_dy*speed)
+
+                self.mouse_x_old = self.mouse_x
+                self.mouse_y_old = self.mouse_y
+                # print(pos, dpos)
+            
+                self.camera.setPos(*pos)
+                self.camera.setR(0)
+                self.camera.lookAt(Vec3(*self.box.center[:3]))
+        
         return Task.cont
     
     def up_down(self, pos, speed):
@@ -500,9 +556,9 @@ class World(ShowBase):
         # balls = arr.create_pendulum(0.2, np.array([0,0,-1]))
         pos = self.box.center.copy()
         pos[2] -= 100
-        balls += arr.create_simplex(size=200, position=pos, vertices=12, charge=0)
-        # ball = self.box.add_particle(1, 80, self.box.center, fixed=True, charge=4)
-        # balls.append(ball)
+        # balls += arr.create_simplex(size=200, position=pos, vertices=12, charge=0)
+        ball = self.box.add_particle(1, 80, self.box.center, fixed=False, charge=0)
+        balls.append(ball)
 
         # balls += arr.test_spring()
 
@@ -521,7 +577,7 @@ class World(ShowBase):
         # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
         
         # balls += arr.random_balls(15, 1, 40, 5, charge=1)
-        # balls += arr.random_balls(30, 1, 40, 5, charge=None)
+        # balls += arr.random_balls(15, 1, 40, 5, charge=-1)
  
         # balls = arr.create_kube_planes(500, 20)
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
@@ -538,8 +594,8 @@ class World(ShowBase):
         #     charge=0
         #     ball = self.box.add_particle(1, radius, pos, speed, charge=charge)
     
-        # plane = Plane(self.box, [1,1,1], self.box.center)
-        # self.box.planes.append(plane)
+        plane = Plane(self.box, [1,1,1], self.box.center)
+        self.box.planes.append(plane)
 
         # plane = Plane(self.box, [1,0,0], self.box.center/2)
         # plane.color = [0,255,0]
@@ -630,18 +686,20 @@ class World(ShowBase):
         self.spheres = []
         for ball in self.box.particles:
             scale = ball.radius * 0.30
-            sphere = self.loader.loadModel("models/Sphere_HighPoly")
-            material = Material()
-            material.setShininess(1.0)
-
             color = [c/255 for c in ball.color] 
             color.append(1)
-            # ball.color = [255*c for c in color[:3]]
-            material.setAmbient(Vec4(*color))
-            material.setSpecular(Vec4(0,1,1,1))
+
+            sphere = self.loader.loadModel("models/Sphere_HighPoly")
             sphere.setScale(scale, scale, scale)
+
+            material = Material()
+            material.setShininess(5)
+            material.setAmbient(Vec4(*color))
+            material.setSpecular(Vec4(1,1,1,1))
+            material.setDiffuse(Vec4(*color))
+            # material.setEmission(Vec4(*color))
             sphere.setMaterial(material)
-            # sphere.reparentTo(self.render)
+
             sphere.reparentTo(self.boxnode)
 
             sphere.setPos(*ball.position[:3])
