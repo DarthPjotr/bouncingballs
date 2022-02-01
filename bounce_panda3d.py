@@ -607,6 +607,8 @@ class World(ShowBase):
         for np in self.boxnode.children:
             np.removeNode()
             np.clear()
+        
+        self.trails = []
     
     def _fix2d(self,vector):
         if len(vector) < 3:

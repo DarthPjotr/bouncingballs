@@ -472,7 +472,7 @@ class Box:
         if position is None:
             position = []
         position = numpy.array(position)
-        rpos = [random.randrange(radius, x - radius)*1.0 for x in self.box_sizes]
+        rpos = [random.randrange(int(radius), int(x - radius))*1.0 for x in self.box_sizes]
         # position.extend(rpos[len(position):])
         position = numpy.append(position, rpos[len(position):])
 
