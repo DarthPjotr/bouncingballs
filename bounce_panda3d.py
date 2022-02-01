@@ -192,7 +192,7 @@ class World(ShowBase):
         # register events and tasks
         self.register_key_and_mouse_events()
         self.taskMgr.add(self.task_box_go, 'move')
-        self.taskMgr.add(self.mousetask, 'mouse')
+        self.taskMgr.add(self.task_mouse_move, 'mouse')
 
     def set_main_lighting(self):
         mainLight = DirectionalLight("main light")
@@ -446,7 +446,7 @@ class World(ShowBase):
         self.camera.lookAt(Vec3(*self.box.center[:3]))
         return Task.cont
         
-    def mousetask(self, task):
+    def task_mouse_move(self, task):
         if self.mouse1_down:
             mw = self.mouseWatcherNode
             speed = 5000
