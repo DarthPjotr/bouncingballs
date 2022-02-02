@@ -206,7 +206,7 @@ class World(ShowBase):
         # ambientLight.setColor(Vec4(0.2, 0.2, 0.2, 1))
         # self.ambientLightNodePath = self.render.attachNewNode(ambientLight)
         # self.render.setLight(self.ambientLightNodePath)
-        self.render.setShaderAuto()
+        # self.render.setShaderAuto()
 
     def set_spotligth(self):
         self.light = self.render.attachNewNode(Spotlight("Spot"))
@@ -219,7 +219,7 @@ class World(ShowBase):
         pos = self.box.center.copy()
         pos[1] = -500
         pos[2] = 3000
-        self.light.setPos(*pos)
+        self.light.setPos(*pos[:3])
         # self.light.setP(-60)
         self.light.setHpr(45, -80, 0)
         self.render.setLight(self.light)
@@ -466,18 +466,13 @@ class World(ShowBase):
                 mouse_dx = self.mouse_x_old - self.mouse_x
                 mouse_dy = self.mouse_y_old - self.mouse_y
 
-                # dpos = numpy.array([mouse_dx, 0, mouse_dy]) * speed
-
                 dx = np.array([dir[1],-dir[0],0]) * mouse_dx
-                # dy = dir * mouse_dy
                 dpos = dx * speed
-                pos += dpos
-                
+                pos += dpos 
                 pos = self.up_down(pos, mouse_dy*speed)
 
                 self.mouse_x_old = self.mouse_x
                 self.mouse_y_old = self.mouse_y
-                # print(pos, dpos)
             
                 self.camera.setPos(*pos)
                 self.camera.setR(0)
@@ -529,6 +524,7 @@ class World(ShowBase):
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
     def setup_box(self):
+        self.quiet = True
         sizes = [1200, 1000, 1200]
         self.box = Box(sizes)
 
@@ -537,7 +533,7 @@ class World(ShowBase):
         self.box.trail = 0
         self.box.skip_trail = 1
 
-        interaction = 5000.0
+        interaction = 000.0
         power = 2
         friction = 0.0
         gravity_strength = 0.5
@@ -554,17 +550,19 @@ class World(ShowBase):
         self.box.set_gravity(gravity_strength, gravity_direction)
 
         # balls = arr.create_pendulum(0.2, np.array([0,0,-1]))
-        pos = self.box.center.copy()
-        pos[2] -= 100
+        # pos = self.box.center.copy()
+        # pos[2] -= 100
         # balls += arr.create_simplex(size=200, position=pos, vertices=12, charge=0)
-        ball = self.box.add_particle(1, 80, self.box.center, fixed=False, charge=0)
-        balls.append(ball)
+        # ball = self.box.add_particle(1, 80, self.box.center, fixed=False, charge=0)
+        # balls.append(ball)
 
         # balls += arr.test_spring()
 
         # balls += arr.create_simplex(charge=0, vertices=6) # 12 = isocahedron
         # self.tick_rate = 10
-        # balls += arr.shapes()
+        # balls += arr.shapes(radius=10, length=100)
+        # balls += arr.football(radius=10, length=100)
+        # balls += arr.cuboctahedral(radius=50, length=100)
         # balls += arr.create_simplex(charge=1, vertices=18)
         # balls += arr.create_simplex(charge=1, vertices=5)
         # balls += arr.create_simplex(charge=-1, vertices=5)
@@ -576,7 +574,7 @@ class World(ShowBase):
         # balls = arr.test_interaction(40000, power, M0=40, V0=6, D=350, ratio=0.1)
         # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
         
-        # balls += arr.random_balls(15, 1, 40, 5, charge=1)
+        balls += arr.random_balls(nballs=80, mass=1, radius=40, max_speed=5, charge=0)
         # balls += arr.random_balls(15, 1, 40, 5, charge=-1)
  
         # balls = arr.create_kube_planes(500, 20)
@@ -594,14 +592,18 @@ class World(ShowBase):
         #     charge=0
         #     ball = self.box.add_particle(1, radius, pos, speed, charge=charge)
     
-        plane = Plane(self.box, [1,1,1], self.box.center)
+        # plane = Plane(self.box, [1,1,1], self.box.center)
+        # self.box.planes.append(plane)
+
+        normal = [1,1,1,1,1]
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center)
+        plane.color = [0,255,0]
         self.box.planes.append(plane)
 
-        # plane = Plane(self.box, [1,0,0], self.box.center/2)
-        # plane.color = [0,255,0]
-        # self.box.planes.append(plane)
         if charge_colors:
             arr.set_charge_colors(balls)
+        
+        self.box.get_radi()
 
     def clear_box(self):
         for np in self.boxnode.children:

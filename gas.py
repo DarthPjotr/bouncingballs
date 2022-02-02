@@ -6,6 +6,7 @@ import numpy
 from numpy import linalg
 # from pyglet.window.key import E, F
 from scipy.spatial import ConvexHull
+from scipy.spatial import KDTree
 import scipy.spatial as sp
 import random
 import math
@@ -250,6 +251,24 @@ class Box:
         self.trail = 0
         self.skip_trail = 1
         self.object = None
+        self._max_radius = 0
+        self._min_radius = 0
+        self._avg_radius = 0
+        self._kdtree = None
+    
+    def get_radi(self):
+        try:
+            self._max_radius = max([ball.radius for ball in self.particles])
+        except ValueError:
+            self._max_radius = 0
+        try:
+            self._min_radius = min([ball.radius for ball in self.particles])
+        except ValueError:
+            self._min_radius = 0
+        try:
+            self._avg_radius = sum([ball.radius for ball in self.particles])/len(self.particles)
+        except ZeroDivisionError:
+            self._avg_radius = 0
 
     def _get_vertices(self):
         """
@@ -744,13 +763,31 @@ class Box:
                 ball.wrap()
             else:
                 ball.bounce()      
+            
+        if False:
             # collide or merge the balls
-            if self.merge == False:
+            if not self.merge:
                 for ball2 in self.particles[i:]:
                     if ball.collide(ball2): bounced = True
             else:
                 for ball2 in self.particles[i:]:
                     if ball.merge(ball2): bounced = True
+        
+
+        # collide or merge the balls
+        positions = [ball.position for ball in self.particles]
+        positions = numpy.array(positions)
+        self._kdtree = KDTree(positions)
+        pairs = self._kdtree.query_pairs(2*self._max_radius)
+
+        for i, j in pairs:
+            # print(i,j)
+            ball1 = self.particles[i]
+            ball2 = self.particles[j]
+            if self.merge:
+                if ball1.merge(ball2): bounced = True
+            else:
+                if ball1.collide(ball2): bounced = True
         
         # apply rods
         for rod in self.rods:
@@ -768,7 +805,7 @@ class Box:
     def _move_all(self):
         # move all balls
         for ball in self.particles:
-            ball.move()
+            position = ball.move()
 
 class Plane:
     """
@@ -1188,7 +1225,7 @@ class Particle:
 
         self.position += self.speed
         if self.box.torus:
-            return
+            return self.position
 
         # Put the particle back in the box. Usefull when the box is resized 
         for i, x in enumerate(self.box.nullvector):
@@ -1198,6 +1235,8 @@ class Particle:
         for i, x in enumerate(self.box.box_sizes):
             if self.position[i] > x:
                 self.position[i] = 1.0*(x - self.radius)
+        
+        return self.position
 
 
     def fast_collision_check(self, ball):
@@ -1221,7 +1260,7 @@ class Particle:
         if (sum(dposition) > min_distance*min_distance):
             return False
         return True
-    
+           
     def collide(self, ball):
         """
         Handles particle collision
@@ -1237,9 +1276,9 @@ class Particle:
         """
         collided = False
 
-        if not self.fast_collision_check(ball):
-            collided = False
-            return collided
+        # if not self.fast_collision_check(ball):
+        #     collided = False
+        #     return collided
 
         # dposition = self.position - p2.position
         dposition = self.displacement(ball.position)
@@ -1621,6 +1660,9 @@ class Spring:
             return
 
         dpos = self.p1.displacement(self.p2.position)
+        if numpy.all(dpos==0):
+            return
+
         length2 = dpos.dot(dpos)
         length = math.sqrt(length2)
         dlength = self.length - length
@@ -1716,14 +1758,109 @@ class ArrangeParticles:
 
         return balls
     
+    def cuboctahedral (self, radius=10, length=100, strength=0.05, damping=0.01,center=True):       
+        G = nx.Graph()
+        edges = []
+        start = 0
+        size = 4
+        for i in range(size):
+            edge = (start+i, start+(i+1) % size)
+            edges.append(edge)
+        G.add_edges_from(edges)
+        print(edges)
+
+        edges = []
+        start = start + size
+        size = 8
+        for i in range(size):
+            edge = (start+i, start+(i+1) % size)
+            edges.append(edge)
+        G.add_edges_from(edges)
+
+        edges = [(4,0),(4,1),(6,1),(6,2),(8,2),(8,3),(10,3),(10,0)]
+        G.add_edges_from(edges)
+
+        edges = [(5,7),(7,9),(9,11),(11,5)]
+        G.add_edges_from(edges)
+
+        balls = self.arrange_from_graph(G, radius, length, strength, damping, center)
+        return balls
+
+    def football(self, radius=10, length=100, strength=0.05, damping=0.01, center=True):       
+        G = nx.Graph()
+        edges = []
+        start = 0
+        size = 5
+        for i in range(size):
+            edge = (start+i, start+(i+1) % size)
+            edges.append(edge)
+        
+        print(edges)
+        G.add_edges_from(edges)
+
+        start = size
+        size = 15
+        edges = []
+        for i in range(size):
+            edge = (start+i, start + (i+1) % size)
+            edges.append(edge)
+
+        # print(edges)
+        G.add_edges_from(edges)
+
+        edges = [(0,5),(1,8),(2,11),(3,14),(4,17)]
+        G.add_edges_from(edges)
+
+        start = start + size
+        size = 20
+        edges = []
+        for i in range(size):
+            edge = (start+i, start + (i+1) % size)
+            edges.append(edge)
+
+        # print(edges)
+        G.add_edges_from(edges)
+
+        edges = [(6,20),(7,23),(9,24),(10,27),(12,28),(13,31),(15,32),(16,35),(18,36),(19,39)]
+        G.add_edges_from(edges)
+
+        start = start + size
+        size = 15
+        edges = []
+        for i in range(size):
+            edge = (start+i, start + (i+1) % size)
+            edges.append(edge)
+        
+        # print(edges)
+        G.add_edges_from(edges)
+
+        edges = [(21,40),(22,42),(25,43),(26,45),(29,46), (30,48),(33,49),(34,51),(37,52),(38,54)]
+        G.add_edges_from(edges)
+
+        start = start + size
+        size = 5
+        edges = []
+        for i in range(size):
+            edge = (start+i, start + (i+1) % size)
+            edges.append(edge)
+        
+        # print(edges)
+        G.add_edges_from(edges)
+
+        edges = [(41,55),(44,56),(47,57),(50,58),(53,59)]
+        G.add_edges_from(edges)
+
+        balls = self.arrange_from_graph(G, radius, length, strength, damping, center)
+        return balls
+
     def shapes(self):
-        # G = nx.dodecahedral_graph()
+        G = nx.dodecahedral_graph()
         # G = nx.graph_atlas(134)
         # G = nx.graph_atlas(1167)
-        G = nx.truncated_cube_graph()
+        # G = nx.truncated_cube_graph()
         # G = nx.truncated_tetrahedron_graph()
         # G = nx.cycle_graph(5)
-        # G = nx.circular_ladder_graph(25)
+        # G = nx.circular_ladder_graph(10)
         # G = nx.circulant_graph(10,[1,4,6])
         # G = nx.frucht_graph()
         # G = nx.moebius_kantor_graph()
@@ -1737,7 +1874,7 @@ class ArrangeParticles:
         # dim = (3,3,3)
         # dim = (2,2,2,2)
         # dim = (3,3,6)
-        # G = nx.grid_graph(dim=dim, periodic=False)
+        G = nx.grid_graph(dim=dim, periodic=False)
         # G = nx.wheel_graph(40)
         # G = nx.star_graph(21)
 
@@ -1748,9 +1885,11 @@ class ArrangeParticles:
         # G = nx.grid_2d_graph(3,4, periodic=False)
         # G = nx.hypercube_graph(2)
         # G = nx.random_geometric_graph(n=8, radius=8, dim=8, p=10)
+        balls = self.arrange_from_graph(G)
+        return balls
 
+    def arrange_from_graph(self, G, radius=10, length=100, strength=0.05, damping=0.01, center=True):
         balls = []
-        length = 100
         for node in G.nodes:
             try:
                 lnode = len(node)
@@ -1764,7 +1903,7 @@ class ArrangeParticles:
                 position = self.box.center + self.box.random() * length
 
             speed = self.box.nullvector.copy()
-            ball = self.box.add_particle(mass=1, radius=10, position=position, speed=speed, charge=1, fixed=False)
+            ball = self.box.add_particle(mass=1, radius=radius, position=position, speed=speed, charge=1, fixed=False)
             balls.append(ball)
         
         for edge in G.edges:
@@ -1776,18 +1915,13 @@ class ArrangeParticles:
                 p2 = balls[j]
                 if numpy.all(p1.position == p2.position):
                     p1.position += (self.box.onevector * 10)
-                spring = Spring(length=length, strength=0.05, damping=0.01, p1=p1, p2=p2)
+                spring = Spring(length=length, strength=strength, damping=damping, p1=p1, p2=p2)
                 self.box.springs.append(spring)
             else:
                 print(edge)
    
-        self.box.center_all()
-        # for ball in balls:
-        #     ball.fixed = True
-        
-        for i in range(10):
-            ball = self.box.add_particle(1, 40, charge=-1)
-            balls.append(ball)
+        if center:
+            self.box.center_all()
 
         return balls
 
@@ -1821,7 +1955,7 @@ class ArrangeParticles:
             if rand_m:
                 mass = random.randrange(1, 30) * 1.0
             if rand_r:
-                radius = round(mass)
+                radius = random.randrange(1, 30) * 1.0
             if rand_c:
                 # charge = random.randint(-1, 1)
                 charge = random.choice([-1, 1])
@@ -2555,6 +2689,18 @@ class Test():
 
         for i in range(100):
             box.go()
+    
+    def kdtree(self):
+        sizes = [100, 200, 300]
+        box = Box(sizes)
+        arr = ArrangeParticles(box)
+        balls = arr.random_balls(4)
+        box.get_radi()
+        box._move_all()
+        # print([ball.position for ball in box.particles])
+
+        for i in range(100):
+            box.go()
 
 def main():
     print("START")
@@ -2568,8 +2714,9 @@ def main():
     # t.test_load_yaml()
     # t.test_displacement()
     # t.normal()
-    t.shapes()
+    # t.shapes()
     # t.test_shapes()
+    t.kdtree()
 
     print("END")
 
