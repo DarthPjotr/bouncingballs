@@ -1,2 +1,4 @@
 TODO
 # rename files
+# Use KDtree for interaction
+# bounces of planes when box.torus = True. Now it is either bounces of wrap

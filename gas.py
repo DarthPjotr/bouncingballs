@@ -254,9 +254,12 @@ class Box:
         self._max_radius = 0
         self._min_radius = 0
         self._avg_radius = 0
+        self._interaction_radius = max(self.box_sizes)
+        self._use_kdtree = True
         self._kdtree = None
+        self._neighbors = []
     
-    def get_radi(self):
+    def get_radi(self, interaction_factor=5):
         try:
             self._max_radius = max([ball.radius for ball in self.particles])
         except ValueError:
@@ -269,6 +272,11 @@ class Box:
             self._avg_radius = sum([ball.radius for ball in self.particles])/len(self.particles)
         except ZeroDivisionError:
             self._avg_radius = 0
+        # if len(self.particles) > 25:
+        #     self._interaction_radius = interaction_factor*(self.interaction**(1/self.interaction_power))
+        # else: 
+        #     self._interaction_radius = max(self.box_sizes)
+        self._interaction_radius = interaction_factor * max(self.box_sizes) / (len(self.particles)**(1/self.dimensions))
 
     def _get_vertices(self):
         """
@@ -491,7 +499,13 @@ class Box:
         if position is None:
             position = []
         position = numpy.array(position)
-        rpos = [random.randrange(int(radius), int(x - radius))*1.0 for x in self.box_sizes]
+        rpos = []
+        for size in self.box_sizes:
+            l = [int(radius), int(size - radius)]
+            l.sort()
+            X = random.randrange(*l)*1.0
+            rpos.append(X)
+        # rpos = [random.randrange(int(radius), int(x - radius))*1.0 for x in self.box_sizes]
         # position.extend(rpos[len(position):])
         position = numpy.append(position, rpos[len(position):])
 
@@ -730,7 +744,7 @@ class Box:
         bounced = False
         for _ in range(steps):
             self.ticks += 1
-
+            self._get_kdtree()
             bounced |= self._speeds()
             self._energies()
             self._move_all()
@@ -763,31 +777,24 @@ class Box:
                 ball.wrap()
             else:
                 ball.bounce()      
-            
-        if False:
-            # collide or merge the balls
-            if not self.merge:
-                for ball2 in self.particles[i:]:
-                    if ball.collide(ball2): bounced = True
-            else:
-                for ball2 in self.particles[i:]:
-                    if ball.merge(ball2): bounced = True
-        
+            if not self._use_kdtree:
+                # collide or merge the balls
+                if not self.merge:
+                    for ball2 in self.particles[i:]:
+                        if ball.collide(ball2): bounced = True
+                else:
+                    for ball2 in self.particles[i:]:
+                        if ball.merge(ball2): bounced = True
 
-        # collide or merge the balls
-        positions = [ball.position for ball in self.particles]
-        positions = numpy.array(positions)
-        self._kdtree = KDTree(positions)
-        pairs = self._kdtree.query_pairs(2*self._max_radius)
-
-        for i, j in pairs:
-            # print(i,j)
-            ball1 = self.particles[i]
-            ball2 = self.particles[j]
-            if self.merge:
-                if ball1.merge(ball2): bounced = True
-            else:
-                if ball1.collide(ball2): bounced = True
+        if self._use_kdtree:
+            pairs = self._kdtree.query_pairs(2*self._max_radius)
+            for i, j in pairs:
+                ball1 = self.particles[i]
+                ball2 = self.particles[j]
+                if self.merge:
+                    if ball1.merge(ball2): bounced = True
+                else:
+                    if ball1.collide(ball2): bounced = True
         
         # apply rods
         for rod in self.rods:
@@ -806,6 +813,14 @@ class Box:
         # move all balls
         for ball in self.particles:
             position = ball.move()
+    
+    def _get_kdtree(self):
+        positions = [ball.position for ball in self.particles]
+        sizes = None
+        if self.torus:
+            sizes = self.box_sizes
+        self._kdtree = KDTree(positions, boxsize=sizes)
+        self._neighbors  = self._kdtree.query_ball_tree(self._kdtree, self._interaction_radius)
 
 class Plane:
     """
@@ -1225,6 +1240,7 @@ class Particle:
 
         self.position += self.speed
         if self.box.torus:
+            self.position = numpy.mod(self.position, self.box.box_sizes)
             return self.position
 
         # Put the particle back in the box. Usefull when the box is resized 
@@ -1500,7 +1516,11 @@ class Particle:
         else:
             mass = self.mass
 
-        for ball in self.box.particles:
+        if not self.box._use_kdtree:
+            particles = self.box.particles
+        else:
+            particles = [self.box.particles[i] for i in self.box._neighbors[self.index()]]
+        for ball in particles:
             if ball == self or ball.charge == 0:
                 continue
 
@@ -1853,7 +1873,7 @@ class ArrangeParticles:
         balls = self.arrange_from_graph(G, radius, length, strength, damping, center)
         return balls
 
-    def shapes(self):
+    def shapes(self, radius=10, length=100, strength=0.05, damping=0.01, center=True):
         G = nx.dodecahedral_graph()
         # G = nx.graph_atlas(134)
         # G = nx.graph_atlas(1167)
@@ -1870,7 +1890,7 @@ class ArrangeParticles:
         # G = nx.octahedral_graph()
 
         # dim = (4,4,4)
-        dim = (2,2,4)
+        dim = (2,2,6)
         # dim = (3,3,3)
         # dim = (2,2,2,2)
         # dim = (3,3,6)
@@ -1885,7 +1905,14 @@ class ArrangeParticles:
         # G = nx.grid_2d_graph(3,4, periodic=False)
         # G = nx.hypercube_graph(2)
         # G = nx.random_geometric_graph(n=8, radius=8, dim=8, p=10)
-        balls = self.arrange_from_graph(G)
+        balls = self.arrange_from_graph(G, radius, length, strength, damping, center)
+
+        return balls
+
+    def create_grid(self, dim, radius=10, length=100, strength=0.05, damping=0.01, center=True):
+        G = nx.grid_graph(dim=dim, periodic=False)
+        balls = self.arrange_from_graph(G, radius, length, strength, damping, center)
+
         return balls
 
     def arrange_from_graph(self, G, radius=10, length=100, strength=0.05, damping=0.01, center=True):
@@ -2436,6 +2463,7 @@ def load_gas(data):
     box.merge = b.get('merge', False)
     box.trail = b.get('trail', 0)
     box.color = b.get('color', (200,200,200))
+    # box.interaction = b.get("interaction", 0)
     box.interaction_power = b.get("interaction_power", 2)
 
     if "particles" in b:
@@ -2468,6 +2496,7 @@ def load_gas(data):
             else:
                 plane = Plane(box, normal, point, color)
             box.planes.append(plane)
+    box.get_radi()
 
     return box
 
