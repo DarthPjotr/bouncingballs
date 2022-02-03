@@ -153,6 +153,7 @@ class World(ShowBase):
         self.bounced = False
 
         self.boxnode = None
+        self._dummy_ball = None
         self.sound = self.loader.load_sfx('sounds/c_bang1.wav')
         # self.sound = self.loader.load_sfx('sounds/Knife Hit Short - QuickSounds.com.mp3')
         # self.sound = self.loader.load_sfx('sounds/Sword Hit Wood 1 - QuickSounds.com.mp3')
@@ -171,7 +172,6 @@ class World(ShowBase):
         self.draw_box()
 
         # setup scene, camera lighting and text
-        
         self.load_scene()
         self.set_camera()
         self.disableMouse()
@@ -531,16 +531,19 @@ class World(ShowBase):
         self.box.torus = False
         self.box.merge = False
         self.box.trail = 0
-        self.box.skip_trail = 1
+        self.box.skip_trail = 5
+        self.box._use_kdtree = True
 
-        interaction = 000.0
-        power = 2
+        interaction = 5000.0
+        power = 2.0
         friction = 0.0
         gravity_strength = 0.5
         gravity_direction = self.box.nullvector.copy()
         gravity_direction[self.box.Z] = 0
 
-        charge_colors = False
+        charge_colors = True
+        interaction_factor = 5
+        _dummy = False
 
         arr = ArrangeParticles(self.box)
         balls = []
@@ -561,6 +564,10 @@ class World(ShowBase):
         # balls += arr.create_simplex(charge=0, vertices=6) # 12 = isocahedron
         # self.tick_rate = 10
         # balls += arr.shapes(radius=10, length=100)
+        balls += arr.create_grid((2,3,4))
+        v = numpy.array([2,0,0])
+        for ball in balls:
+            ball.speed += v
         # balls += arr.football(radius=10, length=100)
         # balls += arr.cuboctahedral(radius=50, length=100)
         # balls += arr.create_simplex(charge=1, vertices=18)
@@ -573,8 +580,11 @@ class World(ShowBase):
         # balls = arr.test_interaction_simple(10000, power)
         # balls = arr.test_interaction(40000, power, M0=40, V0=6, D=350, ratio=0.1)
         # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
-        
-        balls += arr.random_balls(nballs=80, mass=1, radius=40, max_speed=5, charge=0)
+        nballs =  20
+        radius = 30
+        charge = 1
+        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=-charge)
+        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
         # balls += arr.random_balls(15, 1, 40, 5, charge=-1)
  
         # balls = arr.create_kube_planes(500, 20)
@@ -595,16 +605,18 @@ class World(ShowBase):
         # plane = Plane(self.box, [1,1,1], self.box.center)
         # self.box.planes.append(plane)
 
-        normal = [1,1,1,1,1]
-        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center)
-        plane.color = [0,255,0]
-        self.box.planes.append(plane)
+        # normal = [1,1,1,1,1]
+        # plane = Plane(self.box, normal[:self.box.dimensions], self.box.center)
+        # plane.color = [0,255,0]
+        # self.box.planes.append(plane)
 
         if charge_colors:
             arr.set_charge_colors(balls)
         
-        self.box.get_radi()
-
+        self.box.get_radi(interaction_factor=interaction_factor)
+        if _dummy:
+            self._dummy_ball = self.box.add_particle(1, self.box._interaction_radius, self.box.center, fixed=True, charge=0, color=[0,0,0])
+   
     def clear_box(self):
         for np in self.boxnode.children:
             np.removeNode()
@@ -703,12 +715,18 @@ class World(ShowBase):
             material.setDiffuse(Vec4(*color))
             # material.setEmission(Vec4(*color))
             sphere.setMaterial(material)
+            sphere.setColor(*color)
 
             sphere.reparentTo(self.boxnode)
 
             sphere.setPos(*ball.position[:3])
             if self.box.dimensions > 3:
                 sphere.setTransparency(TransparencyAttrib.M_dual, 1)
+            # if ball == self._dummy_ball:
+            #     sphere.setTransparency(TransparencyAttrib.M_dual, 1)
+            #     color = sphere.getColor()
+            #     color[3] = 0
+            #     sphere.setColor(color)
             # sphere.setAntiAlias(8,1)
             ball.object = sphere
             # sphere.setColor(0, 100, 100, 10)
