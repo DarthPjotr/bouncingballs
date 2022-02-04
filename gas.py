@@ -258,8 +258,9 @@ class Box:
         self._use_kdtree = True
         self._kdtree = None
         self._neighbors = []
+        self._neighbor_count = 10
     
-    def get_radi(self, interaction_factor=5):
+    def get_radi(self, interaction_factor=5, neighbor_count=None):
         try:
             self._max_radius = max([ball.radius for ball in self.particles])
         except ValueError:
@@ -277,6 +278,10 @@ class Box:
         # else: 
         #     self._interaction_radius = max(self.box_sizes)
         self._interaction_radius = interaction_factor * max(self.box_sizes) / (len(self.particles)**(1/self.dimensions))
+        if not neighbor_count:
+            neighbor_count = max(10, int(0.1*len(self.particles)))
+        
+        self._neighbor_count = min(len(self.particles), neighbor_count)
 
     def _get_vertices(self):
         """
@@ -820,7 +825,7 @@ class Box:
         if self.torus:
             sizes = self.box_sizes
         self._kdtree = KDTree(positions, boxsize=sizes)
-        self._neighbors  = self._kdtree.query_ball_tree(self._kdtree, self._interaction_radius)
+        # self._neighbors  = self._kdtree.query_ball_tree(self._kdtree, self._interaction_radius)
 
 class Plane:
     """
@@ -1519,15 +1524,18 @@ class Particle:
         if not self.box._use_kdtree:
             particles = self.box.particles
         else:
-            particles = [self.box.particles[i] for i in self.box._neighbors[self.index()]]
-        for ball in particles:
+            # particles = [self.box.particles[i] for i in self.box._neighbors[self.index()]]
+            distances, ids = self.box._kdtree.query(self.position, self.box._neighbor_count)
+            particles = [self.box.particles[i] for i in ids]
+        for i, ball in enumerate(particles):
             if ball == self or ball.charge == 0:
                 continue
 
             dpos = self.displacement(ball.position)
             distance2 = dpos.dot(dpos)
             if distance2 > (self.radius+ball.radius)*(self.radius+ball.radius):
-                distance = math.sqrt(distance2)
+                # distance = math.sqrt(distance2)
+                distance = distances[i]
                 unitnormal = dpos/distance
                 if self.box.interaction_power == 2:
                     dspeed += self.charge*ball.charge*self.box.interaction*unitnormal/(mass*distance2)
@@ -1888,13 +1896,14 @@ class ArrangeParticles:
         # G = nx.sudoku_graph(2)
         # G = nx.pappus_graph()
         # G = nx.octahedral_graph()
+        G = nx.hypercube_graph(4)
 
         # dim = (4,4,4)
-        dim = (2,2,6)
+        # dim = (2,2,6)
         # dim = (3,3,3)
         # dim = (2,2,2,2)
         # dim = (3,3,6)
-        G = nx.grid_graph(dim=dim, periodic=False)
+        # G = nx.grid_graph(dim=dim, periodic=False)
         # G = nx.wheel_graph(40)
         # G = nx.star_graph(21)
 
@@ -2445,7 +2454,8 @@ class ArrangeParticles:
 
 def save(box, file):
     out = box.out()
-    yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
+    yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False, width=120)
+    # yaml.dump(out, file, canonical=False, default_flow_style=True, width=120)
 
 def load(file):
     data = yaml.load(file, Loader=yaml.FullLoader)
@@ -2463,7 +2473,6 @@ def load_gas(data):
     box.merge = b.get('merge', False)
     box.trail = b.get('trail', 0)
     box.color = b.get('color', (200,200,200))
-    # box.interaction = b.get("interaction", 0)
     box.interaction_power = b.get("interaction_power", 2)
 
     if "particles" in b:
@@ -2496,6 +2505,7 @@ def load_gas(data):
             else:
                 plane = Plane(box, normal, point, color)
             box.planes.append(plane)
+
     box.get_radi()
 
     return box

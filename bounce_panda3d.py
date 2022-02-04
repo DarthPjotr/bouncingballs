@@ -543,6 +543,7 @@ class World(ShowBase):
 
         charge_colors = True
         interaction_factor = 5
+        neigbor_count = 50
         _dummy = False
 
         arr = ArrangeParticles(self.box)
@@ -563,28 +564,28 @@ class World(ShowBase):
 
         # balls += arr.create_simplex(charge=0, vertices=6) # 12 = isocahedron
         # self.tick_rate = 10
-        # balls += arr.shapes(radius=10, length=100)
-        balls += arr.create_grid((2,3,4))
-        v = numpy.array([2,0,0])
-        for ball in balls:
-            ball.speed += v
+        # balls += arr.shapes(radius=40, length=200, damping=0.01)
+        # for ball in balls:
+        #     ball.speed = self.box.random(0.3)
+        #     ball.charge=1
+        # balls += arr.create_grid((4,4,4,4), radius=30, length=150)
+        # v = numpy.array([2,0,0,-1])
+        # for ball in balls:
+        #     ball.speed += v[:self.box.dimensions]
         # balls += arr.football(radius=10, length=100)
         # balls += arr.cuboctahedral(radius=50, length=100)
-        # balls += arr.create_simplex(charge=1, vertices=18)
+        # balls += arr.create_simplex(charge=1, vertices=10)
         # balls += arr.create_simplex(charge=1, vertices=5)
-        # balls += arr.create_simplex(charge=-1, vertices=5)
-        # balls += arr.create_simplex(charge=-1, vertices=5)
-
         # balls += arr.create_kube_planes(800, 10)
         # balls += arr.create_n_mer(12, 4, star=False, circle=True, charge=None)
         # balls = arr.test_interaction_simple(10000, power)
         # balls = arr.test_interaction(40000, power, M0=40, V0=6, D=350, ratio=0.1)
         # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
-        nballs =  20
-        radius = 30
+        nballs = 5
+        radius = 100
         charge = 1
-        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=-charge)
-        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
+        balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
+        balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
         # balls += arr.random_balls(15, 1, 40, 5, charge=-1)
  
         # balls = arr.create_kube_planes(500, 20)
@@ -613,7 +614,7 @@ class World(ShowBase):
         if charge_colors:
             arr.set_charge_colors(balls)
         
-        self.box.get_radi(interaction_factor=interaction_factor)
+        self.box.get_radi(interaction_factor=interaction_factor, neighbor_count=neigbor_count)
         if _dummy:
             self._dummy_ball = self.box.add_particle(1, self.box._interaction_radius, self.box.center, fixed=True, charge=0, color=[0,0,0])
    
@@ -675,7 +676,7 @@ class World(ShowBase):
                     np.setTwoSided(True)
                     np.setTransparency(TransparencyAttrib.M_dual, 1)
                     if not plane.color:
-                        color = (0.5, 0.5, 1)
+                        # color = (0.5, 0.5, 1)
                         color = (random.random(), random.random(),random.random())
                     else:
                         color = [c/255 for c in plane.color]
@@ -712,7 +713,9 @@ class World(ShowBase):
             material.setShininess(5)
             material.setAmbient(Vec4(*color))
             material.setSpecular(Vec4(1,1,1,1))
-            material.setDiffuse(Vec4(*color))
+            # transparent_color = color[:3]
+            # transparent_color.append(0.1)
+            # material.setDiffuse(Vec4(*transparent_color))
             # material.setEmission(Vec4(*color))
             sphere.setMaterial(material)
             sphere.setColor(*color)
