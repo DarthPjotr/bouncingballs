@@ -541,7 +541,7 @@ class World(ShowBase):
         gravity_direction = self.box.nullvector.copy()
         gravity_direction[self.box.Z] = 0
 
-        charge_colors = True
+        charge_colors = False
         interaction_factor = 5
         neigbor_count = 50
         _dummy = False
@@ -584,9 +584,10 @@ class World(ShowBase):
         nballs = 5
         radius = 100
         charge = 1
-        balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
-        balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
+        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
+        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
         # balls += arr.random_balls(15, 1, 40, 5, charge=-1)
+        balls += arr.test_bounce()
  
         # balls = arr.create_kube_planes(500, 20)
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)

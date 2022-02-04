@@ -15,6 +15,7 @@ import networkx as nx
 
 import yaml
 from pprint import pp
+import time
 
 import locale
 locale.setlocale(locale.LC_ALL, '')
@@ -363,6 +364,8 @@ class Box:
         box["springs"] = [spring.out() for spring in self.springs]
         box["planes"] = [plane.out() for plane in self.planes[2*self.dimensions:]]
         box["interaction_power"] = self.interaction_power
+        box["use_kdtree"] = self._use_kdtree
+        box["neighbor_count"] = self._neighbor_count = 10
 
         output = {"box": box}
 
@@ -508,7 +511,10 @@ class Box:
         for size in self.box_sizes:
             l = [int(radius), int(size - radius)]
             l.sort()
-            X = random.randrange(*l)*1.0
+            try:
+                X = random.randrange(*l)*1.0
+            except ValueError:
+                X = 0
             rpos.append(X)
         # rpos = [random.randrange(int(radius), int(x - radius))*1.0 for x in self.box_sizes]
         # position.extend(rpos[len(position):])
@@ -1534,8 +1540,10 @@ class Particle:
             dpos = self.displacement(ball.position)
             distance2 = dpos.dot(dpos)
             if distance2 > (self.radius+ball.radius)*(self.radius+ball.radius):
-                # distance = math.sqrt(distance2)
-                distance = distances[i]
+                if self.box._use_kdtree:
+                    distance = distances[i]
+                else:
+                    distance = math.sqrt(distance2)
                 unitnormal = dpos/distance
                 if self.box.interaction_power == 2:
                     dspeed += self.charge*ball.charge*self.box.interaction*unitnormal/(mass*distance2)
@@ -1785,7 +1793,21 @@ class ArrangeParticles:
                 ball.color = [255,255,0]
 
         return balls
-    
+
+    def test_bounce(self):
+        balls = []
+        ball = self.box.add_particle(mass=10, radius=min(self.box.box_sizes)/6,color=[180,180,0])
+        balls.append(ball)
+
+        R = 15
+        for i in range(R):
+            c = (i*255/R) % 255 
+            color = [c,c,c]
+            ball = self.box.add_particle(mass=1, radius=30, color=color)
+            balls.append(ball)
+
+        return balls
+
     def cuboctahedral (self, radius=10, length=100, strength=0.05, damping=0.01,center=True):       
         G = nx.Graph()
         edges = []
@@ -2474,6 +2496,8 @@ def load_gas(data):
     box.trail = b.get('trail', 0)
     box.color = b.get('color', (200,200,200))
     box.interaction_power = b.get("interaction_power", 2)
+    box._use_kdtree = b.get("use_kdtree", True)
+    box._neighbor_count = b("neighbor_count",10)
 
     if "particles" in b:
         for p in b['particles']:
@@ -2730,16 +2754,24 @@ class Test():
             box.go()
     
     def kdtree(self):
-        sizes = [100, 200, 300]
+        sizes = [100, 200, 300, 200]
         box = Box(sizes)
+        box.interaction = 000
+        box._use_kdtree = True
+        box._neighbor_count=20
+
         arr = ArrangeParticles(box)
-        balls = arr.random_balls(4)
+        nballs = 50
+        balls = arr.random_balls(nballs=nballs, mass=1, radius=5, charge=0)
+        balls = arr.random_balls(nballs=nballs, mass=1, radius=5, charge=0)
         box.get_radi()
-        box._move_all()
         # print([ball.position for ball in box.particles])
 
         for i in range(100):
             box.go()
+        
+        ticks = box.ticks
+        return ticks
 
 def main():
     print("START")
@@ -2755,7 +2787,11 @@ def main():
     # t.normal()
     # t.shapes()
     # t.test_shapes()
-    t.kdtree()
+    start = time.perf_counter()
+    ticks = t.kdtree()
+    end = time.perf_counter()
+    dtime = end - start
+    print(dtime, ticks/dtime)
 
     print("END")
 
