@@ -528,10 +528,10 @@ class World(ShowBase):
         sizes = [1200, 1000, 1200]
         self.box = Box(sizes)
 
-        self.box.torus = False
+        self.box.torus = True
         self.box.merge = False
         self.box.trail = 0
-        self.box.skip_trail = 5
+        self.box.skip_trail = 3
         self.box._use_kdtree = True
 
         interaction = 5000.0
@@ -541,7 +541,7 @@ class World(ShowBase):
         gravity_direction = self.box.nullvector.copy()
         gravity_direction[self.box.Z] = 0
 
-        charge_colors = False
+        charge_colors = True
         interaction_factor = 5
         neigbor_count = 50
         _dummy = False
@@ -579,15 +579,19 @@ class World(ShowBase):
         # balls += arr.create_kube_planes(800, 10)
         # balls += arr.create_n_mer(12, 4, star=False, circle=True, charge=None)
         # balls = arr.test_interaction_simple(10000, power)
-        # balls = arr.test_interaction(40000, power, M0=40, V0=6, D=350, ratio=0.1)
+        # self.box.torus = True
+        # balls = arr.test_interaction(40000, power, M0=40, V0=6, D=150, ratio=0.1)
+        # for ball in balls:
+        #     ball.position[0] = 50 # self.box.center[0]
         # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
         nballs = 5
         radius = 100
         charge = 1
-        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
-        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
-        # balls += arr.random_balls(15, 1, 40, 5, charge=-1)
-        balls += arr.test_bounce()
+        balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
+        balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
+        # balls += arr.random_balls(1, 1, 40, 5, charge=-1)
+        # balls += arr.random_balls(1, 1, 40, 5, charge=1)
+        # balls += arr.test_bounce()
  
         # balls = arr.create_kube_planes(500, 20)
         # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
@@ -607,9 +611,10 @@ class World(ShowBase):
         # plane = Plane(self.box, [1,1,1], self.box.center)
         # self.box.planes.append(plane)
 
-        # normal = [1,1,1,1,1]
-        # plane = Plane(self.box, normal[:self.box.dimensions], self.box.center)
-        # plane.color = [0,255,0]
+        normal = [1,1,1,1,1]
+        normal = [1,0,0,0,0]
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center)
+        plane.color = [0,255,0]
         # self.box.planes.append(plane)
 
         if charge_colors:
