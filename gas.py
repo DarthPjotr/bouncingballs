@@ -784,10 +784,11 @@ class Box:
             if self.friction != 0:
                 self.slide(ball)
             # Bounce or wrap the ball if needed
-            if self.torus:
-                ball.wrap()
-            else:
-                ball.bounce()      
+            # if self.torus:
+            #     ball.wrap()
+            # else:
+            #     ball.bounce() 
+            ball.bounce()   
             if not self._use_kdtree:
                 # collide or merge the balls
                 if not self.merge:
@@ -1250,6 +1251,8 @@ class Particle:
                 self.speeds = self.positions[:self.box.trail]
 
         self.position += self.speed
+
+        # wrap around
         if self.box.torus:
             self.position = numpy.mod(self.position, self.box.box_sizes)
             return self.position
@@ -1443,8 +1446,11 @@ class Particle:
         """
         bounced = False
         old_speed = self.speed.copy()
-
-        for plane in self.box.planes:
+        
+        start = 0
+        if self.box.torus:
+            start = self.box.dimensions*2
+        for plane in self.box.planes[start:]:
             speed2plane = self.speed @ plane.unitnormal
             distance2plane = abs(plane.distance(self.position))
 
