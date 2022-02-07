@@ -783,30 +783,23 @@ class Box:
             # friction
             if self.friction != 0:
                 self.slide(ball)
-            # Bounce or wrap the ball if needed
-            # if self.torus:
-            #     ball.wrap()
-            # else:
-            #     ball.bounce() 
-            ball.bounce()   
-            if not self._use_kdtree:
-                # collide or merge the balls
-                if not self.merge:
-                    for ball2 in self.particles[i:]:
-                        if ball.collide(ball2): bounced = True
-                else:
-                    for ball2 in self.particles[i:]:
-                        if ball.merge(ball2): bounced = True
+            # bounce against planes
+            ball.bounce()  
 
+        # collisions between balls
+        pairs = []
         if self._use_kdtree:
             pairs = self._kdtree.query_pairs(2*self._max_radius)
-            for i, j in pairs:
-                ball1 = self.particles[i]
-                ball2 = self.particles[j]
-                if self.merge:
-                    if ball1.merge(ball2): bounced = True
-                else:
-                    if ball1.collide(ball2): bounced = True
+        else: 
+            pairs = itertools.combinations(range(len(self.particles)), 2)
+        
+        for i, j in pairs:
+            ball1 = self.particles[i]
+            ball2 = self.particles[j]
+            if self.merge:
+                if ball1.merge(ball2): bounced = True
+            else:
+                if ball1.collide(ball2): bounced = True
         
         # apply rods
         for rod in self.rods:
@@ -1536,13 +1529,12 @@ class Particle:
         if not self.box._use_kdtree:
             particles = self.box.particles
         else:
-            # particles = [self.box.particles[i] for i in self.box._neighbors[self.index()]]
-            distances, ids = self.box._kdtree.query(self.position, self.box._neighbor_count)
-            try:
+            if self.box._neighbor_count > 1:
+                distances, ids = self.box._kdtree.query(self.position, self.box._neighbor_count)
                 particles = [self.box.particles[i] for i in ids]
-            except TypeError:
-                # just one particle
+            else:
                 particles = []
+
         for i, ball in enumerate(particles):
             if ball == self or ball.charge == 0:
                 continue
@@ -2801,7 +2793,7 @@ def main():
     ticks = t.kdtree()
     end = time.perf_counter()
     dtime = end - start
-    print(dtime, ticks/dtime)
+    print("time = {:.2f}, tick/sec = {:.2f}".format(dtime, ticks/dtime))
 
     print("END")
 

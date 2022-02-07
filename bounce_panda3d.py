@@ -534,25 +534,27 @@ class World(ShowBase):
 
     def setup_box(self):
         self.quiet = True
-        sizes = [1200, 1000, 1200]
-        self.box = Box(sizes)
+        sizes = numpy.array([1200, 1000, 1200, 1000, 1000, 1000, 1000, 1000])
+        dimensions = 3
+        #sizes = sizes/2
 
-        self.box.torus = True
+        self.box = Box(sizes[:dimensions])
+        self.box.torus = False
         self.box.merge = False
         self.box.trail = 0
         self.box.skip_trail = 1
         self.box._use_kdtree = True
 
-        interaction = 15000.0
+        interaction = 000.0
         power = 2.0
-        friction = 0.0
+        friction = 0.0 # 0.025
         gravity_strength = 0.5
         gravity_direction = self.box.nullvector.copy()
-        gravity_direction[self.box.Z] = 0
+        gravity_direction[self.box.Z] = -0
 
-        charge_colors = True
+        charge_colors = False
         interaction_factor = 5
-        neigbor_count = 50
+        neigbor_count = 10
         _dummy = False
 
         arr = ArrangeParticles(self.box)
@@ -593,11 +595,11 @@ class World(ShowBase):
         # for ball in balls:
         #     ball.position[0] = 50 # self.box.center[0]
         # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
-        nballs = 5
-        radius = 100
-        charge = 1
-        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
+        nballs = 50 # self.box.dimensions+1
+        radius = 40
+        charge = 0
         balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
+        balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=-charge)
         # balls += arr.random_balls(1, 1, 40, 5, charge=-1)
         # balls += arr.random_balls(1, 1, 40, 5, charge=1)
         # balls += arr.test_bounce()
@@ -620,8 +622,8 @@ class World(ShowBase):
         # plane = Plane(self.box, [1,1,1], self.box.center)
         # self.box.planes.append(plane)
 
-        normal = [1,1,1,1,1]
-        normal = [1,0,0,0,0]
+        normal = [1,1,1,1,1,1,1,1]
+        normal = [1,0,0,0,0,0,0,0]
         plane = Plane(self.box, normal[:self.box.dimensions], self.box.center)
         plane.color = [0,255,0]
         # self.box.planes.append(plane)
