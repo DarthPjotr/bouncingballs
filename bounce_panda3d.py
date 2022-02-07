@@ -331,16 +331,25 @@ class World(ShowBase):
         d = (start - end).length()
         if d > 0:
             line.setScale(d)
+        else:
+            line.setScale(0.000001)
     
     def draw_trail(self, ball):
         i = ball.index()
         trail = self.trails[i]
         start = ball.position
-        start = Vec3(*start[:3])
+        pstart = Vec3(*start[:3])
         for i, end in enumerate(ball.positions):
             line = trail[i]
-            end = Vec3(*end[:3])
-            self.move_line(line, start, end)
+            pend = Vec3(*end[:3])
+            d = start - end
+            length2 = d @ d
+            if self.box.torus and length2 > min(self.box.box_sizes/2)**2:  # 
+                print("skipped") 
+                self.move_line(line, pstart, pstart)
+            else:      
+                self.move_line(line, pstart, pend)
+            pstart = pend
             start = end
 
     def set_camera(self):
@@ -531,10 +540,10 @@ class World(ShowBase):
         self.box.torus = True
         self.box.merge = False
         self.box.trail = 0
-        self.box.skip_trail = 3
+        self.box.skip_trail = 1
         self.box._use_kdtree = True
 
-        interaction = 5000.0
+        interaction = 15000.0
         power = 2.0
         friction = 0.0
         gravity_strength = 0.5
@@ -587,7 +596,7 @@ class World(ShowBase):
         nballs = 5
         radius = 100
         charge = 1
-        balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
+        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
         balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
         # balls += arr.random_balls(1, 1, 40, 5, charge=-1)
         # balls += arr.random_balls(1, 1, 40, 5, charge=1)

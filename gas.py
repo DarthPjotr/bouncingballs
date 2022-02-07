@@ -1538,7 +1538,11 @@ class Particle:
         else:
             # particles = [self.box.particles[i] for i in self.box._neighbors[self.index()]]
             distances, ids = self.box._kdtree.query(self.position, self.box._neighbor_count)
-            particles = [self.box.particles[i] for i in ids]
+            try:
+                particles = [self.box.particles[i] for i in ids]
+            except TypeError:
+                # just one particle
+                particles = []
         for i, ball in enumerate(particles):
             if ball == self or ball.charge == 0:
                 continue
