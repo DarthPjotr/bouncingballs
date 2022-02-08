@@ -12,7 +12,6 @@ import yaml
 
 from palettable.scientific.diverging import Roma_20_r as colormap
 
-
 from direct.showbase.ShowBase import ShowBase
 # from direct.showbase.DirectObject import DirectObject
 from direct.gui.DirectGui import OnscreenText
@@ -598,7 +597,7 @@ class World(ShowBase):
         # for ball in balls:
         #     ball.position[0] = 50 # self.box.center[0]
         # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
-        nballs = 50 # self.box.dimensions+1
+        nballs = 250 # self.box.dimensions+1
         radius = 40
         charge = 0
         balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
@@ -626,10 +625,10 @@ class World(ShowBase):
         # self.box.planes.append(plane)
 
         normal = [1,1,1,1,1,1,1,1]
-        normal = [1,0,0,0,0,0,0,0]
+        # normal = [1,0,0,0,0,0,0,0]
         plane = Plane(self.box, normal[:self.box.dimensions], self.box.center)
         plane.color = [0,255,0]
-        # self.box.planes.append(plane)
+        self.box.planes.append(plane)
 
         if charge_colors:
             arr.set_charge_colors(balls)

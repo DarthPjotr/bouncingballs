@@ -250,10 +250,6 @@ class Box:
         self.momentum = self.nullvector.copy()
         self._normal_momentum = 0
         self.ticks = 0
-        # other properties
-        self.trail = 0
-        self.skip_trail = 1
-        self.object = None
         # properties for optimization by KDTree
         self._max_radius = 0
         self._min_radius = 0
@@ -262,9 +258,14 @@ class Box:
         self._use_kdtree = True
         self._kdtree = None
         self._neighbors = []
-        self._neighbor_count = 10
+        self._interaction_neighbors = 10
+        # other properties
+        self.calculate_energies = False
+        self.trail = 0
+        self.skip_trail = 1
+        self.object = None
     
-    def get_radi(self, interaction_factor=5, neighbor_count=None):
+    def get_radi(self, interaction_factor=1, neighbor_count=None):
         try:
             self._max_radius = max([ball.radius for ball in self.particles])
         except ValueError:
@@ -282,10 +283,10 @@ class Box:
         # else: 
         #     self._interaction_radius = max(self.box_sizes)
         self._interaction_radius = interaction_factor * max(self.box_sizes) / (len(self.particles)**(1/self.dimensions))
-        if not neighbor_count:
+        if neighbor_count is None:
             neighbor_count = max(10, int(0.1*len(self.particles)))
         
-        self._neighbor_count = min(len(self.particles), neighbor_count)
+        self._interaction_neighbors = min(len(self.particles), neighbor_count)
 
     def _get_vertices(self):
         """
@@ -368,7 +369,7 @@ class Box:
         box["planes"] = [plane.out() for plane in self.planes[2*self.dimensions:]]
         box["interaction_power"] = self.interaction_power
         box["use_kdtree"] = self._use_kdtree
-        box["neighbor_count"] = self._neighbor_count = 10
+        box["neighbor_count"] = self._interaction_neighbors = 10
 
         output = {"box": box}
 
@@ -760,7 +761,8 @@ class Box:
             self.ticks += 1
             self._get_kdtree()
             bounced |= self._speeds()
-            self._energies()
+            if self.calculate_energies:
+                self._energies()
             self._move_all()
 
         return bounced
@@ -814,7 +816,10 @@ class Box:
         # calculate energies
         self.energy["KE"] = sum(ball.energy for ball in self.particles)
         self.energy["EE"] = 2 * self.energy["KE"]/self.dimensions # https://en.wikipedia.org/wiki/Kinetic_theory_of_gases#Pressure_and_kinetic_energy
-        self.energy["PE"] = sum(ball.potential_energy for ball in self.particles)
+        if self.interaction != 0:
+            self.energy["PE"] = sum(ball.potential_energy for ball in self.particles)
+        else:
+            self.energy["PE"] = 0
         self.energy["SE"] = sum(spring.energy for spring in self.springs)
 
     def _move_all(self):
@@ -828,7 +833,8 @@ class Box:
         if self.torus:
             sizes = self.box_sizes
         self._kdtree = KDTree(positions, boxsize=sizes)
-        # self._neighbors  = self._kdtree.query_ball_tree(self._kdtree, self._interaction_radius)
+        self._neighbors  = self._kdtree.query_ball_tree(self._kdtree, self._interaction_radius)
+        pass
 
 class Plane:
     """
@@ -1532,11 +1538,12 @@ class Particle:
         if not self.box._use_kdtree:
             particles = self.box.particles
         else:
-            if self.box._neighbor_count > 1:
-                distances, ids = self.box._kdtree.query(self.position, self.box._neighbor_count)
+            if self.box._interaction_neighbors > 1:
+                distances, ids = self.box._kdtree.query(self.position, self.box._interaction_neighbors)
                 particles = [self.box.particles[i] for i in ids]
             else:
-                particles = []
+                # particles = []
+                particles = [self.box.particles[i] for i in self.box._neighbors[self.index()]]
 
         for i, ball in enumerate(particles):
             if ball == self or ball.charge == 0:
@@ -1545,7 +1552,7 @@ class Particle:
             dpos = self.displacement(ball.position)
             distance2 = dpos.dot(dpos)
             if distance2 > (self.radius+ball.radius)*(self.radius+ball.radius):
-                if self.box._use_kdtree:
+                if self.box._use_kdtree and self.box._interaction_neighbors > 1:
                     distance = distances[i]
                 else:
                     distance = math.sqrt(distance2)
@@ -2502,7 +2509,7 @@ def load_gas(data):
     box.color = b.get('color', (200,200,200))
     box.interaction_power = b.get("interaction_power", 2)
     box._use_kdtree = b.get("use_kdtree", True)
-    box._neighbor_count = b("neighbor_count",10)
+    box._interaction_neighbors = b("neighbor_count",10)
 
     if "particles" in b:
         for p in b['particles']:
@@ -2759,18 +2766,24 @@ class Test():
             box.go()
     
     def kdtree(self):
-        sizes = [100, 200, 300, 200]
+        sizes = [100, 200, 300, 500]
         box = Box(sizes)
-        box.interaction = 000
+        box.interaction = 5000
         box._use_kdtree = True
-        box._neighbor_count=20
 
         arr = ArrangeParticles(box)
-        nballs = 50
-        balls = arr.random_balls(nballs=nballs, mass=1, radius=5, charge=0)
-        balls = arr.random_balls(nballs=nballs, mass=1, radius=5, charge=0)
-        box.get_radi()
+
+        nballs = 100
+        charge = 1
+        balls = arr.random_balls(nballs=nballs, mass=1, radius=5, charge=charge)
+        balls = arr.random_balls(nballs=nballs, mass=1, radius=5, charge=-charge)
+
+        box.get_radi(interaction_factor=1, neighbor_count=0)
+
+        box._interaction_radius = 60
+        box._interaction_neighbors = 20
         # print([ball.position for ball in box.particles])
+        print("nball: {}\nuse k-d-tree: {}\ninteraction radius: {:.2f}\nneighbor count: {}".format(len(box.particles), box._use_kdtree, box._interaction_radius, box._interaction_neighbors))
 
         for i in range(100):
             box.go()
@@ -2796,7 +2809,7 @@ def main():
     ticks = t.kdtree()
     end = time.perf_counter()
     dtime = end - start
-    print("time = {:.2f}, tick/sec = {:.2f}".format(dtime, ticks/dtime))
+    print("\ntime = {:.2f}, tick/sec = {:.2f}".format(dtime, ticks/dtime))
 
     print("END")
 
