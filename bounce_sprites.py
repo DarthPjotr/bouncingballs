@@ -5,7 +5,9 @@ Spawns a new ball for each mouse-click.
 
 import arcade
 import random
+import math
 import numpy
+import yaml
 
 from palettable.scientific.diverging import Roma_20_r as colormap
 # from palettable.mycarta import CubeYF_20 as colormap

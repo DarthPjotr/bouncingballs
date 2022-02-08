@@ -25,6 +25,8 @@ RADIUS = 1
 MASS = 1
 NBALLS = 20
 
+__all__ = ['Box', 'Particle', 'Plane', 'Spring', 'Field', 'ArrangeParticles', 'load', 'save', 'load_gas']
+
 class Field:
     """
     Different field equation. 
@@ -252,6 +254,7 @@ class Box:
         self.trail = 0
         self.skip_trail = 1
         self.object = None
+        # properties for optimization by KDTree
         self._max_radius = 0
         self._min_radius = 0
         self._avg_radius = 0

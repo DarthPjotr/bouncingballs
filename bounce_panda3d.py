@@ -1,6 +1,9 @@
 from math import pi, sin, cos
 import sys
-import numpy as np
+import random
+import math
+import numpy
+from numpy import linalg
 
 import tkinter
 from tkinter import filedialog as fd
@@ -239,14 +242,14 @@ class World(ShowBase):
         # self.incrementLightPosition(0)
 
     def set_background(self):
-        # color = np.array([0.1, 0.1, 0.1])
+        # color = numpy.array([0.1, 0.1, 0.1])
         # expfog = Fog("Scene-wide exponential Fog object")
         # expfog.setMode(1)
         # expfog.setColor(*color)
         # expfog.setExpDensity(0.0015)
         # self.render.setFog(expfog)
 
-        color = np.array([0, 0, 0])
+        color = numpy.array([0, 0, 0])
         self.setBackgroundColor(*color/3)
     
     def load_scene(self):
@@ -418,12 +421,12 @@ class World(ShowBase):
 
     def task_move_camera(self, key="", mouse="", speed=15):
 
-        pos = np.array(self.camera.getPos())
+        pos = numpy.array(self.camera.getPos())
         dir = self.render.getRelativeVector(self.camera, Vec3.forward())
 
-        dx = np.array([dir[1],-dir[0],0]) * speed
+        dx = numpy.array([dir[1],-dir[0],0]) * speed
         dy = dir * speed
-        dz = np.array([0,0,1]) * speed
+        dz = numpy.array([0,0,1]) * speed
 
         # lef right
         if key == 'a':
@@ -466,7 +469,7 @@ class World(ShowBase):
                 else:
                     speed = 5000
 
-                pos = np.array(self.camera.getPos())
+                pos = numpy.array(self.camera.getPos())
                 dir = self.render.getRelativeVector(self.camera, Vec3.forward())
 
                 self.mouse_x = mw.getMouseX() 
@@ -475,7 +478,7 @@ class World(ShowBase):
                 mouse_dx = self.mouse_x_old - self.mouse_x
                 mouse_dy = self.mouse_y_old - self.mouse_y
 
-                dx = np.array([dir[1],-dir[0],0]) * mouse_dx
+                dx = numpy.array([dir[1],-dir[0],0]) * mouse_dx
                 dpos = dx * speed
                 pos += dpos 
                 pos = self.up_down(pos, mouse_dy*speed)
@@ -490,9 +493,9 @@ class World(ShowBase):
         return Task.cont
     
     def up_down(self, pos, speed):
-        nz = np.array([0,0,1])
-        center = pos - np.array(self.box.center[:3])
-        vz = np.cross(center, np.cross(nz, center))
+        nz = numpy.array([0,0,1])
+        center = pos - numpy.array(self.box.center[:3])
+        vz = numpy.cross(center, numpy.cross(nz, center))
         vzn = vz/math.sqrt(vz@vz)
         pos += vzn * speed
         
@@ -564,7 +567,7 @@ class World(ShowBase):
         self.box.set_friction(friction)
         self.box.set_gravity(gravity_strength, gravity_direction)
 
-        # balls = arr.create_pendulum(0.2, np.array([0,0,-1]))
+        # balls = arr.create_pendulum(0.2, numpy.array([0,0,-1]))
         # pos = self.box.center.copy()
         # pos[2] -= 100
         # balls += arr.create_simplex(size=200, position=pos, vertices=12, charge=0)
@@ -636,9 +639,9 @@ class World(ShowBase):
             self._dummy_ball = self.box.add_particle(1, self.box._interaction_radius, self.box.center, fixed=True, charge=0, color=[0,0,0])
    
     def clear_box(self):
-        for np in self.boxnode.children:
-            np.removeNode()
-            np.clear()
+        for numpy in self.boxnode.children:
+            numpy.removeNode()
+            numpy.clear()
         
         self.trails = []
     
@@ -669,11 +672,11 @@ class World(ShowBase):
             lines.setThickness(1)
             node = lines.create()
             # node.setAntiAlias(8, 1)
-            np = NodePath(node)
-            #np.setAntiAlias(8, 1)
-            #np.setColor((1, 1, 1, 1))
-            # np.reparentTo(self.render)
-            np.reparentTo(self.boxnode)
+            numpy = NodePath(node)
+            #numpy.setAntiAlias(8, 1)
+            #numpy.setColor((1, 1, 1, 1))
+            # numpy.reparentTo(self.render)
+            numpy.reparentTo(self.boxnode)
            
     def draw_planes(self):
         # draw extra planes
@@ -686,20 +689,20 @@ class World(ShowBase):
                         continue
                     poly = Polygon(vertices)
                     node = poly.create()
-                    np = NodePath(node)
-                    # np.reparentTo(self.render)
-                    np.reparentTo(self.boxnode)
+                    numpy = NodePath(node)
+                    # numpy.reparentTo(self.render)
+                    numpy.reparentTo(self.boxnode)
 
-                    np.setTwoSided(True)
-                    np.setTransparency(TransparencyAttrib.M_dual, 1)
+                    numpy.setTwoSided(True)
+                    numpy.setTransparency(TransparencyAttrib.M_dual, 1)
                     if not plane.color:
                         # color = (0.5, 0.5, 1)
                         color = (random.random(), random.random(),random.random())
                     else:
                         color = [c/255 for c in plane.color]
                     transparency = 0.3
-                    np.setColor(*color, transparency)
-                    # np.setColor(0.5,0.5,1,0.3)
+                    numpy.setColor(*color, transparency)
+                    # numpy.setColor(0.5,0.5,1,0.3)
 
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]
@@ -710,10 +713,10 @@ class World(ShowBase):
                     lines.drawTo(*p2[:3])
                     lines.setThickness(2)
                     node = lines.create()
-                    np = NodePath(node)
-                    # np.setColor((1, 1, 1, 1))
-                    # np.reparentTo(self.render)         
-                    np.reparentTo(self.boxnode)
+                    numpy = NodePath(node)
+                    # numpy.setColor((1, 1, 1, 1))
+                    # numpy.reparentTo(self.render)         
+                    numpy.reparentTo(self.boxnode)
         
     def draw_spheres(self):
         # draw spheres
@@ -764,13 +767,13 @@ class World(ShowBase):
             line.drawTo((0,1,0))
             line.setThickness(2)
             node = line.create(True)
-            np = NodePath(node)
-            # np.reparentTo(self.render)
-            np.reparentTo(self.boxnode)
+            numpy = NodePath(node)
+            # numpy.reparentTo(self.render)
+            numpy.reparentTo(self.boxnode)
 
-            # np.setColor(0,1,0,1)
-            self.springs.append((np, line))
-            # spring.object = (np, line)
+            # numpy.setColor(0,1,0,1)
+            self.springs.append((numpy, line))
+            # spring.object = (numpy, line)
         
     def draw_trails(self):
         # draw trails
@@ -787,12 +790,12 @@ class World(ShowBase):
                 line.setThickness(1)
                 
                 node = line.create()
-                np = NodePath(node)
-                # np.reparentTo(self.render)  
-                np.reparentTo(self.boxnode)
-                # np.reparentTo(ball.object)
-                # np.setColor(0,0.5,0,1)
-                trail.append(np)
+                numpy = NodePath(node)
+                # numpy.reparentTo(self.render)  
+                numpy.reparentTo(self.boxnode)
+                # numpy.reparentTo(ball.object)
+                # numpy.setColor(0,0.5,0,1)
+                trail.append(numpy)
             self.trails.append(trail)   
 
         return self.box.particles
@@ -822,8 +825,8 @@ class World(ShowBase):
             sphere = ball.object
             trail = self.trails.pop(index)
             sphere.removeNode()
-            for np in trail:
-                np.removeNode()
+            for numpy in trail:
+                numpy.removeNode()
         
         for ball in self.box.particles:
             sphere = ball.object
