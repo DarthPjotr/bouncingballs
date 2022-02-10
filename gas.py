@@ -2,6 +2,7 @@
 Ideal gas in n-dimensional box
 """
 import itertools
+from operator import length_hint
 import numpy
 from numpy import linalg
 # from pyglet.window.key import E, F
@@ -255,7 +256,8 @@ class Box:
         self._min_radius = 0
         self._avg_radius = 0
         self._interaction_radius = max(self.box_sizes)
-        self._use_kdtree = True
+        self.optimized_collisions = True
+        self.optimized_interaction = True
         self._kdtree = None
         self._neighbors = []
         self._interaction_neighbors = 10
@@ -368,7 +370,8 @@ class Box:
         box["springs"] = [spring.out() for spring in self.springs]
         box["planes"] = [plane.out() for plane in self.planes[2*self.dimensions:]]
         box["interaction_power"] = self.interaction_power
-        box["use_kdtree"] = self._use_kdtree
+        box["optimized_collisions"] = self.optimized_collisions
+        box["optimized_interaction"] = self.optimized_interaction
         box["neighbor_count"] = self._interaction_neighbors = 10
 
         output = {"box": box}
@@ -793,7 +796,7 @@ class Box:
 
         # collisions between balls
         pairs = []
-        if self._use_kdtree:
+        if self.optimized_collisions and self._kdtree:
             pairs = self._kdtree.query_pairs(2*self._max_radius)
         else: 
             pairs = itertools.combinations(range(len(self.particles)), 2)
@@ -828,19 +831,20 @@ class Box:
             position = ball.move()
     
     def _get_kdtree(self):
+        if not len(self.particles):
+            return
         positions = [ball.position for ball in self.particles]
         sizes = None
         if self.torus:
             sizes = self.box_sizes
         self._kdtree = KDTree(positions, boxsize=sizes)
         self._neighbors  = self._kdtree.query_ball_tree(self._kdtree, self._interaction_radius)
-        pass
 
 class Plane:
     """
     Plane
     """    
-    def __init__(self, box: Box, normal=None, point=None, points=None, color=None) -> None:
+    def __init__(self, box: Box, normal=None, point=None, points=None, color=None, radius=0) -> None:
         """
         Creates plane
 
@@ -877,6 +881,7 @@ class Plane:
         self.color = color
         
         self._set_params()
+        self.radius = radius
         self.object = None
     
     def _set_params(self):
@@ -1134,6 +1139,7 @@ class Plane:
 
     def pass_through(self, ball):
         return False
+
 
 class Membrane(Plane):
     def __init__(self, box: Box, normal=None, point=None, points=None) -> None:
@@ -1458,8 +1464,20 @@ class Particle:
 
             # is the particle close enough to bounce of the wall?
             if  distance2plane < self.radius or distance2plane < abs(speed2plane):
+                # function from Membrane, allows conditional pass through wall
                 if plane.pass_through(self):
                     continue
+
+                if plane.radius != 0:
+                    maxd2p2 = abs(plane.radius) + self.radius
+                    v2p = self.position - plane.point
+                    d2p2 = v2p @ v2p
+                    if plane.radius > 0:
+                        if d2p2 > maxd2p2**2:
+                            continue
+                    if plane.radius < 0:
+                        if d2p2 < maxd2p2**2:
+                            continue
 
                 hitpoint = plane.intersect_line(self.position, self.speed)
                 if hitpoint is None:
@@ -1535,7 +1553,7 @@ class Particle:
         else:
             mass = self.mass
 
-        if not self.box._use_kdtree:
+        if not self.box.optimized_interaction:
             particles = self.box.particles
         else:
             if self.box._interaction_neighbors > 1:
@@ -1552,7 +1570,7 @@ class Particle:
             dpos = self.displacement(ball.position)
             distance2 = dpos.dot(dpos)
             if distance2 > (self.radius+ball.radius)*(self.radius+ball.radius):
-                if self.box._use_kdtree and self.box._interaction_neighbors > 1:
+                if self.box.optimized_interaction and self.box._interaction_neighbors > 1:
                     distance = distances[i]
                 else:
                     distance = math.sqrt(distance2)
@@ -1817,6 +1835,47 @@ class ArrangeParticles:
             color = [c,c,c]
             ball = self.box.add_particle(mass=1, radius=30, color=color)
             balls.append(ball)
+
+        return balls
+    
+    def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, plane_radius=0):
+        balls = []
+
+        for i in range(nplanes):
+            normal = self.box.random()
+            distance = (min(self.box.center)/4) * (1-(2*random.random()))
+            point = self.box.center + distance * normal
+            color = [0,128,0]
+            plane = Plane(self.box, normal=normal, point=point, color=None)
+            if plane_radius:
+                plane.radius = plane_radius
+            self.box.planes.append(plane)
+        
+        balls += self.random_balls(nballs, charge=charge)
+    
+        for i in range(nsprings):
+            length = 100*random.random() + 50
+            strength = 0.05
+            damping = 0.001
+
+            if charge is None:
+                c1 = 1
+                c2 = -1
+            else:
+                c1 = c2 = 0
+
+            pos1 = self.box.random_position()
+            v1 = self.box.random(3)
+            p1 = self.box.add_particle(1, 20, pos1, v1, c1)
+
+            pos2 = pos1 + length * self.box.random()
+            v2 = self.box.random(3)
+            p2 = self.box.add_particle(1, 20, pos2, v2, c2)
+            spring = Spring(length=length, strength=strength, damping=damping, p1=p1, p2=p2)
+            self.box.springs.append(spring)
+
+            balls.append(p1)
+            balls.append(p2)
 
         return balls
 
@@ -2508,8 +2567,9 @@ def load_gas(data):
     box.trail = b.get('trail', 0)
     box.color = b.get('color', (200,200,200))
     box.interaction_power = b.get("interaction_power", 2)
-    box._use_kdtree = b.get("use_kdtree", True)
-    box._interaction_neighbors = b("neighbor_count",10)
+    box.optimized_collisions = b.get("optimized_collisions", True)
+    box.optimized_interaction = b.get("optimized_interaction", True)
+    box._interaction_neighbors = b.get("neighbor_count",10)
 
     if "particles" in b:
         for p in b['particles']:
@@ -2768,13 +2828,14 @@ class Test():
     def kdtree(self):
         sizes = [100, 200, 300, 500]
         box = Box(sizes)
-        box.interaction = 5000
-        box._use_kdtree = True
+        box.interaction = 000
+        box.optimized_collisions = True
+        box.optimized_interaction = True
 
         arr = ArrangeParticles(box)
 
         nballs = 100
-        charge = 1
+        charge = 0
         balls = arr.random_balls(nballs=nballs, mass=1, radius=5, charge=charge)
         balls = arr.random_balls(nballs=nballs, mass=1, radius=5, charge=-charge)
 
@@ -2783,7 +2844,7 @@ class Test():
         box._interaction_radius = 60
         box._interaction_neighbors = 20
         # print([ball.position for ball in box.particles])
-        print("nball: {}\nuse k-d-tree: {}\ninteraction radius: {:.2f}\nneighbor count: {}".format(len(box.particles), box._use_kdtree, box._interaction_radius, box._interaction_neighbors))
+        print("nball: {}\noptimized collisions: {}\noptimized interaction: {}\ninteraction radius: {:.2f}\nneighbor count: {}".format(len(box.particles), box.optimized_collisions, box.optimized_interaction, box._interaction_radius, box._interaction_neighbors))
 
         for i in range(100):
             box.go()
