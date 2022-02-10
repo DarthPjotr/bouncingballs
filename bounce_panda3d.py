@@ -141,6 +141,22 @@ class Polygon():
 
         return node
 
+
+def circle(segments=36):
+    points = []
+
+    theta = numpy.deg2rad(360/segments)
+
+    V = [1,0]
+    points.append(V)
+    rot = numpy.array([[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]])
+    for i in range(segments):
+        V = V @ rot
+        points.append(V)
+
+    points = [numpy.insert(p,1, 0) for p in points]
+    return points
+
 class World(ShowBase):
     def __init__(self):
         super().__init__()
@@ -536,6 +552,7 @@ class World(ShowBase):
 
     def setup_box(self):
         self.quiet = True
+        self.tick_rate = 1
         sizes = numpy.array([1200, 1000, 1200, 1000, 1000, 1000, 1000, 1000])
         dimensions = 3
         #sizes = sizes/2
@@ -545,18 +562,18 @@ class World(ShowBase):
         self.box.merge = False
         self.box.trail = 0
         self.box.skip_trail = 1
-        self.box._use_kdtree = True
+        self.box.optimized_collisions = True
 
-        interaction = 000.0
+        interaction = 5000.0
         power = 2.0
-        friction = 0.0 # 0.025
+        friction = 0.0 #0.035
         gravity_strength = 0.5
         gravity_direction = self.box.nullvector.copy()
         gravity_direction[self.box.Z] = -0
 
-        charge_colors = False
-        interaction_factor = 5
-        neigbor_count = 10
+        charge_colors = True
+        interaction_factor = 1
+        neigbor_count = 20
         _dummy = False
 
         arr = ArrangeParticles(self.box)
@@ -597,12 +614,14 @@ class World(ShowBase):
         # for ball in balls:
         #     ball.position[0] = 50 # self.box.center[0]
         # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
-        nballs = 250 # self.box.dimensions+1
-        radius = 40
-        charge = 0
-        balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=charge)
-        balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=5, charge=-charge)
-        # balls += arr.random_balls(1, 1, 40, 5, charge=-1)
+        nballs = 100 # self.box.dimensions+1
+        radius = 5
+        charge = 1
+        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=charge)
+        # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=-charge)
+        # # balls += arr.random_balls(1, 1, 40, 5, charge=-1)
+        balls += arr.test_all(nplanes=0, nballs=100, nsprings=0, charge=0, plane_radius=250)
+
         # balls += arr.random_balls(1, 1, 40, 5, charge=1)
         # balls += arr.test_bounce()
  
@@ -624,10 +643,11 @@ class World(ShowBase):
         # plane = Plane(self.box, [1,1,1], self.box.center)
         # self.box.planes.append(plane)
 
-        normal = [1,1,1,1,1,1,1,1]
+        normal = [0,0,1,1,1,1,1,1]
         # normal = [1,0,0,0,0,0,0,0]
-        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center)
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center+numpy.array([150,-170,20]))
         plane.color = [0,255,0]
+        plane.radius = 250
         self.box.planes.append(plane)
 
         if charge_colors:
@@ -638,9 +658,9 @@ class World(ShowBase):
             self._dummy_ball = self.box.add_particle(1, self.box._interaction_radius, self.box.center, fixed=True, charge=0, color=[0,0,0])
    
     def clear_box(self):
-        for numpy in self.boxnode.children:
-            numpy.removeNode()
-            numpy.clear()
+        for nodepath in self.boxnode.children:
+            nodepath.removeNode()
+            nodepath.clear()
         
         self.trails = []
     
@@ -671,11 +691,11 @@ class World(ShowBase):
             lines.setThickness(1)
             node = lines.create()
             # node.setAntiAlias(8, 1)
-            numpy = NodePath(node)
-            #numpy.setAntiAlias(8, 1)
-            #numpy.setColor((1, 1, 1, 1))
-            # numpy.reparentTo(self.render)
-            numpy.reparentTo(self.boxnode)
+            nodepath = NodePath(node)
+            #nodepath.setAntiAlias(8, 1)
+            #nodepath.setColor((1, 1, 1, 1))
+            # nodepath.reparentTo(self.render)
+            nodepath.reparentTo(self.boxnode)
            
     def draw_planes(self):
         # draw extra planes
@@ -688,20 +708,47 @@ class World(ShowBase):
                         continue
                     poly = Polygon(vertices)
                     node = poly.create()
-                    numpy = NodePath(node)
-                    # numpy.reparentTo(self.render)
-                    numpy.reparentTo(self.boxnode)
+                    nodepath = NodePath(node)
+                    # nodepath.reparentTo(self.render)
+                    nodepath.reparentTo(self.boxnode)
 
-                    numpy.setTwoSided(True)
-                    numpy.setTransparency(TransparencyAttrib.M_dual, 1)
+                    nodepath.setTwoSided(True)
+                    nodepath.setTransparency(TransparencyAttrib.M_dual, 1)
                     if not plane.color:
                         # color = (0.5, 0.5, 1)
                         color = (random.random(), random.random(),random.random())
                     else:
                         color = [c/255 for c in plane.color]
+
                     transparency = 0.3
-                    numpy.setColor(*color, transparency)
-                    # numpy.setColor(0.5,0.5,1,0.3)
+                    nodepath.setColor(*color, transparency)
+                    # nodepath.setColor(0.5,0.5,1,0.3)
+                
+                if plane.radius != 0:
+                    vertices = circle(72)
+                    poly = Polygon(vertices)
+                    node = poly.create()
+                    nodepath = NodePath(node)
+                    nodepath.reparentTo(self.boxnode)
+
+                    nodepath.setTwoSided(True)
+                    nodepath.setTransparency(TransparencyAttrib.M_dual, 1)
+                    if not plane.color:
+                        # color = (0.5, 0.5, 1)
+                        color = (random.random(), random.random(),random.random())
+                    else:
+                        color = [c/128 for c in plane.color]
+                    if plane.radius > 0:
+                        transparency = 0.9
+                    else:
+                        transparency = 0.3
+                    nodepath.setColor(*color, transparency)
+
+                    nodepath.setPos(*plane.point[:3])
+                    nodepath.setScale(abs(plane.radius))
+                    look = plane.point + 10*plane.unitnormal
+                    nodepath.lookAt(*look[:3])
+
 
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]
@@ -712,10 +759,10 @@ class World(ShowBase):
                     lines.drawTo(*p2[:3])
                     lines.setThickness(2)
                     node = lines.create()
-                    numpy = NodePath(node)
-                    # numpy.setColor((1, 1, 1, 1))
-                    # numpy.reparentTo(self.render)         
-                    numpy.reparentTo(self.boxnode)
+                    nodepath = NodePath(node)
+                    # nodepath.setColor((1, 1, 1, 1))
+                    # nodepath.reparentTo(self.render)         
+                    nodepath.reparentTo(self.boxnode)
         
     def draw_spheres(self):
         # draw spheres
@@ -766,13 +813,13 @@ class World(ShowBase):
             line.drawTo((0,1,0))
             line.setThickness(2)
             node = line.create(True)
-            numpy = NodePath(node)
-            # numpy.reparentTo(self.render)
-            numpy.reparentTo(self.boxnode)
+            nodepath = NodePath(node)
+            # nodepath.reparentTo(self.render)
+            nodepath.reparentTo(self.boxnode)
 
-            # numpy.setColor(0,1,0,1)
-            self.springs.append((numpy, line))
-            # spring.object = (numpy, line)
+            # nodepath.setColor(0,1,0,1)
+            self.springs.append((nodepath, line))
+            # spring.object = (nodepath, line)
         
     def draw_trails(self):
         # draw trails
@@ -789,12 +836,12 @@ class World(ShowBase):
                 line.setThickness(1)
                 
                 node = line.create()
-                numpy = NodePath(node)
-                # numpy.reparentTo(self.render)  
-                numpy.reparentTo(self.boxnode)
-                # numpy.reparentTo(ball.object)
-                # numpy.setColor(0,0.5,0,1)
-                trail.append(numpy)
+                nodepath = NodePath(node)
+                # nodepath.reparentTo(self.render)  
+                nodepath.reparentTo(self.boxnode)
+                # nodepath.reparentTo(ball.object)
+                # nodepath.setColor(0,0.5,0,1)
+                trail.append(nodepath)
             self.trails.append(trail)   
 
         return self.box.particles
@@ -824,8 +871,8 @@ class World(ShowBase):
             sphere = ball.object
             trail = self.trails.pop(index)
             sphere.removeNode()
-            for numpy in trail:
-                numpy.removeNode()
+            for nodepath in trail:
+                nodepath.removeNode()
         
         for ball in self.box.particles:
             sphere = ball.object
@@ -853,7 +900,7 @@ class World(ShowBase):
             self.move_line(ray, p1.getPos(), p2.getPos())
        
         charge = sum(p.charge for p in self.box.particles)
-        output = "Ticks: {}\nDimensions: {}\nBalls: {}\nCharge: {}".format(self.box.ticks, self.box.dimensions, len(self.box.particles), charge)
+        output = "Ticks: {}\nDimensions: {}\nBalls: {}\nCharge: {}\nInteraction: {}".format(self.box.ticks, self.box.dimensions, len(self.box.particles), charge, self.box.interaction)
         self.textnode.text = output
 
         if self.bounced and not(self.quiet):
