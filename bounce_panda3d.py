@@ -68,8 +68,9 @@ def warning(title, message):
 class Polygon():
     def __init__(self, vertices=[]):
         # self.vertices=list(tuple(v) for v in vertices)
-        self.vertices=numpy.array(vertices)
-        self.normal = self._get_normal()
+        self._vertices=numpy.array(vertices)
+        if len(self._vertices) > 2:
+            self.normal = self._get_normal()
 
     def _get_normal(self):
         """
@@ -81,7 +82,10 @@ class Polygon():
         Returns:
             numpy.array: unit normal vector
         """   
-        points = [v for v in self.vertices]     
+        # points = [v for v in self._vertices] 
+        if len(self._vertices) < 3:
+            raise ValueError("minimal 3 vertices needed")
+        points = self._vertices    
         shape = numpy.shape(points)
         ones = numpy.ones(shape)
         i = 0
@@ -97,8 +101,13 @@ class Polygon():
             raise ValueError("not all points in one plane")
         
         return unitnormal
+    
+    def set_vertices(self, vertices):
+        self._vertices = vertices
+        self.normal = self._get_normal()
 
-    def create(self):
+
+    def create_geom_node(self):
         xyzero = False
         for i, x in enumerate(self.normal):
             if x == 1:
@@ -113,7 +122,7 @@ class Polygon():
         vertex = GeomVertexWriter(vdata, 'vertex')
         color = GeomVertexWriter(vdata, 'color')
 
-        for point in self.vertices:
+        for point in self._vertices:
             (x,y,z) = point
             v = (x,y)
             if not xyzero:
@@ -140,22 +149,45 @@ class Polygon():
         node.addGeom(geom)
 
         return node
+    
+    def create_outline_node(self, color=[1,1,1,1]):
+        points = self._vertices
+        
+        outline = LineSegs()
+        outline.setThickness(3)
+        outline.setColor(*color)
+
+        start = points[0]
+        outline.moveTo(*start[:3])
+        for point in points[1:]:
+            outline.drawTo(*point[:3])
+        
+        outline.drawTo(*start[:3])
+
+        node = outline.create()
+
+        return node
+    
+    def regular_polygon_vertices(self, segments=36):
+        points = []
+        edges = []
+
+        theta = numpy.deg2rad(360/segments)
+        rot = numpy.array([[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]])
 
 
-def circle(segments=36):
-    points = []
-
-    theta = numpy.deg2rad(360/segments)
-
-    V = [1,0]
-    points.append(V)
-    rot = numpy.array([[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]])
-    for i in range(segments):
-        V = V @ rot
+        V = [1,0]
         points.append(V)
+        edges.append((0,1))
+        for i in range(segments-1):
+            edges.append((i+1,(i+2)%segments))
+            V = V @ rot
+            points.append(V)
 
-    points = [numpy.insert(p,1, 0) for p in points]
-    return points
+        points = [numpy.insert(p,1, 0) for p in points]
+        self.set_vertices(points)
+
+        return (points, edges)
 
 class World(ShowBase):
     def __init__(self):
@@ -620,7 +652,7 @@ class World(ShowBase):
         # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=charge)
         # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=-charge)
         # # balls += arr.random_balls(1, 1, 40, 5, charge=-1)
-        balls += arr.test_all(nplanes=0, nballs=100, nsprings=0, charge=0, plane_radius=250)
+        balls += arr.test_all(nplanes=3, nballs=100, nsprings=0, charge=0, plane_radius=-400)
 
         # balls += arr.random_balls(1, 1, 40, 5, charge=1)
         # balls += arr.test_bounce()
@@ -643,12 +675,12 @@ class World(ShowBase):
         # plane = Plane(self.box, [1,1,1], self.box.center)
         # self.box.planes.append(plane)
 
-        normal = [0,0,1,1,1,1,1,1]
-        # normal = [1,0,0,0,0,0,0,0]
-        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center+numpy.array([150,-170,20]))
-        plane.color = [0,255,0]
-        plane.radius = 250
-        self.box.planes.append(plane)
+        # normal = [0,0,1,1,1,1,1,1]
+        # # normal = [1,0,0,0,0,0,0,0]
+        # plane = Plane(self.box, normal[:self.box.dimensions], self.box.center+numpy.array([150,-170,20]))
+        # plane.color = [0,255,0]
+        # plane.radius = -250
+        # self.box.planes.append(plane)
 
         if charge_colors:
             arr.set_charge_colors(balls)
@@ -707,13 +739,13 @@ class World(ShowBase):
                     if not vertices:
                         continue
                     poly = Polygon(vertices)
-                    node = poly.create()
-                    nodepath = NodePath(node)
+                    node = poly.create_geom_node()
+                    circle_np = NodePath(node)
                     # nodepath.reparentTo(self.render)
-                    nodepath.reparentTo(self.boxnode)
+                    circle_np.reparentTo(self.boxnode)
 
-                    nodepath.setTwoSided(True)
-                    nodepath.setTransparency(TransparencyAttrib.M_dual, 1)
+                    circle_np.setTwoSided(True)
+                    circle_np.setTransparency(TransparencyAttrib.M_dual, 1)
                     if not plane.color:
                         # color = (0.5, 0.5, 1)
                         color = (random.random(), random.random(),random.random())
@@ -721,34 +753,40 @@ class World(ShowBase):
                         color = [c/255 for c in plane.color]
 
                     transparency = 0.3
-                    nodepath.setColor(*color, transparency)
+                    circle_np.setColor(*color, transparency)
                     # nodepath.setColor(0.5,0.5,1,0.3)
                 
                 if plane.radius != 0:
-                    vertices = circle(72)
-                    poly = Polygon(vertices)
-                    node = poly.create()
-                    nodepath = NodePath(node)
-                    nodepath.reparentTo(self.boxnode)
+                    # vertices = regular_polygon_vertices(72)
+                    poly = Polygon()
+                    poly.regular_polygon_vertices(72)
+                    circle = poly.create_geom_node()
+                    circle_np = NodePath(circle)
+                    circle_np.reparentTo(self.boxnode)
 
-                    nodepath.setTwoSided(True)
-                    nodepath.setTransparency(TransparencyAttrib.M_dual, 1)
+                    circle_np.setTwoSided(True)
+                    circle_np.setTransparency(TransparencyAttrib.M_dual, 1)
                     if not plane.color:
                         # color = (0.5, 0.5, 1)
                         color = (random.random(), random.random(),random.random())
                     else:
                         color = [c/128 for c in plane.color]
-                    if plane.radius > 0:
-                        transparency = 0.9
-                    else:
-                        transparency = 0.3
-                    nodepath.setColor(*color, transparency)
 
-                    nodepath.setPos(*plane.point[:3])
-                    nodepath.setScale(abs(plane.radius))
-                    look = plane.point + 10*plane.unitnormal
-                    nodepath.lookAt(*look[:3])
+                    circle_np.setColor(*color, 0.3)
+                    circle_np.setPos(*plane.point[:3])
+                    circle_np.setScale(abs(plane.radius))
+                    look = plane.point + plane.unitnormal
+                    circle_np.lookAt(*look[:3])
 
+                    if plane.radius < 0:
+                        circle_outline = poly.create_outline_node()
+                        circle_outline_np = NodePath(circle_outline)
+                        circle_outline_np.reparentTo(self.boxnode)
+                        circle_outline_np.setColor(*color, 1)
+                        circle_outline_np.setPos(*plane.point[:3])
+                        circle_outline_np.setScale(abs(plane.radius))
+                        look = plane.point + plane.unitnormal
+                        circle_outline_np.lookAt(*look[:3])
 
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]
@@ -759,10 +797,10 @@ class World(ShowBase):
                     lines.drawTo(*p2[:3])
                     lines.setThickness(2)
                     node = lines.create()
-                    nodepath = NodePath(node)
+                    circle_np = NodePath(node)
                     # nodepath.setColor((1, 1, 1, 1))
                     # nodepath.reparentTo(self.render)         
-                    nodepath.reparentTo(self.boxnode)
+                    circle_np.reparentTo(self.boxnode)
         
     def draw_spheres(self):
         # draw spheres

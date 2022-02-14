@@ -802,10 +802,17 @@ class Box:
             pairs = itertools.combinations(range(len(self.particles)), 2)
         
         for i, j in pairs:
-            ball1 = self.particles[i]
-            ball2 = self.particles[j]
+            try:
+                ball1 = self.particles[i]
+                ball2 = self.particles[j]
+            except IndexError:
+                continue
             if self.merge:
-                if ball1.merge(ball2): bounced = True
+                if ball1.merge(ball2): 
+                    bounced = True
+                    if ball1.radius > self._max_radius:
+                        self._max_radius = ball1.radius
+                    # self._get_kdtree()
             else:
                 if ball1.collide(ball2): bounced = True
         
@@ -1405,7 +1412,8 @@ class Particle:
             self.box.delete_particles.append(ball)
             self.box.delete_trails.append(index)
             merged = True
-        
+
+
         # self.impuls = self.mass * self.speed
         return merged
 
