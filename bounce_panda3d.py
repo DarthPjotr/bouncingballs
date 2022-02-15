@@ -384,7 +384,7 @@ class World(ShowBase):
         else:
             line.setScale(0.000001)
     
-    def draw_trail(self, ball):
+    def move_trail(self, ball):
         i = ball.index()
         trail = self.trails[i]
         start = ball.position
@@ -592,7 +592,7 @@ class World(ShowBase):
         self.box = Box(sizes[:dimensions])
         self.box.torus = False
         self.box.merge = False
-        self.box.trail = 0
+        self.box.trail = 20
         self.box.skip_trail = 1
         self.box.optimized_collisions = True
 
@@ -652,7 +652,7 @@ class World(ShowBase):
         # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=charge)
         # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=-charge)
         # # balls += arr.random_balls(1, 1, 40, 5, charge=-1)
-        balls += arr.test_all(nplanes=3, nballs=100, nsprings=0, charge=0, plane_radius=-400)
+        balls += arr.test_all(nplanes=1, nballs=10, nsprings=0, charge=0, plane_radius=300, extra_holes=1, holes = False)
 
         # balls += arr.random_balls(1, 1, 40, 5, charge=1)
         # balls += arr.test_bounce()
@@ -730,7 +730,9 @@ class World(ShowBase):
             nodepath.reparentTo(self.boxnode)
     
     def draw_plane_holes(self, plane):
-        if plane.radius != 0:
+        # if plane.radius != 0:
+        for hole in plane._holes:
+            (point, radius) = hole
             # vertices = regular_polygon_vertices(72)
             poly = Polygon()
             poly.regular_polygon_vertices(72)
@@ -747,19 +749,19 @@ class World(ShowBase):
                 color = [c/128 for c in plane.color]
 
             circle_np.setColor(*color, 0.3)
-            circle_np.setPos(*plane.point[:3])
-            circle_np.setScale(abs(plane.radius))
-            look = plane.point + plane.unitnormal
+            circle_np.setPos(*point[:3])
+            circle_np.setScale(abs(radius))
+            look = point + plane.unitnormal
             circle_np.lookAt(*look[:3])
 
-            if plane.radius < 0:
+            if radius < 0:
                 circle_outline = poly.create_outline_node()
                 circle_outline_np = NodePath(circle_outline)
                 circle_outline_np.reparentTo(self.boxnode)
                 circle_outline_np.setColor(*color, 1)
-                circle_outline_np.setPos(*plane.point[:3])
-                circle_outline_np.setScale(abs(plane.radius))
-                look = plane.point + plane.unitnormal
+                circle_outline_np.setPos(*point[:3])
+                circle_outline_np.setScale(abs(radius))
+                look = point + plane.unitnormal
                 circle_outline_np.lookAt(*look[:3])
            
     def draw_planes(self):
@@ -956,7 +958,7 @@ class World(ShowBase):
                 color[3] = transparency
                 sphere.setColor(color)
             if self.box.trail > 0:
-                self.draw_trail(ball)
+                self.move_trail(ball)
 
         for i, spring in enumerate(self.box.springs):
             p1 = spring.p1.object

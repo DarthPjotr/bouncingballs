@@ -860,6 +860,9 @@ class Plane:
             normal (numpy.array, optional): the normal vector. Defaults to None.
             point (numpy.array, optional): a point on the plane. Defaults to None.
             points (list of numpy.array, optional): point on the plane. Defaults to None.
+            radius (float): radius of a disk or hole at the central pont of the plane, 
+                            hole when radius is negative 
+                            disk will reflect when radius is positive.
         """        
         self.box = box
         
@@ -889,13 +892,34 @@ class Plane:
         
         self._set_params()
         self.radius = radius
+        self._holes = []
+        if self.radius != 0:
+            self.add_hole(self.point, radius)
         self.object = None
     
     def _set_params(self):
         self.D = self.unitnormal @ self.point
         self.box_intersections = self._box_intersections()
         self.edges = self._edges()
-        
+    
+    def add_hole(self, point, radius):
+        """
+        adds a hole in the plane, when the point is not on the plane
+        it is projected on the plane using the normal
+
+        Args:
+            point (numpy.array): point on the plane
+            radius (float): radius of the hole
+
+        Returns:
+            tuple: (point, radius)
+        """        
+        point = self.project_point(point)
+        hole = (point, radius)
+        self._holes.append(hole)
+
+        return hole
+
     def _get_normal(self, points):
         """
         Calculates the normal vector from points on the plane
@@ -992,7 +1016,8 @@ class Plane:
 
         Returns:
             numpy.array: the intersection point
-        """ 
+        """
+        point = numpy.array(point)
         dn = vector @ self.unitnormal
         if dn == 0:
             # line parallel to or on plane, no solution
@@ -1001,6 +1026,20 @@ class Plane:
         d = dt / dn
         
         return point + vector * d
+
+    def project_point(self, point):
+        """
+        projects point on plane, using planes normal vector
+
+        Args:
+            point (numpy.array): point to project on to plane
+
+        Returns:
+            numpy.array: the projected point 
+        """  
+        point = numpy.array(point)      
+        projected_point = self.intersect_line(point,self.unitnormal)
+        return projected_point
     
     def _box_intersections(self):
         """
@@ -1477,16 +1516,37 @@ class Particle:
                 if plane.pass_through(self):
                     continue
 
-                if plane.radius != 0:
-                    maxd2p2 = abs(plane.radius) + self.radius
-                    v2p = self.position - plane.point
+                # if plane.radius != 0:
+                #     maxd2p2 = abs(plane.radius) + self.radius
+                #     v2p = self.position - plane.point
+                #     d2p2 = v2p @ v2p
+                #     if plane.radius > 0:
+                #         if d2p2 > maxd2p2**2:
+                #             continue
+                #     if plane.radius < 0:
+                #         if d2p2 < maxd2p2**2:
+                #             continue
+                through_hole = False
+                for hole in plane._holes:
+                    (point, radius) = hole
+                    maxd2p2 = abs(radius) + self.radius
+                    v2p = self.position - point
                     d2p2 = v2p @ v2p
-                    if plane.radius > 0:
-                        if d2p2 > maxd2p2**2:
-                            continue
-                    if plane.radius < 0:
+                    # disk
+                    if radius > 0:
+                        through_hole = True
                         if d2p2 < maxd2p2**2:
+                            # continue
+                            through_hole = False
                             continue
+                    # hole
+                    if radius < 0:
+                        if d2p2 < maxd2p2**2:
+                            through_hole = True
+                            # continue 
+
+                if through_hole:
+                    continue                   
 
                 hitpoint = plane.intersect_line(self.position, self.speed)
                 if hitpoint is None:
@@ -1847,7 +1907,7 @@ class ArrangeParticles:
 
         return balls
     
-    def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, plane_radius=0):
+    def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, plane_radius=0, extra_holes=0, holes=True):
         balls = []
 
         for i in range(nplanes):
@@ -1855,10 +1915,21 @@ class ArrangeParticles:
             distance = (min(self.box.center)/4) * (1-(2*random.random()))
             point = self.box.center + distance * normal
             color = [0,128,0]
-            plane = Plane(self.box, normal=normal, point=point, color=None)
-            if plane_radius:
-                plane.radius = plane_radius
+            plane = Plane(self.box, normal=normal, point=point, color=None, radius=plane_radius)
+            # if plane_radius:
+            #     plane.radius = plane_radius
+            #     plane.add_hole(plane.point, plane.radius)
             self.box.planes.append(plane)
+            for i in range(extra_holes):
+                point = self.box.random_position()
+                _range = [10, min(self.box.box_sizes)//3]
+                _range.sort()
+                if holes:
+                    sign = -1
+                else:
+                    sign = 1
+                radius = sign * random.randint(*_range)
+                plane.add_hole(point, radius)
         
         balls += self.random_balls(nballs, charge=charge)
     
@@ -2621,7 +2692,8 @@ class Test():
     def test_plane(self):
         planes = []
         box = Box([10,20,30])
-        plane = Plane(box, [3,2,5], [5,10,30])
+        print(box)
+        plane = Plane(box, [math.pi,2,5], [5,math.e,30])
         print(plane)
         planes.append(plane)
         
@@ -2646,16 +2718,32 @@ class Test():
 
         print("\n####\n")
 
-        print(plane.on([5,10,30]))
-        print(plane.on2([5,10,30]))
+        # print(plane.on([5,10,30]))
+        # print(plane.on2([5,10,30]))
 
-        print(plane.on([5,13,33]))
-        print(plane.on2([5,13,33]))
+        # print(plane.on([5,13,33]))
+        # print(plane.on2([5,13,33]))
 
         print("\n####\n")
-        for p in planes:
-            print(p.on(intersection))
-            print(p.on2(intersection))
+        print(plane)
+        # for p in planes:
+        #     print(p.on(intersection))
+        #     print(p.on2(intersection))
+
+        projected = plane.project_point([3,5,math.sqrt(2)])
+        print(projected)
+
+        projected2 = plane.project_point(projected)
+        print(projected2)
+
+        equal = numpy.allclose(projected, projected2)
+        distance = plane.distance(projected)
+        onplane = numpy.isclose(distance, 0)
+        print(equal, onplane)
+        print(distance==0)
+        print(projected==projected2)
+
+        return 0
 
 
     def test_box(self):
@@ -2877,7 +2965,8 @@ def main():
     # t.shapes()
     # t.test_shapes()
     start = time.perf_counter()
-    ticks = t.kdtree()
+    # ticks = t.kdtree()
+    ticks = t.test_plane()
     end = time.perf_counter()
     dtime = end - start
     print("\ntime = {:.2f}, tick/sec = {:.2f}".format(dtime, ticks/dtime))
