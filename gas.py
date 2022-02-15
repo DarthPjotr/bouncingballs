@@ -943,6 +943,7 @@ class Plane:
         plane["normal"] = [float(f) for f in self.unitnormal]
         plane["point"] = [float(f) for f in self.point]
         plane["color"] = [int(i) for i in self.color]
+        plane["radius"] = self.radius
         return plane
     
     def intersection(self, planes):
@@ -2601,13 +2602,14 @@ def load_gas(data):
             normal = p["normal"]
             point = p["point"]
             color = p.get('color', None)
+            radius = p.get('radius', 0)
             if 'pass_through_function' in p:
                 plane = Membrane(box, normal, point)
                 plane._filter = getattr(plane, p['pass_through_function'])
                 plane.hole_size = p['hole_size']
                 plane.max_speed = p['max_speed']
             else:
-                plane = Plane(box, normal, point, color)
+                plane = Plane(box=box, normal=normal, point=point, color=color, radius=radius)
             box.planes.append(plane)
 
     box.get_radi()

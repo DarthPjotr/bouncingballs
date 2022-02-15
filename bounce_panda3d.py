@@ -728,6 +728,39 @@ class World(ShowBase):
             #nodepath.setColor((1, 1, 1, 1))
             # nodepath.reparentTo(self.render)
             nodepath.reparentTo(self.boxnode)
+    
+    def draw_plane_holes(self, plane):
+        if plane.radius != 0:
+            # vertices = regular_polygon_vertices(72)
+            poly = Polygon()
+            poly.regular_polygon_vertices(72)
+            circle = poly.create_geom_node()
+            circle_np = NodePath(circle)
+            circle_np.reparentTo(self.boxnode)
+
+            circle_np.setTwoSided(True)
+            circle_np.setTransparency(TransparencyAttrib.M_dual, 1)
+            if not plane.color:
+                # color = (0.5, 0.5, 1)
+                color = (random.random(), random.random(),random.random())
+            else:
+                color = [c/128 for c in plane.color]
+
+            circle_np.setColor(*color, 0.3)
+            circle_np.setPos(*plane.point[:3])
+            circle_np.setScale(abs(plane.radius))
+            look = plane.point + plane.unitnormal
+            circle_np.lookAt(*look[:3])
+
+            if plane.radius < 0:
+                circle_outline = poly.create_outline_node()
+                circle_outline_np = NodePath(circle_outline)
+                circle_outline_np.reparentTo(self.boxnode)
+                circle_outline_np.setColor(*color, 1)
+                circle_outline_np.setPos(*plane.point[:3])
+                circle_outline_np.setScale(abs(plane.radius))
+                look = plane.point + plane.unitnormal
+                circle_outline_np.lookAt(*look[:3])
            
     def draw_planes(self):
         # draw extra planes
@@ -755,38 +788,39 @@ class World(ShowBase):
                     transparency = 0.3
                     circle_np.setColor(*color, transparency)
                     # nodepath.setColor(0.5,0.5,1,0.3)
+                    self.draw_plane_holes(plane)
                 
-                if plane.radius != 0:
-                    # vertices = regular_polygon_vertices(72)
-                    poly = Polygon()
-                    poly.regular_polygon_vertices(72)
-                    circle = poly.create_geom_node()
-                    circle_np = NodePath(circle)
-                    circle_np.reparentTo(self.boxnode)
+                # if plane.radius != 0:
+                #     # vertices = regular_polygon_vertices(72)
+                #     poly = Polygon()
+                #     poly.regular_polygon_vertices(72)
+                #     circle = poly.create_geom_node()
+                #     circle_np = NodePath(circle)
+                #     circle_np.reparentTo(self.boxnode)
 
-                    circle_np.setTwoSided(True)
-                    circle_np.setTransparency(TransparencyAttrib.M_dual, 1)
-                    if not plane.color:
-                        # color = (0.5, 0.5, 1)
-                        color = (random.random(), random.random(),random.random())
-                    else:
-                        color = [c/128 for c in plane.color]
+                #     circle_np.setTwoSided(True)
+                #     circle_np.setTransparency(TransparencyAttrib.M_dual, 1)
+                #     if not plane.color:
+                #         # color = (0.5, 0.5, 1)
+                #         color = (random.random(), random.random(),random.random())
+                #     else:
+                #         color = [c/128 for c in plane.color]
 
-                    circle_np.setColor(*color, 0.3)
-                    circle_np.setPos(*plane.point[:3])
-                    circle_np.setScale(abs(plane.radius))
-                    look = plane.point + plane.unitnormal
-                    circle_np.lookAt(*look[:3])
+                #     circle_np.setColor(*color, 0.3)
+                #     circle_np.setPos(*plane.point[:3])
+                #     circle_np.setScale(abs(plane.radius))
+                #     look = plane.point + plane.unitnormal
+                #     circle_np.lookAt(*look[:3])
 
-                    if plane.radius < 0:
-                        circle_outline = poly.create_outline_node()
-                        circle_outline_np = NodePath(circle_outline)
-                        circle_outline_np.reparentTo(self.boxnode)
-                        circle_outline_np.setColor(*color, 1)
-                        circle_outline_np.setPos(*plane.point[:3])
-                        circle_outline_np.setScale(abs(plane.radius))
-                        look = plane.point + plane.unitnormal
-                        circle_outline_np.lookAt(*look[:3])
+                #     if plane.radius < 0:
+                #         circle_outline = poly.create_outline_node()
+                #         circle_outline_np = NodePath(circle_outline)
+                #         circle_outline_np.reparentTo(self.boxnode)
+                #         circle_outline_np.setColor(*color, 1)
+                #         circle_outline_np.setPos(*plane.point[:3])
+                #         circle_outline_np.setScale(abs(plane.radius))
+                #         look = plane.point + plane.unitnormal
+                #         circle_outline_np.lookAt(*look[:3])
 
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]
