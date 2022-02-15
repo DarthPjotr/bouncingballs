@@ -1933,14 +1933,14 @@ class ArrangeParticles:
             self.box.planes.append(plane)
             for i in range(extra_holes):
                 # self.box.random_position()
-                _range = [10, min(self.box.box_sizes)//3]
+                _range = [min(self.box.box_sizes)//5, min(self.box.box_sizes)//3]
                 _range.sort()
                 if holes:
                     sign = -1
                 else:
                     sign = 1
                 radius = sign * random.randint(*_range)
-                point = self.box.center + self.box.random(min(self.box.box_sizes) - 2*radius)
+                point = self.box.center + self.box.random(min(self.box.box_sizes) - 3*radius)
                 plane.add_hole(point, radius)
         
         balls += self.random_balls(nballs, charge=charge)
