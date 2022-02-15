@@ -973,6 +973,12 @@ class Plane:
         plane["point"] = [float(f) for f in self.point]
         plane["color"] = [int(i) for i in self.color]
         plane["radius"] = self.radius
+        plane["holes"] = []
+        for hole in self._holes:
+            (point, radius) = hole
+            point = [float(f) for f in point]
+            plane["holes"].append({"point": point, "radius": float(radius)})
+
         return plane
     
     def intersection(self, planes):
@@ -1926,7 +1932,7 @@ class ArrangeParticles:
             #     plane.add_hole(plane.point, plane.radius)
             self.box.planes.append(plane)
             for i in range(extra_holes):
-                point = self.box.random_position()
+                # self.box.random_position()
                 _range = [10, min(self.box.box_sizes)//3]
                 _range.sort()
                 if holes:
@@ -1934,6 +1940,7 @@ class ArrangeParticles:
                 else:
                     sign = 1
                 radius = sign * random.randint(*_range)
+                point = self.box.center + self.box.random(min(self.box.box_sizes) - 2*radius)
                 plane.add_hole(point, radius)
         
         balls += self.random_balls(nballs, charge=charge)
@@ -2686,6 +2693,13 @@ def load_gas(data):
                 plane.max_speed = p['max_speed']
             else:
                 plane = Plane(box=box, normal=normal, point=point, color=color, radius=radius)
+            
+            holes = p.get("holes", [])
+            for h in holes:
+                point = h.get("point", None)
+                radius = h.get("radius", 0)
+                if point is not None and radius !=0:
+                    plane.add_hole(point, radius)
             box.planes.append(plane)
 
     box.get_radi()
