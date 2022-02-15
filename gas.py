@@ -455,6 +455,11 @@ class Box:
             plane.unitnormal[:3] = normal.dot(self._rotation_matrix(α, β, γ))
             plane._set_params()
 
+            for hole in plane._holes:
+                (point, radius) = hole
+                cpos = point[:3] - self.center[:3]
+                point[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
+
         for ball in self.particles:
             cpos = ball.position[:3] - self.center[:3]
             ball.position[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
