@@ -856,7 +856,7 @@ class Plane:
     """
     Plane
     """    
-    def __init__(self, box: Box, normal=None, point=None, points=None, color=None, radius=0) -> None:
+    def __init__(self, box: Box, normal=None, point=None, points=None, color=None, as_holes=True) -> None:
         """
         Creates plane
 
@@ -865,9 +865,8 @@ class Plane:
             normal (numpy.array, optional): the normal vector. Defaults to None.
             point (numpy.array, optional): a point on the plane. Defaults to None.
             points (list of numpy.array, optional): point on the plane. Defaults to None.
-            radius (float): radius of a disk or hole at the central pont of the plane, 
-                            hole when radius is negative 
-                            disk will reflect when radius is positive.
+            as_holes (boolean): whether the holes in the plane act as holes of as a disk. 
+                Holes let the particles pass. Disks reflect.
         """        
         self.box = box
         
@@ -896,10 +895,9 @@ class Plane:
         self.color = color
         
         self._set_params()
-        self.radius = radius
+        self.as_holes = as_holes
         self._holes = []
-        if self.radius != 0:
-            self.add_hole(self.point, radius)
+
         self.object = None
     
     def _set_params(self):
@@ -972,7 +970,7 @@ class Plane:
         plane["normal"] = [float(f) for f in self.unitnormal]
         plane["point"] = [float(f) for f in self.point]
         plane["color"] = [int(i) for i in self.color]
-        plane["radius"] = self.radius
+        plane["as_holes"] = self.as_holes
         plane["holes"] = []
         for hole in self._holes:
             (point, radius) = hole
@@ -1537,26 +1535,31 @@ class Particle:
                 #     if plane.radius < 0:
                 #         if d2p2 < maxd2p2**2:
                 #             continue
-                through_hole = False
+                if plane.as_holes:
+                    reflect = True
+                else:
+                    reflect = False
+
                 for hole in plane._holes:
                     (point, radius) = hole
                     maxd2p2 = abs(radius) + self.radius
                     v2p = self.position - point
                     d2p2 = v2p @ v2p
-                    # disk
-                    if radius > 0:
-                        through_hole = True
+                    # hole
+                    if plane.as_holes:
+                        # in a hole
                         if d2p2 < maxd2p2**2:
                             # continue
-                            through_hole = False
+                            reflect = False
                             continue
-                    # hole
-                    if radius < 0:
+                    # disk
+                    else:
+                        # on a disk
                         if d2p2 < maxd2p2**2:
-                            through_hole = True
-                            # continue 
+                            reflect = True
+                            continue 
 
-                if through_hole:
+                if not reflect:
                     continue                   
 
                 hitpoint = plane.intersect_line(self.position, self.speed)
@@ -1918,7 +1921,7 @@ class ArrangeParticles:
 
         return balls
     
-    def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, plane_radius=0, extra_holes=0, holes=True):
+    def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, plane_radius=0, extra_holes=0, as_holes=True):
         balls = []
 
         for i in range(nplanes):
@@ -1926,7 +1929,7 @@ class ArrangeParticles:
             distance = (min(self.box.center)/4) * (1-(2*random.random()))
             point = self.box.center + distance * normal
             color = [0,128,0]
-            plane = Plane(self.box, normal=normal, point=point, color=None, radius=plane_radius)
+            plane = Plane(self.box, normal=normal, point=point, color=None, as_holes=as_holes)
             # if plane_radius:
             #     plane.radius = plane_radius
             #     plane.add_hole(plane.point, plane.radius)
@@ -1935,11 +1938,7 @@ class ArrangeParticles:
                 # self.box.random_position()
                 _range = [min(self.box.box_sizes)//5, min(self.box.box_sizes)//3]
                 _range.sort()
-                if holes:
-                    sign = -1
-                else:
-                    sign = 1
-                radius = sign * random.randint(*_range)
+                radius = random.randint(*_range)
                 point = self.box.center + self.box.random(min(self.box.box_sizes) - 3*radius)
                 plane.add_hole(point, radius)
         
@@ -2685,14 +2684,14 @@ def load_gas(data):
             normal = p["normal"]
             point = p["point"]
             color = p.get('color', None)
-            radius = p.get('radius', 0)
+            as_holes = p.get('as_holes', 0)
             if 'pass_through_function' in p:
                 plane = Membrane(box, normal, point)
                 plane._filter = getattr(plane, p['pass_through_function'])
                 plane.hole_size = p['hole_size']
                 plane.max_speed = p['max_speed']
             else:
-                plane = Plane(box=box, normal=normal, point=point, color=color, radius=radius)
+                plane = Plane(box=box, normal=normal, point=point, color=color, as_holes=as_holes)
             
             holes = p.get("holes", [])
             for h in holes:
