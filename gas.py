@@ -1921,7 +1921,7 @@ class ArrangeParticles:
 
         return balls
     
-    def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, plane_radius=0, extra_holes=0, as_holes=True):
+    def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, extra_holes=0, as_holes=True):
         balls = []
 
         for i in range(nplanes):
@@ -1930,9 +1930,7 @@ class ArrangeParticles:
             point = self.box.center + distance * normal
             color = [0,128,0]
             plane = Plane(self.box, normal=normal, point=point, color=None, as_holes=as_holes)
-            # if plane_radius:
-            #     plane.radius = plane_radius
-            #     plane.add_hole(plane.point, plane.radius)
+
             self.box.planes.append(plane)
             for i in range(extra_holes):
                 # self.box.random_position()

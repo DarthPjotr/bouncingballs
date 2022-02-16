@@ -652,7 +652,7 @@ class World(ShowBase):
         # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=charge)
         # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=-charge)
         # # balls += arr.random_balls(1, 1, 40, 5, charge=-1)
-        balls += arr.test_all(nplanes=2, nballs=20, nsprings=4, charge=None, plane_radius=0, extra_holes=2, as_holes=True)
+        balls += arr.test_all(nplanes=2, nballs=20, nsprings=4, charge=None, extra_holes=2, as_holes=True)
 
         # balls += arr.random_balls(1, 1, 40, 5, charge=1)
         # balls += arr.test_bounce()
