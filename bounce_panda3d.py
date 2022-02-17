@@ -196,6 +196,7 @@ class World(ShowBase):
         # defaults
         self.pause = False
         self._draw_planes = True
+        self._draw_box_planes = False
         self.dynamic_string_coloring = False
         self.trails = []
         self.tick_rate = 1
@@ -585,14 +586,14 @@ class World(ShowBase):
     def setup_box(self):
         self.quiet = True
         self.tick_rate = 1
-        sizes = numpy.array([1200, 1000, 1200, 1000, 1000, 1000, 1000, 1000])
+        sizes = numpy.array([1500, 1500, 1200, 1000, 1000, 1000, 1000, 1000])
         dimensions = 3
-        #sizes = sizes/2
+        #sizes = sizes/25
 
         self.box = Box(sizes[:dimensions])
         self.box.torus = False
         self.box.merge = False
-        self.box.trail = 20
+        self.box.trail = 0
         self.box.skip_trail = 1
         self.box.optimized_collisions = True
 
@@ -603,7 +604,8 @@ class World(ShowBase):
         gravity_direction = self.box.nullvector.copy()
         gravity_direction[self.box.Z] = -0
 
-        charge_colors = True
+        charge_colors = False
+        hole_in_walls = False
         interaction_factor = 1
         neigbor_count = 20
         _dummy = False
@@ -614,6 +616,12 @@ class World(ShowBase):
         self.box.set_interaction(interaction, power)
         self.box.set_friction(friction)
         self.box.set_gravity(gravity_strength, gravity_direction)
+
+        if hole_in_walls:
+            self._draw_box_planes = True
+            for plane in self.box.planes[:self.box.dimensions*2]:
+                plane.as_holes = True
+                plane.add_hole(plane.point, 500)
 
         # balls = arr.create_pendulum(0.2, numpy.array([0,0,-1]))
         # pos = self.box.center.copy()
@@ -646,8 +654,8 @@ class World(ShowBase):
         # for ball in balls:
         #     ball.position[0] = 50 # self.box.center[0]
         # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
-        nballs = 1 # self.box.dimensions+1
-        radius = 200
+        nballs = 100 # self.box.dimensions+1
+        radius = 20
         charge = 0
         # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=charge)
         # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=-charge)
@@ -658,7 +666,7 @@ class World(ShowBase):
         # balls += arr.test_bounce()
  
         # balls = arr.create_kube_planes(500, 20)
-        ball = self.box.add_particle(mass=1, radius=200, position=self.box.center-[0,100,0], speed=numpy.array([0.5,1,0.3])*3)
+        ball = self.box.add_particle(mass=15, radius=200, position=self.box.center-[0,100,0], speed=numpy.array([0.5,1,0.3])*3)
         balls.append(ball)
 
         # balls += arr.random_balls(nballs=15, mass=1, radius=100, max_speed=5, charge=0)
@@ -767,7 +775,11 @@ class World(ShowBase):
     def draw_planes(self):
         # draw extra planes
         if self._draw_planes == True:
-            for plane in self.box.planes[2*self.box.dimensions:]:
+            start = 2*self.box.dimensions
+            if self._draw_box_planes:
+                start = 0
+            for plane in self.box.planes[start:]:
+            # for plane in self.box.planes[2*self.box.dimensions:]:
             # for plane in self.box.planes:
                 if self.box.dimensions == 3:
                     vertices = plane.box_intersections
@@ -792,37 +804,6 @@ class World(ShowBase):
                     # nodepath.setColor(0.5,0.5,1,0.3)
                     self.draw_plane_holes(plane)
                 
-                # if plane.radius != 0:
-                #     # vertices = regular_polygon_vertices(72)
-                #     poly = Polygon()
-                #     poly.regular_polygon_vertices(72)
-                #     circle = poly.create_geom_node()
-                #     circle_np = NodePath(circle)
-                #     circle_np.reparentTo(self.boxnode)
-
-                #     circle_np.setTwoSided(True)
-                #     circle_np.setTransparency(TransparencyAttrib.M_dual, 1)
-                #     if not plane.color:
-                #         # color = (0.5, 0.5, 1)
-                #         color = (random.random(), random.random(),random.random())
-                #     else:
-                #         color = [c/128 for c in plane.color]
-
-                #     circle_np.setColor(*color, 0.3)
-                #     circle_np.setPos(*plane.point[:3])
-                #     circle_np.setScale(abs(plane.radius))
-                #     look = plane.point + plane.unitnormal
-                #     circle_np.lookAt(*look[:3])
-
-                #     if plane.radius < 0:
-                #         circle_outline = poly.create_outline_node()
-                #         circle_outline_np = NodePath(circle_outline)
-                #         circle_outline_np.reparentTo(self.boxnode)
-                #         circle_outline_np.setColor(*color, 1)
-                #         circle_outline_np.setPos(*plane.point[:3])
-                #         circle_outline_np.setScale(abs(plane.radius))
-                #         look = plane.point + plane.unitnormal
-                #         circle_outline_np.lookAt(*look[:3])
 
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]

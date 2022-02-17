@@ -1318,6 +1318,7 @@ class Particle:
 
         # wrap around
         if self.box.torus:
+        # if True:
             self.position = numpy.mod(self.position, self.box.box_sizes)
             return self.position
 
@@ -1525,16 +1526,6 @@ class Particle:
                 if plane.pass_through(self):
                     continue
 
-                # if plane.radius != 0:
-                #     maxd2p2 = abs(plane.radius) + self.radius
-                #     v2p = self.position - plane.point
-                #     d2p2 = v2p @ v2p
-                #     if plane.radius > 0:
-                #         if d2p2 > maxd2p2**2:
-                #             continue
-                #     if plane.radius < 0:
-                #         if d2p2 < maxd2p2**2:
-                #             continue
                 if plane.as_holes:
                     reflect = True
                 else:
@@ -1545,11 +1536,11 @@ class Particle:
                     maxd2p2 = (radius)**2
                     v2p = self.position - point
 
-                    radius = 0
+                    radius = 0 #self.radius
                     if plane.as_holes:
-                        radius = self.radius
+                        radius = -self.radius
 
-                    v2pp = v2p - (v2p @ plane.unitnormal- radius)*plane.unitnormal
+                    v2pp = v2p - (v2p @ plane.unitnormal + radius)*plane.unitnormal
                     d2p2 = v2pp @ v2pp
                     # hole
                     if plane.as_holes:
