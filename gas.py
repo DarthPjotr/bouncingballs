@@ -1542,20 +1542,25 @@ class Particle:
 
                 for hole in plane._holes:
                     (point, radius) = hole
-                    maxd2p2 = abs(radius) + self.radius
+                    maxd2p2 = (radius)**2
                     v2p = self.position - point
-                    d2p2 = v2p @ v2p
+
+                    radius = 0
+                    if plane.as_holes:
+                        radius = self.radius
+
+                    v2pp = v2p - (v2p @ plane.unitnormal- radius)*plane.unitnormal
+                    d2p2 = v2pp @ v2pp
                     # hole
                     if plane.as_holes:
                         # in a hole
-                        if d2p2 < maxd2p2**2:
-                            # continue
+                        if d2p2 < maxd2p2:
                             reflect = False
                             continue
                     # disk
                     else:
                         # on a disk
-                        if d2p2 < maxd2p2**2:
+                        if d2p2 < maxd2p2:
                             reflect = True
                             continue 
 

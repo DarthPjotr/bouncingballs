@@ -646,20 +646,20 @@ class World(ShowBase):
         # for ball in balls:
         #     ball.position[0] = 50 # self.box.center[0]
         # balls = arr.test_interaction(30000/9, power, M0=40, V0=7/3, D=350, ratio=0.1)
-        nballs = 100 # self.box.dimensions+1
-        radius = 5
-        charge = 1
+        nballs = 1 # self.box.dimensions+1
+        radius = 200
+        charge = 0
         # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=charge)
         # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=-charge)
         # # balls += arr.random_balls(1, 1, 40, 5, charge=-1)
-        balls += arr.test_all(nplanes=2, nballs=20, nsprings=4, charge=None, extra_holes=2, as_holes=True)
 
-        # balls += arr.random_balls(1, 1, 40, 5, charge=1)
+        # balls += arr.test_all(nplanes=2, nballs=20, nsprings=4, charge=None, extra_holes=2, as_holes=True)
+
         # balls += arr.test_bounce()
  
         # balls = arr.create_kube_planes(500, 20)
-        # ball = self.box.add_particle(1, 10, [15,15,15], speed=None)
-        # balls.append(ball)
+        ball = self.box.add_particle(mass=1, radius=200, position=self.box.center-[0,100,0], speed=numpy.array([0.5,1,0.3])*3)
+        balls.append(ball)
 
         # balls += arr.random_balls(nballs=15, mass=1, radius=100, max_speed=5, charge=0)
         # ball = self.box.add_particle(1, 20, self.box.center, speed=None, charge=-10, fixed=True, color=[255,255,255])
@@ -676,11 +676,11 @@ class World(ShowBase):
         # self.box.planes.append(plane)
 
         # normal = [0,0,1,1,1,1,1,1]
-        # # normal = [1,0,0,0,0,0,0,0]
-        # plane = Plane(self.box, normal[:self.box.dimensions], self.box.center+numpy.array([150,-170,20]))
+        normal = [0,1,0,0,0,0,0,0]
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center+numpy.array([0,0,0]), as_holes=True)
+        plane.add_hole(self.box.center, 250)
         # plane.color = [0,255,0]
-        # plane.radius = -250
-        # self.box.planes.append(plane)
+        self.box.planes.append(plane)
 
         if charge_colors:
             arr.set_charge_colors(balls)
