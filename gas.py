@@ -1500,6 +1500,32 @@ class Particle:
         self.box._normal_momentum += abs(momentum[index])
         return bounced
     
+    def bounce_from_hole(self, plane, hole):
+        (center, radius) = hole
+        R2 = radius * radius
+        BR2 = self.radius * self.radius
+
+        ball2center = self.position - center
+        distance2plane = ball2center @ plane.unitnormal
+        vector2plane = distance2plane * plane.unitnormal
+        parallelvector2center = ball2center - vector2plane
+
+        parallelunitnormal =  parallelvector2center / math.sqrt(parallelvector2center @ parallelvector2center)
+        hitpoint = radius * parallelunitnormal
+        vector2rim = self.position - hitpoint
+
+        DR2 = vector2rim @ vector2rim
+        D2 = parallelvector2center @ parallelvector2center
+
+        reflect = True
+        if plane.as_holes and D2 < R2: # and  DR2 < BR2: # hole
+            reflect = False
+        
+        if not plane.as_holes and D2 > R2: # and  DR2 < BR2: # disk
+            reflect = False
+
+        return reflect
+    
     def bounce(self):
         """
         Check and handles particle hitting the box walls
@@ -1526,34 +1552,41 @@ class Particle:
                 if plane.pass_through(self):
                     continue
 
-                if plane.as_holes:
-                    reflect = True
-                else:
-                    reflect = False
+                # if plane.as_holes:
+                #     reflect = True
+                # else:
+                #     reflect = False
 
+                # for hole in plane._holes:
+                #     (point, radius) = hole
+                #     maxd2p2 = (radius)**2
+                #     v2p = self.position - point
+
+                #     radius = 0 #self.radius
+                #     if plane.as_holes:
+                #         radius = 0 #-self.radius
+
+                #     v2pp = v2p - (v2p @ plane.unitnormal + radius)*plane.unitnormal
+                #     d2p2 = v2pp @ v2pp
+                #     # hole
+                #     if plane.as_holes:
+                #         # in a hole
+                #         if d2p2 < maxd2p2:
+                #             reflect = False
+                #             break
+                #     # disk
+                #     else:
+                #         # on a disk
+                #         if d2p2 < maxd2p2:
+                #             reflect = True
+                #             break 
+
+                reflect = plane.as_holes
                 for hole in plane._holes:
-                    (point, radius) = hole
-                    maxd2p2 = (radius)**2
-                    v2p = self.position - point
-
-                    radius = 0 #self.radius
-                    if plane.as_holes:
-                        radius = -self.radius
-
-                    v2pp = v2p - (v2p @ plane.unitnormal + radius)*plane.unitnormal
-                    d2p2 = v2pp @ v2pp
-                    # hole
-                    if plane.as_holes:
-                        # in a hole
-                        if d2p2 < maxd2p2:
-                            reflect = False
-                            continue
-                    # disk
-                    else:
-                        # on a disk
-                        if d2p2 < maxd2p2:
-                            reflect = True
-                            continue 
+                    reflected = self.bounce_from_hole(plane, hole)
+                    if reflected != reflect:
+                        reflect = reflected
+                        break
 
                 if not reflect:
                     continue                   

@@ -593,9 +593,10 @@ class World(ShowBase):
         self.box = Box(sizes[:dimensions])
         self.box.torus = False
         self.box.merge = False
-        self.box.trail = 0
+        self.box.trail = 100
         self.box.skip_trail = 1
         self.box.optimized_collisions = True
+        self.box.optimized_interaction = True
 
         interaction = 5000.0
         power = 2.0
@@ -604,7 +605,7 @@ class World(ShowBase):
         gravity_direction = self.box.nullvector.copy()
         gravity_direction[self.box.Z] = -0
 
-        charge_colors = False
+        charge_colors = True
         hole_in_walls = False
         interaction_factor = 1
         neigbor_count = 20
@@ -666,7 +667,9 @@ class World(ShowBase):
         # balls += arr.test_bounce()
  
         # balls = arr.create_kube_planes(500, 20)
-        ball = self.box.add_particle(mass=15, radius=200, position=self.box.center-[0,100,0], speed=numpy.array([0.5,1,0.3])*3)
+        ball = self.box.add_particle(mass=1, radius=150, position=self.box.center-[0,300,0], speed=numpy.array([0.5,1,0.3])*5, charge=1)
+        balls.append(ball)
+        ball = self.box.add_particle(mass=1, radius=150, position=self.box.center-[-300,-300,0], speed=numpy.array([0.3,1,-0.6])*5, charge=-1)
         balls.append(ball)
 
         # balls += arr.random_balls(nballs=15, mass=1, radius=100, max_speed=5, charge=0)
@@ -684,9 +687,10 @@ class World(ShowBase):
         # self.box.planes.append(plane)
 
         # normal = [0,0,1,1,1,1,1,1]
-        normal = [0,1,0,0,0,0,0,0]
+        normal = [0.25,1,0.5,0,0,0,0,0]
         plane = Plane(self.box, normal[:self.box.dimensions], self.box.center+numpy.array([0,0,0]), as_holes=True)
-        plane.add_hole(self.box.center, 250)
+        # plane.add_hole(self.box.center+[-300,0,0], 300)
+        # plane.add_hole(self.box.center+[300,0,0], 300)
         # plane.color = [0,255,0]
         self.box.planes.append(plane)
 
