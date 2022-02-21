@@ -895,7 +895,7 @@ class Plane:
         self.color = color
         
         self._set_params()
-        self.as_holes = reflect
+        self.reflect = reflect
         self._holes = []
 
         self.object = None
@@ -970,7 +970,7 @@ class Plane:
         plane["normal"] = [float(f) for f in self.unitnormal]
         plane["point"] = [float(f) for f in self.point]
         plane["color"] = [int(i) for i in self.color]
-        plane["as_holes"] = self.as_holes
+        plane["reflect"] = self.reflect
         plane["holes"] = []
         for hole in self._holes:
             (point, radius) = hole
@@ -1502,7 +1502,7 @@ class Particle:
     
     def bounce_from_hole(self, plane, hole):
         (center, radius) = hole
-        R2 = radius * radius
+        HR2 = radius * radius
         BR2 = self.radius * self.radius
 
         ball2center = self.position - center
@@ -1510,25 +1510,27 @@ class Particle:
         vector2plane = distance2plane * plane.unitnormal
         parallelvector2center = ball2center - vector2plane
 
-        parallelunitnormal =  parallelvector2center / math.sqrt(parallelvector2center @ parallelvector2center)
-        hitpoint = radius * parallelunitnormal
-        vector2rim = self.position - hitpoint
+        # parallelunitnormal =  parallelvector2center / math.sqrt(parallelvector2center @ parallelvector2center)
+        # hitpoint = radius * parallelunitnormal
+        # ball2edge = self.position - hitpoint
 
-        DR2 = vector2rim @ vector2rim
+        # BE2 = ball2edge @ ball2edge
         D2 = parallelvector2center @ parallelvector2center
 
         reflect = True
-        if plane.as_holes and D2 < R2: # and  DR2 < BR2: # hole
+        if plane.reflect and D2 < HR2: # and  DR2 < BR2: # hole
+        # if plane.reflect and D2 < HR2 and BE2 < BR2: # hole
             reflect = False
         
-        if not plane.as_holes and D2 > R2: # and  DR2 < BR2: # disk
+        if not plane.reflect and D2 > HR2: # and  DR2 < BR2: # disk
+        # if not plane.reflect and D2 > HR2 and BE2 < BR2: # disk
             reflect = False
 
         return reflect
     
     def bounce(self):
         """
-        Check and handles particle hitting the box walls
+        Check and handles particle hitting the box walls and the other planes
 
         Args:
             box (Box): the box
@@ -1552,7 +1554,7 @@ class Particle:
                 if plane.pass_through(self):
                     continue
 
-                # if plane.as_holes:
+                # if plane.reflect:
                 #     reflect = True
                 # else:
                 #     reflect = False
@@ -1563,13 +1565,13 @@ class Particle:
                 #     v2p = self.position - point
 
                 #     radius = 0 #self.radius
-                #     if plane.as_holes:
+                #     if plane.reflect:
                 #         radius = 0 #-self.radius
 
                 #     v2pp = v2p - (v2p @ plane.unitnormal + radius)*plane.unitnormal
                 #     d2p2 = v2pp @ v2pp
                 #     # hole
-                #     if plane.as_holes:
+                #     if plane.reflect:
                 #         # in a hole
                 #         if d2p2 < maxd2p2:
                 #             reflect = False
@@ -1581,7 +1583,7 @@ class Particle:
                 #             reflect = True
                 #             break 
 
-                reflect = plane.as_holes
+                reflect = plane.reflect
                 for hole in plane._holes:
                     reflected = self.bounce_from_hole(plane, hole)
                     if reflected != reflect:
@@ -1950,7 +1952,7 @@ class ArrangeParticles:
 
         return balls
     
-    def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, extra_holes=0, as_holes=True):
+    def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, extra_holes=0, reflect=True):
         balls = []
 
         for i in range(nplanes):
@@ -1958,7 +1960,7 @@ class ArrangeParticles:
             distance = (min(self.box.center)/4) * (1-(2*random.random()))
             point = self.box.center + distance * normal
             color = [0,128,0]
-            plane = Plane(self.box, normal=normal, point=point, color=None, reflect=as_holes)
+            plane = Plane(self.box, normal=normal, point=point, color=None, reflect=reflect)
 
             self.box.planes.append(plane)
             for i in range(extra_holes):
@@ -2711,14 +2713,14 @@ def load_gas(data):
             normal = p["normal"]
             point = p["point"]
             color = p.get('color', None)
-            as_holes = p.get('as_holes', 0)
+            reflect = p.get('reflect', 0)
             if 'pass_through_function' in p:
                 plane = Membrane(box, normal, point)
                 plane._filter = getattr(plane, p['pass_through_function'])
                 plane.hole_size = p['hole_size']
                 plane.max_speed = p['max_speed']
             else:
-                plane = Plane(box=box, normal=normal, point=point, color=color, reflect=as_holes)
+                plane = Plane(box=box, normal=normal, point=point, color=color, reflect=reflect)
             
             holes = p.get("holes", [])
             for h in holes:

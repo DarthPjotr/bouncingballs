@@ -621,7 +621,7 @@ class World(ShowBase):
         if hole_in_walls:
             self._draw_box_planes = True
             for plane in self.box.planes[:self.box.dimensions*2]:
-                plane.as_holes = True
+                plane.reflect = True
                 plane.add_hole(plane.point, 500)
 
         # balls = arr.create_pendulum(0.2, numpy.array([0,0,-1]))
@@ -662,7 +662,7 @@ class World(ShowBase):
         # balls += arr.random_balls(nballs=nballs, mass=1, radius=radius, max_speed=3, charge=-charge)
         # # balls += arr.random_balls(1, 1, 40, 5, charge=-1)
 
-        # balls += arr.test_all(nplanes=2, nballs=20, nsprings=4, charge=None, extra_holes=2, as_holes=True)
+        # balls += arr.test_all(nplanes=2, nballs=20, nsprings=4, charge=None, extra_holes=2, reflect=True)
 
         # balls += arr.test_bounce()
  
@@ -689,8 +689,8 @@ class World(ShowBase):
         # normal = [0,0,1,1,1,1,1,1]
         normal = [0.25,1,0.5,0,0,0,0,0]
         plane = Plane(self.box, normal[:self.box.dimensions], self.box.center+numpy.array([0,0,0]), reflect=False)
-        plane.add_hole(self.box.center+[-300,0,0], 300)
-        plane.add_hole(self.box.center+[300,0,0], 300)
+        plane.add_hole(self.box.center+[-350,0,0], 300)
+        plane.add_hole(self.box.center+[350,0,0], 300)
         # plane.color = [0,255,0]
         self.box.planes.append(plane)
 
@@ -766,7 +766,7 @@ class World(ShowBase):
             look = point + plane.unitnormal
             circle_np.lookAt(*look[:3])
 
-            if plane.as_holes:
+            if plane.reflect:
                 circle_outline = poly.create_outline_node()
                 circle_outline_np = NodePath(circle_outline)
                 circle_outline_np.reparentTo(self.boxnode)
