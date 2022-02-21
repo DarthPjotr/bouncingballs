@@ -856,7 +856,7 @@ class Plane:
     """
     Plane
     """    
-    def __init__(self, box: Box, normal=None, point=None, points=None, color=None, as_holes=True) -> None:
+    def __init__(self, box: Box, normal=None, point=None, points=None, color=None, reflect=True) -> None:
         """
         Creates plane
 
@@ -865,8 +865,8 @@ class Plane:
             normal (numpy.array, optional): the normal vector. Defaults to None.
             point (numpy.array, optional): a point on the plane. Defaults to None.
             points (list of numpy.array, optional): point on the plane. Defaults to None.
-            as_holes (boolean): whether the holes in the plane act as holes of as a disk. 
-                Holes let the particles pass. Disks reflect.
+            reflect (boolean): Does the plane reflect the particles? 
+                If False the holes will reflect and act as disks
         """        
         self.box = box
         
@@ -895,7 +895,7 @@ class Plane:
         self.color = color
         
         self._set_params()
-        self.as_holes = as_holes
+        self.as_holes = reflect
         self._holes = []
 
         self.object = None
@@ -1958,7 +1958,7 @@ class ArrangeParticles:
             distance = (min(self.box.center)/4) * (1-(2*random.random()))
             point = self.box.center + distance * normal
             color = [0,128,0]
-            plane = Plane(self.box, normal=normal, point=point, color=None, as_holes=as_holes)
+            plane = Plane(self.box, normal=normal, point=point, color=None, reflect=as_holes)
 
             self.box.planes.append(plane)
             for i in range(extra_holes):
@@ -2718,7 +2718,7 @@ def load_gas(data):
                 plane.hole_size = p['hole_size']
                 plane.max_speed = p['max_speed']
             else:
-                plane = Plane(box=box, normal=normal, point=point, color=color, as_holes=as_holes)
+                plane = Plane(box=box, normal=normal, point=point, color=color, reflect=as_holes)
             
             holes = p.get("holes", [])
             for h in holes:

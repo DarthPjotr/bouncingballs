@@ -688,9 +688,9 @@ class World(ShowBase):
 
         # normal = [0,0,1,1,1,1,1,1]
         normal = [0.25,1,0.5,0,0,0,0,0]
-        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center+numpy.array([0,0,0]), as_holes=True)
-        # plane.add_hole(self.box.center+[-300,0,0], 300)
-        # plane.add_hole(self.box.center+[300,0,0], 300)
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center+numpy.array([0,0,0]), reflect=False)
+        plane.add_hole(self.box.center+[-300,0,0], 300)
+        plane.add_hole(self.box.center+[300,0,0], 300)
         # plane.color = [0,255,0]
         self.box.planes.append(plane)
 
