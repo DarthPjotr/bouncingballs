@@ -467,6 +467,19 @@ class World(ShowBase):
     def task_stop(self):
         self.box.stop_all()
         return Task.cont
+    
+    def correct_camera_distance(self, new_pos):
+        old_pos = numpy.array(self.camera.getPos())
+        opos2center = old_pos - self.box.center
+        distance2center = math.sqrt(opos2center @ opos2center)
+
+        new_pos = numpy.array(new_pos)
+        npos2center = new_pos - self.box.center
+        npos_normal = npos2center / math.sqrt(npos2center @ npos2center)
+
+        new_pos_corrected = self.box.center + (distance2center * npos_normal)
+
+        return new_pos_corrected
 
     def task_move_camera(self, key="", mouse="", speed=15):
 
@@ -485,15 +498,17 @@ class World(ShowBase):
         # forward backward
         elif key == 'arrow_up' or key == 'wheel_up':
             pos += dy*10
+            pos = self.correct_camera_distance(pos)
         elif key == 'arrow_down' or key == 'wheel_down':
             pos -= dy*10
+            pos = self.correct_camera_distance(pos)
         # up down
         elif key == "w":
             pos = self.up_down(pos, speed)
-            # pos += dz
+            pos = self.correct_camera_distance(pos)
         elif key == "s":
             pos = self.up_down(pos, -speed)
-            # pos -= dz'
+            pos = self.correct_camera_distance(pos)
         elif key == 'mouse1':
             self.mouse1_down = True
             mw = self.mouseWatcherNode
@@ -534,7 +549,9 @@ class World(ShowBase):
 
                 self.mouse_x_old = self.mouse_x
                 self.mouse_y_old = self.mouse_y
-            
+
+                pos = self.correct_camera_distance(pos)
+
                 self.camera.setPos(*pos)
                 self.camera.setR(0)
                 self.camera.lookAt(Vec3(*self.box.center[:3]))

@@ -23,23 +23,26 @@ class Setup():
         friction = 0.0 #0.035
         gravity_strength = 0.5
         gravity_direction = self.box.nullvector.copy()
-        gravity_direction[self.box.Z] = -0
+        if dimensions > 2:
+            gravity_direction[self.box.Z] = -0
+        else:
+            gravity_direction[self.box.Y] = -0
+
+        self.box.set_interaction(interaction, power)
+        self.box.set_friction(friction)
+        self.box.set_gravity(gravity_strength, gravity_direction)
+
+        self.layout = ArrangeParticles(self.box)
 
         self.charge_colors = True
         self.hole_in_walls = False
         self.interaction_factor = 1
         self.neigbor_count = 20
 
-        self.layout = ArrangeParticles(self.box)
-
-        self.box.set_interaction(interaction, power)
-        self.box.set_friction(friction)
-        self.box.set_gravity(gravity_strength, gravity_direction)
-
         self.balls = []
 
-        self._setup_function = self._test_holes # None
-        self._setup_function = None
+        self._setup_function = self._test_holes
+        # self._setup_function = None
 
     def _test_holes(self):
         balls = self.balls

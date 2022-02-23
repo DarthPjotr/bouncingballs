@@ -215,6 +215,8 @@ class World(arcade.Window):
         gravity_direction = self.box.nullvector.copy()
         if dimensions > 2:
             gravity_direction[self.box.Z] = -0
+        else:
+            gravity_direction[self.box.Y] = -0
 
         charge_colors = True
         hole_in_walls = False
