@@ -493,15 +493,15 @@ class World(ShowBase):
         # lef right
         if key == 'a':
             pos -= dx
+            pos = self.correct_camera_distance(pos)
         elif key == 'd':
             pos += dx
+            pos = self.correct_camera_distance(pos)
         # forward backward
         elif key == 'arrow_up' or key == 'wheel_up':
             pos += dy*10
-            pos = self.correct_camera_distance(pos)
         elif key == 'arrow_down' or key == 'wheel_down':
             pos -= dy*10
-            pos = self.correct_camera_distance(pos)
         # up down
         elif key == "w":
             pos = self.up_down(pos, speed)
