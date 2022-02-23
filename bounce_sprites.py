@@ -16,6 +16,7 @@ import tkinter
 from tkinter import filedialog as fd
 
 from gas import *
+from setupbox import Setup
 
 # Set up the constants
 ASK_LOAD = False
@@ -46,7 +47,7 @@ GRAVITY = 0.0
 FRICTION = 0.00
 INTERACTION = 10000.0
 TORUS = False
-DIMENSIONS = 2
+DIMENSIONS = 3
 # HEIGHT = 30
 SPEED = 3
 
@@ -187,23 +188,39 @@ class World(arcade.Window):
         return color
 
     def setup_box(self):
-        sizes = BOX_DIMENSIONS[:DIMENSIONS]
-        sizes = [1200, 900, 1000]
-        self.box = Box(sizes)
+        setup = Setup(self)
+        (box, balls) = setup.make()
+        self.box = box
+        self.add_balls(balls)
 
-        self.box.torus = False # TORUS
+    def setup_box_(self):
+        self.quiet = True
+        self.tick_rate = 1
+        sizes = numpy.array([1500, 1500, 1200, 1000, 1000, 1000, 1000, 1000])
+        dimensions = 2
+        #sizes = sizes/25
+
+        self.box = Box(sizes[:dimensions])
+        self.box.torus = False
         self.box.merge = False
-        self.box.trail = 0
+        self.box.trail = 100
         self.box.skip_trail = 1
+        self.box.optimized_collisions = True
+        self.box.optimized_interaction = True
 
-        interaction = 500.0
-        power = 2
-        friction = 0.0
+        interaction = 5000.0
+        power = 2.0
+        friction = 0.0 #0.035
         gravity_strength = 0.5
         gravity_direction = self.box.nullvector.copy()
-        gravity_direction[self.box.Y] = 0
+        if dimensions > 2:
+            gravity_direction[self.box.Z] = -0
 
-        charge_colors = False
+        charge_colors = True
+        hole_in_walls = False
+        interaction_factor = 1
+        neigbor_count = 20
+        _dummy = False
 
         arrangement = ArrangeParticles(self.box)
         balls = []
@@ -211,6 +228,24 @@ class World(arcade.Window):
         self.box.set_interaction(interaction, power)
         self.box.set_friction(friction)
         self.box.set_gravity(gravity_strength, gravity_direction)
+
+        if hole_in_walls:
+            self._draw_box_planes = True
+            for plane in self.box.planes[:self.box.dimensions*2]:
+                plane.reflect = True
+                plane.add_hole(plane.point, 500)
+
+        normal = [0,1,0.5,0,0,0,0,0]
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center+numpy.array([0,-400]), reflect=True)
+        #plane.add_hole(self.box.center+[-350,0], 300)
+        plane.add_hole(self.box.center+[350,0], 300)
+        # plane.color = [0,255,0]
+        self.box.planes.append(plane)
+
+        ball = self.box.add_particle(mass=1, radius=150, position=self.box.center-[0,300], speed=numpy.array([0.5])*5, charge=1)
+        balls.append(ball)
+        ball = self.box.add_particle(mass=1, radius=150, position=self.box.center-[-300,-300], speed=numpy.array([0.3,1])*5, charge=-1)
+        balls.append(ball)
 
         # balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
         # self.add_balls(balls)
@@ -236,7 +271,7 @@ class World(arcade.Window):
         #     else:
         #         ball.color = arcade.color.GREEN
         # self.add_balls(balls)
-        balls = arrangement.random_balls(15, 3, 30, charge=None)
+        # balls = arrangement.random_balls(15, 3, 30, charge=None)
         # # balls = arrangement.create_kube(400)
         # normal = [0,1,0,1,1,1]
         # point = self.box.center
@@ -315,6 +350,7 @@ class World(arcade.Window):
 
         # balls = arrangement.create_box(100, self.box.random_position(), 1)
         # self.add_balls(balls)
+        self.box.get_radi(interaction_factor=interaction_factor, neighbor_count=neigbor_count)
 
         self.quiet = True
         # self.pause = True

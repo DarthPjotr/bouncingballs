@@ -41,6 +41,7 @@ from panda3d.core import GeomTriangles
 from panda3d.core import GeomNode
 
 from gas import *
+from setupbox import Setup
 
 def loaddialog():
     root = tkinter.Tk()
@@ -227,7 +228,7 @@ class World(ShowBase):
         self.set_camera()
         self.disableMouse()
         self.set_main_lighting()
-        self.set_spotligth()
+        self.set_spotlight()
         # self.set_background()
         self.set_background()
         self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
@@ -259,7 +260,7 @@ class World(ShowBase):
         # self.render.setLight(self.ambientLightNodePath)
         # self.render.setShaderAuto()
 
-    def set_spotligth(self):
+    def set_spotlight(self):
         self.light = self.render.attachNewNode(Spotlight("Spot"))
         self.light.node().setScene(self.render)
         self.light.node().setShadowCaster(True)
@@ -584,6 +585,11 @@ class World(ShowBase):
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
     def setup_box(self):
+        setup = Setup(self)
+        (box, balls) = setup.make()
+        self.box = box
+
+    def setup_box_(self):
         self.quiet = True
         self.tick_rate = 1
         sizes = numpy.array([1500, 1500, 1200, 1000, 1000, 1000, 1000, 1000])
