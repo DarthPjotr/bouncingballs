@@ -61,7 +61,7 @@ class Setup():
         balls.append(ball)
 
 
-        normal = [0.25,1,0.5,0,0,0,0,0]
+        normal = [0,1,1,0,0,0,0,0]
         plane = Plane(self.box, normal[:self.box.dimensions], self.box.center, reflect=False)
 
         dpoint = [-350,0,0,0,0,0,0]

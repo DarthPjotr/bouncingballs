@@ -89,6 +89,7 @@ class World(arcade.Window):
         self.sound = arcade.load_sound(".\\sounds\\c_bang1.wav")
         self.ball_list = arcade.SpriteList(use_spatial_hash=False)
         self.plane_list = arcade.ShapeElementList()
+        self.hole_list = arcade.ShapeElementList()
         self.arrow_list = arcade.ShapeElementList()
         self.trail_list = arcade.ShapeElementList()
 
@@ -161,6 +162,8 @@ class World(arcade.Window):
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
               
     def setup(self):
+        self.set_visible(False)
+        self.set_location(50,50)
         if ASK_LOAD:
             file = loaddialog()
             self.load(file)
@@ -177,6 +180,8 @@ class World(arcade.Window):
             # self.box.field.equation = None # self.box.field.nofield
 
             self.setup_box()
+            self.set_size(int(self.box.box_sizes[Box.X]), int(self.box.box_sizes[Box.Y]))
+        self.set_visible(True)
 
     @staticmethod
     def getcolor(value, vmin, vmax):
@@ -376,11 +381,21 @@ class World(arcade.Window):
         return ball
     
     def draw_plane_holes(self, plane):
+        self.hole_list = None
+        self.hole_list = arcade.ShapeElementList()
         for hole in plane._holes:
             (point, radius) = hole
-
+            shape = FlatD3Shape()
+            shape.regular_polygon_vertices(360)
+            shape.rotate(plane.unitnormal)
+            shape.scale(radius)
+            shape.move(point)
+            points = [v[:2] for v in shape.vertices]
+            polygon = arcade.create_polygon(points, [0,0,50])
             if plane.reflect:
                 pass
+
+            self.hole_list.append(polygon)
 
     def draw_planes(self, planes=list):
         self.plane_list = None
@@ -540,6 +555,7 @@ class World(arcade.Window):
         #if self._draw_planes:
         if True:
             self.plane_list.draw()
+            self.hole_list.draw()
         #self.sprite_list.draw_hit_boxes((255,255,255), 2)
 
     
