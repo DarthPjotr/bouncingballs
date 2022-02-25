@@ -1,4 +1,5 @@
 
+from ctypes.wintypes import HMODULE
 import numpy
 import time
 
@@ -47,30 +48,33 @@ class Setup():
 
     def _test_holes(self):
         balls = self.balls
+        radius = 100
+        hole_size = 150
 
         dpos = [0, 300, 0, 0,0,0,0]
         position = self.box.center - dpos[:self.box.dimensions]
         speed = numpy.array([0.5, 1, 0.3, 0,0,0,0])*5
-        ball = self.box.add_particle(mass=1, radius=150, position=position[:self.box.dimensions], speed=speed[:self.box.dimensions], charge=1)
+        ball = self.box.add_particle(mass=1, radius=radius, position=position[:self.box.dimensions], speed=speed[:self.box.dimensions], charge=1)
         balls.append(ball)
 
         dpos = [-300, -300, 0, 0,0,0,0]
         position = self.box.center - dpos[:self.box.dimensions]
         speed = numpy.array([0.3, 1, -0.6, 0,0,0,0])*5
-        ball = self.box.add_particle(mass=1, radius=150, position=position[:self.box.dimensions], speed=speed[:self.box.dimensions], charge=-1)
+        ball = self.box.add_particle(mass=1, radius=radius, position=position[:self.box.dimensions], speed=speed[:self.box.dimensions], charge=-1)
         balls.append(ball)
 
 
-        normal = [0,1,1,0,0,0,0,0]
-        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center, reflect=False)
+        normal = [0.2,1,0.2,0,0,0,0,0]
+        dpos = [0, -200,0,0,0,0,0 ]
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center + dpos[:self.box.dimensions], reflect=False)
 
-        dpoint = [-350,0,0,0,0,0,0]
+        dpoint = [-450,0,0,0,0,0,0]
         point = self.box.center + dpoint[:self.box.dimensions]
-        plane.add_hole(point[:self.box.dimensions], 300)
+        plane.add_hole(point[:self.box.dimensions], hole_size)
 
-        dpoint = [350,0,0,0,0,0,0]
+        dpoint = [50,0,0,0,0,0,0]
         point = self.box.center + dpoint[:self.box.dimensions]
-        plane.add_hole(point[:self.box.dimensions], 300)
+        plane.add_hole(point[:self.box.dimensions], hole_size)
 
         self.box.planes.append(plane)
     
@@ -92,7 +96,7 @@ class Setup():
 def main():
     print("START")
     setup = Setup()
-    setup.test_holes()
+    setup._test_holes()
     # setup.setup()
     box = setup.box
 

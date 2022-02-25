@@ -52,7 +52,7 @@ DIMENSIONS = 3
 SPEED = 3
 
 # because it looks better with soft SpriteCircle add bit to sprite radius
-FUZZIE = True
+FUZZIE = False
 if FUZZIE:
     D_SPRITE_RADIUS = 5
 else:
@@ -180,7 +180,8 @@ class World(arcade.Window):
             # self.box.field.equation = None # self.box.field.nofield
 
             self.setup_box()
-            self.set_size(int(self.box.box_sizes[Box.X]), int(self.box.box_sizes[Box.Y]))
+            #self.set_size(int(self.box.box_sizes[Box.X]), int(self.box.box_sizes[Box.Y]))
+        self.center_window()
         self.set_visible(True)
 
     @staticmethod
@@ -193,7 +194,7 @@ class World(arcade.Window):
         return color
 
     def setup_box(self):
-        setup = Setup(self)
+        setup = Setup(self, dimensions=2)
         (box, balls) = setup.make()
         self.box = box
         self.add_balls(balls)
@@ -383,19 +384,29 @@ class World(arcade.Window):
     def draw_plane_holes(self, plane):
         self.hole_list = None
         self.hole_list = arcade.ShapeElementList()
-        for hole in plane._holes:
-            (point, radius) = hole
-            shape = FlatD3Shape()
-            shape.regular_polygon_vertices(360)
-            shape.rotate(plane.unitnormal)
-            shape.scale(radius)
-            shape.move(point)
-            points = [v[:2] for v in shape.vertices]
-            polygon = arcade.create_polygon(points, [0,0,50])
-            if plane.reflect:
-                pass
+        if self.box.dimensions < 3:
+            for hole in plane._holes:
+                (point, radius) = hole
+                pnormal = numpy.array([plane.unitnormal[1], -plane.unitnormal[0]])
+                start = point - (radius * pnormal)
+                end = point + (radius * pnormal)
+                line = arcade.create_line(*start, *end, arcade.color.GO_GREEN, 4)
+                self.hole_list.append(line)
+        else:
+            for hole in plane._holes:
+                (point, radius) = hole
+                shape = FlatD3Shape()
+                shape.regular_polygon_vertices(360)
+                shape.rotate(plane.unitnormal)
+                shape.scale(radius)
+                shape.move(point)
+                points = [v[:2] for v in shape.vertices]
+                polygon = arcade.create_polygon(points, arcade.color.GO_GREEN)
+                if plane.reflect:
+                    pass
 
-            self.hole_list.append(polygon)
+                self.hole_list.append(polygon)
+
 
     def draw_planes(self, planes=list):
         self.plane_list = None
