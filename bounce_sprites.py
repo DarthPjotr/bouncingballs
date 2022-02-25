@@ -375,6 +375,13 @@ class World(arcade.Window):
 
         return ball
     
+    def draw_plane_holes(self, plane):
+        for hole in plane._holes:
+            (point, radius) = hole
+
+            if plane.reflect:
+                pass
+
     def draw_planes(self, planes=list):
         self.plane_list = None
         self.plane_list = arcade.ShapeElementList()
@@ -401,6 +408,8 @@ class World(arcade.Window):
             self.plane_list.append(point)
             self.plane_list.append(normal1)
             self.plane_list.append(normal2)
+
+            self.draw_plane_holes(plane)
 
     def draw_field(self):
         if self.background is not None:

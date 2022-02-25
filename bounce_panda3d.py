@@ -65,12 +65,14 @@ def warning(title, message):
     showwarning(title, message)
     root.destroy()
 
-
 class Polygon():
     def __init__(self, vertices=[]):
         # self.vertices=list(tuple(v) for v in vertices)
         self._vertices=numpy.array(vertices)
+        self.center = numpy.zeros(3)
+        self.normal = numpy.array([1,0,0])
         if len(self._vertices) > 2:
+            self.center = sum(self._vertices)/len(self._vertices)
             self.normal = self._get_normal()
 
     def _get_normal(self):
@@ -84,9 +86,10 @@ class Polygon():
             numpy.array: unit normal vector
         """   
         # points = [v for v in self._vertices] 
-        if len(self._vertices) < 3:
+        if len(self._vertices) < 2:
             raise ValueError("minimal 3 vertices needed")
-        points = self._vertices    
+        c = self.center
+        points = [p-c for p in self._vertices]   
         shape = numpy.shape(points)
         ones = numpy.ones(shape)
         i = 0
@@ -98,7 +101,9 @@ class Polygon():
         normal = linalg.solve(points[:3], numpy.array([1,1,1]))
         unitnormal = normal/math.sqrt(normal@normal)
 
-        if not (numpy.allclose(points[size-3:]@normal, numpy.array([1,1,1]))):
+        c = self.center
+        vertices = [v-c for v in self._vertices]
+        if not (numpy.allclose(vertices@unitnormal, numpy.zeros(len(vertices)))):
             raise ValueError("not all points in one plane")
         
         return unitnormal
@@ -106,7 +111,6 @@ class Polygon():
     def set_vertices(self, vertices):
         self._vertices = vertices
         self.normal = self._get_normal()
-
 
     def create_geom_node(self):
         xyzero = False
@@ -170,6 +174,13 @@ class Polygon():
         return node
     
     def regular_polygon_vertices(self, segments=36):
+        shape = FlatD3Shape()
+        (points, edges) = shape.regular_polygon_vertices(segments=segments)
+
+        self.set_vertices(points)
+        return (points, edges)
+
+    def __regular_polygon_vertices(self, segments=36):
         points = []
         edges = []
 
@@ -298,8 +309,8 @@ class World(ShowBase):
         # expfog.setExpDensity(0.0015)
         # self.render.setFog(expfog)
 
-        color = numpy.array([0, 0, 0])
-        self.setBackgroundColor(*color/3)
+        color = numpy.array([0.6, 0.6, 0.6])
+        self.setBackgroundColor(*color)
     
     def load_scene(self):
         # Load the scene.
@@ -318,7 +329,7 @@ class World(ShowBase):
                 nn.setPos((x - 0) * 4, (y - 0) * 4, 0)
         floor.setTexture(floorTex)
         floor.flattenStrong()
-    
+        floor.setTwoSided(True)
 
     def set_background_old(self):
         # Load the environment model.
@@ -470,14 +481,14 @@ class World(ShowBase):
     
     def correct_camera_distance(self, new_pos):
         old_pos = numpy.array(self.camera.getPos())
-        opos2center = old_pos - self.box.center
+        opos2center = old_pos - self.box.center[:3]
         distance2center = math.sqrt(opos2center @ opos2center)
 
         new_pos = numpy.array(new_pos)
-        npos2center = new_pos - self.box.center
+        npos2center = new_pos - self.box.center[:3]
         npos_normal = npos2center / math.sqrt(npos2center @ npos2center)
 
-        new_pos_corrected = self.box.center + (distance2center * npos_normal)
+        new_pos_corrected = self.box.center[:3] + (distance2center * npos_normal)
 
         return new_pos_corrected
 
@@ -602,7 +613,7 @@ class World(ShowBase):
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
     def setup_box(self):
-        setup = Setup(self)
+        setup = Setup(self, dimensions=3)
         (box, balls) = setup.make()
         self.box = box
 
@@ -812,7 +823,9 @@ class World(ShowBase):
                     vertices = plane.box_intersections
                     if not vertices:
                         continue
-                    poly = Polygon(vertices)
+
+                    poly_vertices = [v[:3] for v in vertices]
+                    poly = Polygon(poly_vertices)
                     node = poly.create_geom_node()
                     circle_np = NodePath(node)
                     # nodepath.reparentTo(self.render)
@@ -829,9 +842,9 @@ class World(ShowBase):
                     transparency = 0.3
                     circle_np.setColor(*color, transparency)
                     # nodepath.setColor(0.5,0.5,1,0.3)
-                    self.draw_plane_holes(plane)
-                
 
+                self.draw_plane_holes(plane)
+                
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]
                     p2 = plane.box_intersections[j]

@@ -26,7 +26,7 @@ RADIUS = 1
 MASS = 1
 NBALLS = 20
 
-__all__ = ['Box', 'Particle', 'Plane', 'Spring', 'Field', 'ArrangeParticles', 'load', 'save', 'load_gas']
+__all__ = ['Box', 'Particle', 'Plane', 'Spring', 'Field', 'ArrangeParticles', 'load', 'save', 'load_gas', 'FlatD3Shape']
 
 class Field:
     """
@@ -936,6 +936,7 @@ class Plane:
         shape = numpy.shape(points)
         ones = numpy.ones(shape)
         i = 0
+        points = [p for p in points]
         while linalg.det(points) == 0 and i < 100:
             points += ones
             i += 1
@@ -946,7 +947,6 @@ class Plane:
         return unitnormal
 
     def _test_normal(self, points):
-        print(self.unitnormal)
         p = points[-1]
         for q in points:
             d = p - q
@@ -2733,6 +2733,111 @@ def load_gas(data):
     box.get_radi()
 
     return box
+
+class FlatD3Shape():
+    def __init__(self, vertices=[]) -> None:
+        self.vertices = vertices
+        self.center = [0,0,0]
+        self.normal = None
+        self._set_props(self.vertices)
+
+    def _get_normal(self):
+        """
+        Calculates the normal vector from points on the plane
+
+        Args:
+            points (list of numpy.array): the points
+
+        Returns:
+            numpy.array: unit normal vector
+        """   
+        # points = [v for v in self._vertices] 
+        if len(self.vertices) < 2:
+            raise ValueError("minimal 3 vertices needed")
+        c = self.center
+        points = [p-c for p in self.vertices]   
+        shape = numpy.shape(points)
+        ones = numpy.ones(shape)
+        i = 0
+        while linalg.det(points[:3]) == 0 and i < 100:
+            points += ones
+            i += 1
+
+        size = len(points)
+        normal = linalg.solve(points[:3], numpy.array([1,1,1]))
+        unitnormal = normal/math.sqrt(normal@normal)
+
+        c = self.center
+        vertices = [v-c for v in self.vertices]
+        if not (numpy.allclose(vertices@unitnormal, numpy.zeros(len(vertices)))):
+            raise ValueError("not all points in one plane")
+            pass
+        
+        return unitnormal
+    
+    def _set_props(self, vertices):
+        self.vertices = vertices
+        if self.vertices:
+            self.center = sum(vertices)/len(vertices)
+            self.normal = self._get_normal()
+
+    def regular_polygon_vertices(self, segments=36):
+        points = []
+        edges = []
+
+        theta = numpy.deg2rad(360/segments)
+        rot = numpy.array([[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]])
+
+
+        V = [1,0]
+        points.append(V)
+        edges.append((0,1))
+        for i in range(segments-1):
+            edges.append((i+1,(i+2)%segments))
+            V = V @ rot
+            points.append(V)
+
+        points = [numpy.insert(p,1, 0) for p in points]
+        self._set_props(points)
+
+        return (points, edges)
+    
+    def skew(self,a):
+        return numpy.array([[0,-a[2],a[1]],[a[2],0,-a[0]],[-a[1],a[0],0]])
+
+    def rotate(self, normal):
+        normal = numpy.array(normal)
+        normal = normal / math.sqrt(normal @ normal)
+        self.normal
+
+        V = numpy.cross(self.normal, normal)
+        cos = self.normal @ normal
+        if cos == 1:
+            return self.vertices
+
+        # I = numpy.array([[1,0,0], [0,1,0], [0,0,1]])
+        I = numpy.eye(3)
+        Vx = self.skew(V)
+        # Vx2 = numpy.square(Vx)
+        Vx2 = Vx @ Vx
+
+        mrot = I + Vx + Vx2*(1/(1-cos))
+
+        c = self.center
+        self.vertices = [c+((v-c) @ mrot) for v in self.vertices]
+        self._set_props(self.vertices)
+        return self.vertices
+
+    def scale(self, size):
+        c = self.center
+        self.vertices = [c+((v-c)*size) for v in self.vertices]
+        self._set_props(self.vertices)
+        return self.vertices
+    
+    def move(self, pos):
+        self.vertices = [v+pos for v in self.vertices]
+        self._set_props(self.vertices)
+        return self.vertices
 
 
 class Test():
