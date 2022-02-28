@@ -49,7 +49,7 @@ class Setup():
     def _test_holes(self):
         balls = self.balls
         radius = 100
-        hole_size = 150
+        hole_size = 300
 
         dpos = [0, 300, 0, 0,0,0,0]
         position = self.box.center - dpos[:self.box.dimensions]
