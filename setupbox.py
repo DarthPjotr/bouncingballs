@@ -19,6 +19,7 @@ class Setup():
         self.box.skip_trail = 1
         self.box.optimized_collisions = True
         self.box.optimized_interaction = True
+        self.box.simple_hole_bounce = True
 
         interaction = 0 # 5000.0
         power = 2.0

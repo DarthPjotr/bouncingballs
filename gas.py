@@ -266,6 +266,7 @@ class Box:
         self.trail = 0
         self.skip_trail = 1
         self.object = None
+        self.simple_hole_bounce = False
     
     def get_radi(self, interaction_factor=1, neighbor_count=None):
         try:
@@ -372,7 +373,8 @@ class Box:
         box["interaction_power"] = self.interaction_power
         box["optimized_collisions"] = self.optimized_collisions
         box["optimized_interaction"] = self.optimized_interaction
-        box["neighbor_count"] = self._interaction_neighbors = 10
+        box["neighbor_count"] = self._interaction_neighbors
+        box['simple_hole_bounce'] = self.simple_hole_bounce
 
         output = {"box": box}
 
@@ -1510,10 +1512,13 @@ class Particle:
         vector2plane = distance2plane * plane.unitnormal
         parallelvector2center = ball2center - vector2plane
 
-        parallelunitnormal =  parallelvector2center / math.sqrt(parallelvector2center @ parallelvector2center)
-        edge = center + (parallelunitnormal * radius)
-        ball2edge = self.position - edge
-        BE2 = ball2edge @ ball2edge
+        if not self.box.simple_hole_bounce:
+            parallelunitnormal =  parallelvector2center / math.sqrt(parallelvector2center @ parallelvector2center)
+            edge = center + (parallelunitnormal * radius)
+            ball2edge = self.position - edge
+            BE2 = ball2edge @ ball2edge
+        else:
+            BE2 = BR2 + 100
 
         D2 = parallelvector2center @ parallelvector2center
 
@@ -2690,6 +2695,7 @@ def load_gas(data):
     box.optimized_collisions = b.get("optimized_collisions", True)
     box.optimized_interaction = b.get("optimized_interaction", True)
     box._interaction_neighbors = b.get("neighbor_count",10)
+    box.simple_hole_bounce = b.get("simple_hole_bounce", False)
 
     if "particles" in b:
         for p in b['particles']:
