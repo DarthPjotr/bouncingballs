@@ -4,6 +4,7 @@ import numpy
 import time
 
 from gas import *
+from pprint import pprint as pp
 
 class Setup():
     def __init__(self, world=None, dimensions=3) -> None:
@@ -15,11 +16,11 @@ class Setup():
         self.box = Box(sizes[:dimensions])
         self.box.torus = False
         self.box.merge = False
-        self.box.trail = 100
+        self.box.trail = 0 # 100
         self.box.skip_trail = 1
         self.box.optimized_collisions = True
         self.box.optimized_interaction = True
-        self.box.simple_hole_bounce = True
+        self.box.simple_hole_bounce = False
 
         interaction = 0 # 5000.0
         power = 2.0
@@ -37,14 +38,15 @@ class Setup():
 
         self.layout = ArrangeParticles(self.box)
 
-        self.charge_colors = True
+        self.charge_colors = False
         self.hole_in_walls = False
         self.interaction_factor = 1
         self.neigbor_count = 20
 
         self.balls = []
 
-        self._setup_function = self._test_holes
+        # self._setup_function = self._test_holes
+        self._setup_function = self._test_many_holes
         # self._setup_function = None
 
     def _test_holes(self):
@@ -78,6 +80,49 @@ class Setup():
         plane.add_hole(point[:self.box.dimensions], hole_size)
 
         self.box.planes.append(plane)
+
+    def _test_many_holes(self):
+        arr = ArrangeParticles(self.box)
+        balls = arr.random_balls(nballs=100, mass=1, radius=10, max_speed=3, charge=0)
+    
+        normal = [0,1,0,0,0,0,0,0]
+        dpos = [0, -200,0,0,0,0,0 ]
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center + dpos[:self.box.dimensions], reflect=False)
+        self.box.planes.append(plane)
+
+        nholes = 10
+        hole_size = 100
+
+        points = []
+        dholes = numpy.zeros(self.box.dimensions)
+        dholes.fill(hole_size)
+
+        for i in range(nholes):
+            N = 100
+            repeat = True
+            while N > 0 and repeat:
+                point = self.box.random_position(hole_size)
+                point = plane.project_point(point)
+                
+                repeat = False
+                for p in points:
+                    # if numpy.all((point-p) < dholes):
+                    dp = point - p
+                    D2 = dp@dp
+                    H2 = hole_size*hole_size*1.01
+                    print(H2, D2, dp)
+                    if D2 < H2:
+                        print(i, "\t", N, "\tcollision")
+                        repeat = True
+                        break
+                N -= 1
+    
+                        
+            points.append(point)
+            plane.add_hole(point, hole_size)
+        
+        pp(points)
+            
     
     def _setup(self):
         balls = self.box.particles
