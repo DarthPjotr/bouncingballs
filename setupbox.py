@@ -83,15 +83,15 @@ class Setup():
 
     def _test_many_holes(self):
         arr = ArrangeParticles(self.box)
-        balls = arr.random_balls(nballs=100, mass=1, radius=10, max_speed=3, charge=0)
+        balls = arr.random_balls(nballs=100, mass=1, radius=40, max_speed=3, charge=0)
     
-        normal = [0,1,0,0,0,0,0,0]
+        normal = [0.2,1,0.3,0,0,0,0,0]
         dpos = [0, -200,0,0,0,0,0 ]
-        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center + dpos[:self.box.dimensions], reflect=False)
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center + dpos[:self.box.dimensions], reflect=True)
         self.box.planes.append(plane)
 
-        nholes = 10
-        hole_size = 100
+        nholes = 0
+        hole_size = 80
 
         points = []
         dholes = numpy.zeros(self.box.dimensions)
@@ -106,13 +106,12 @@ class Setup():
                 
                 repeat = False
                 for p in points:
-                    # if numpy.all((point-p) < dholes):
                     dp = point - p
                     D2 = dp@dp
-                    H2 = hole_size*hole_size*1.01
-                    print(H2, D2, dp)
+                    H2 = hole_size*hole_size*4.05
+                    # print(H2, D2, dp)
                     if D2 < H2:
-                        print(i, "\t", N, "\tcollision")
+                        # print(i, "\t", N, "\tcollision")
                         repeat = True
                         break
                 N -= 1
@@ -120,9 +119,7 @@ class Setup():
                         
             points.append(point)
             plane.add_hole(point, hole_size)
-        
-        pp(points)
-            
+                    
     
     def _setup(self):
         balls = self.box.particles
