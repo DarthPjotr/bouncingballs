@@ -1510,21 +1510,21 @@ class Particle:
         vector2plane = distance2plane * plane.unitnormal
         parallelvector2center = ball2center - vector2plane
 
-        # parallelunitnormal =  parallelvector2center / math.sqrt(parallelvector2center @ parallelvector2center)
-        # hitpoint = radius * parallelunitnormal
-        # ball2edge = self.position - hitpoint
+        parallelunitnormal =  parallelvector2center / math.sqrt(parallelvector2center @ parallelvector2center)
+        edge = center + (parallelunitnormal * radius)
+        ball2edge = self.position - edge
+        BE2 = ball2edge @ ball2edge
 
-        # BE2 = ball2edge @ ball2edge
         D2 = parallelvector2center @ parallelvector2center
 
         reflect = True
-        if plane.reflect and D2 < HR2: # and  DR2 < BR2: # hole
-        # if plane.reflect and D2 < HR2 and BE2 < BR2: # hole
+        if plane.reflect and (BE2 > BR2) and (D2 < HR2): # hole
             reflect = False
         
-        if not plane.reflect and D2 > HR2: # and  DR2 < BR2: # disk
-        # if not plane.reflect and D2 > HR2 and BE2 < BR2: # disk
+        if not plane.reflect and (BE2 > BR2) and (D2 > HR2): # disk
             reflect = False
+        
+        # print(BE2 < BR2, edge, self.position, ball2edge, BE2, BR2)
 
         return reflect
     
