@@ -380,16 +380,20 @@ class Box:
 
         return output
     
-    def random_position(self):
+    def random_position(self, edge=0):
         """
         Gives random position in the box
+
+        Args:
+            edge (int, optional): ensures position is not on wall
 
         Returns:
             numpy.array: position
         """        
         V = []
         for max in self.box_sizes:
-            V.append(max*random.random())
+            pos = edge + (max - edge*2)*random.random()
+            V.append(pos)
         position = numpy.array(V)
         return position
    
@@ -1049,7 +1053,7 @@ class Plane:
             numpy.array: the projected point 
         """  
         point = numpy.array(point)      
-        projected_point = self.intersect_line(point,self.unitnormal)
+        projected_point = self.intersect_line(point, self.unitnormal)
         return projected_point
     
     def _box_intersections(self):
