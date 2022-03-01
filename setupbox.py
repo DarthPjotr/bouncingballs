@@ -48,6 +48,20 @@ class Setup():
         # self._setup_function = self._test_holes
         self._setup_function = self._test_many_holes
         # self._setup_function = None
+    
+    def hole_on_plane(self, plane, point, radius):
+        polygon = FlatD3Shape()
+        polygon.regular_polygon_vertices(36)
+        polygon.rotate(plane.unitnormal)
+        polygon.move(point)
+        polygon.scale(radius)
+        points = polygon.vertices
+
+        on_plane = True
+        for point in points:
+            on_plane = on_plane and plane.on_plane(point)
+            
+        return on_plane
 
     def _test_holes(self):
         balls = self.balls
@@ -85,12 +99,12 @@ class Setup():
         arr = ArrangeParticles(self.box)
         balls = arr.random_balls(nballs=100, mass=1, radius=40, max_speed=3, charge=0)
     
-        normal = [0.2,1,0.3,0,0,0,0,0]
+        normal = [1,1,1,0,0,0,0,0]
         dpos = [0, -200,0,0,0,0,0 ]
-        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center + dpos[:self.box.dimensions], reflect=True)
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center + dpos[:self.box.dimensions], reflect=False)
         self.box.planes.append(plane)
 
-        nholes = 0
+        nholes = 30
         hole_size = 80
 
         points = []
@@ -101,9 +115,12 @@ class Setup():
             N = 100
             repeat = True
             while N > 0 and repeat:
-                point = self.box.random_position(hole_size)
-                point = plane.project_point(point)
-                
+                on_plane = False
+                while not on_plane:
+                    point = self.box.random_position(0)
+                    point = plane.project_point(point)
+                    on_plane = self.hole_on_plane(plane, point, hole_size)
+
                 repeat = False
                 for p in points:
                     dp = point - p
@@ -116,9 +133,9 @@ class Setup():
                         break
                 N -= 1
     
-                        
-            points.append(point)
-            plane.add_hole(point, hole_size)
+            if N > 0:          
+                points.append(point)
+                plane.add_hole(point, hole_size)
                     
     
     def _setup(self):
@@ -139,10 +156,27 @@ class Setup():
 def main():
     print("START")
     setup = Setup()
-    setup._test_holes()
-    # setup.setup()
-    box = setup.box
+    (box, balls) = setup.make()
 
+    # print stuff
+    print(box)
+    for plane in box.planes:
+        print(plane)
+        print(plane.phull)
+        for hole in plane._holes:
+            (point, radius) = hole
+            polygon = FlatD3Shape()
+            polygon.regular_polygon_vertices(36)
+            polygon.rotate(plane.unitnormal)
+            polygon.move(point)
+            polygon.scale(radius)
+            points = polygon.vertices
+            on_plane = True
+            for point in points:
+                on_plane = on_plane and plane.on_plane(point)
+            print(hole, on_plane)
+
+    # run the box
     start = time.perf_counter()
     for i in range(1000):
         box.go()

@@ -782,23 +782,12 @@ class World(ShowBase):
             # vertices = regular_polygon_vertices(72)
             poly = Polygon()
             poly.regular_polygon_vertices(72)
-            circle = poly.create_geom_node()
-            circle_np = NodePath(circle)
-            circle_np.reparentTo(self.boxnode)
 
-            circle_np.setTwoSided(True)
-            circle_np.setTransparency(TransparencyAttrib.M_dual, 1)
             if not plane.color:
                 # color = (0.5, 0.5, 1)
                 color = (random.random(), random.random(),random.random())
             else:
                 color = [c/128 for c in plane.color]
-
-            circle_np.setColor(*color, 0.3)
-            circle_np.setPos(*point[:3])
-            circle_np.setScale(abs(radius))
-            look = point + plane.unitnormal
-            circle_np.lookAt(*look[:3])
 
             if plane.reflect:
                 circle_outline = poly.create_outline_node()
@@ -809,6 +798,18 @@ class World(ShowBase):
                 circle_outline_np.setScale(abs(radius))
                 look = point + plane.unitnormal
                 circle_outline_np.lookAt(*look[:3])
+            else:
+                circle = poly.create_geom_node()
+                circle_np = NodePath(circle)
+                circle_np.reparentTo(self.boxnode)
+                circle_np.setTwoSided(True)
+                circle_np.setTransparency(TransparencyAttrib.M_dual, 1)
+                circle_np.setColor(*color, 0.3)
+                circle_np.setPos(*point[:3])
+                circle_np.setScale(abs(radius))
+                look = point + plane.unitnormal
+                circle_np.lookAt(*look[:3])
+
            
     def draw_planes(self):
         # draw extra planes

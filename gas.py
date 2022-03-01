@@ -910,7 +910,24 @@ class Plane:
         self.D = self.unitnormal @ self.point
         self.box_intersections = self._box_intersections()
         self.edges = self._edges()
+        self.phull = self._get_projected_hull(self.box_intersections)
     
+    def _get_projected_hull(self, points):
+        if len(points) < 3:
+            return points
+        
+        # project points on X,Y or Z plane as long as i has a non zero value for the normal
+        for i, x in enumerate(self.unitnormal):
+            if x != 0:
+                break
+    
+        projected = [numpy.delete(p, i) for p in points]
+
+        hull = ConvexHull(projected)
+        projection_coordinate = i
+        return (hull, projection_coordinate)
+
+
     def add_hole(self, point, radius):
         """
         adds a hole in the plane, when the point is not on the plane
@@ -1020,6 +1037,21 @@ class Plane:
         point = numpy.array(point)
         v = point - self.point
         return v @ self.unitnormal
+    
+    def on_plane(self, point):
+        hull, i = self.phull
+        point = numpy.delete(point, i)
+        # A is shape (f, d) and b is shape (f, 1).
+        A, b = hull.equations[:, :-1], hull.equations[:, -1:]
+
+        eps = numpy.finfo(numpy.float32).eps
+
+        # The hull is defined as all points x for which Ax + b <= 0.
+        # We compare to a small positive value to account for floating
+        # point issues.
+        #
+        # Assuming x is shape (m, d), output is boolean shape (m,).
+        return numpy.all(numpy.asarray(point) @ A.T + b.T < eps, axis=1)
 
     def intersect_line(self, point, vector):
         """
@@ -1137,11 +1169,11 @@ class Plane:
         hull = ConvexHull(projected)
         vertices = hull.vertices
 
-        sorter = []
+        sorted = []
         for v in vertices:
-            sorter.append(points[v])
+            sorted.append(points[v])
 
-        return sorter
+        return sorted
     
     def _sort_by_planes(self, points):
         sorted = []
@@ -1562,35 +1594,6 @@ class Particle:
                 # function from Membrane, allows conditional pass through wall
                 if plane.pass_through(self):
                     continue
-
-                # if plane.reflect:
-                #     reflect = True
-                # else:
-                #     reflect = False
-
-                # for hole in plane._holes:
-                #     (point, radius) = hole
-                #     maxd2p2 = (radius)**2
-                #     v2p = self.position - point
-
-                #     radius = 0 #self.radius
-                #     if plane.reflect:
-                #         radius = 0 #-self.radius
-
-                #     v2pp = v2p - (v2p @ plane.unitnormal + radius)*plane.unitnormal
-                #     d2p2 = v2pp @ v2pp
-                #     # hole
-                #     if plane.reflect:
-                #         # in a hole
-                #         if d2p2 < maxd2p2:
-                #             reflect = False
-                #             break
-                #     # disk
-                #     else:
-                #         # on a disk
-                #         if d2p2 < maxd2p2:
-                #             reflect = True
-                #             break 
 
                 reflect = plane.reflect
                 for hole in plane._holes:
