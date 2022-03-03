@@ -41,7 +41,7 @@ from panda3d.core import GeomTriangles
 from panda3d.core import GeomNode
 
 from gas import *
-from setupbox import Setup
+from setupbox import Setup, ArrangeParticles
 
 def loaddialog():
     root = tkinter.Tk()
@@ -777,7 +777,7 @@ class World(ShowBase):
     
     def draw_plane_holes(self, plane):
         # if plane.radius != 0:
-        for hole in plane._holes:
+        for hole in plane.holes:
             (point, radius) = hole
             # vertices = regular_polygon_vertices(72)
             poly = Polygon()

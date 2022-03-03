@@ -16,7 +16,7 @@ import tkinter
 from tkinter import filedialog as fd
 
 from gas import *
-from setupbox import Setup
+from setupbox import Setup, ArrangeParticles
 
 # Set up the constants
 ASK_LOAD = False
@@ -197,7 +197,7 @@ class World(arcade.Window):
         setup = Setup(self, dimensions=2)
         (box, balls) = setup.make()
         self.box = box
-        self.add_balls(balls)
+        self.add_balls(self.box.particles)
 
     def setup_box_(self):
         self.quiet = True
@@ -385,7 +385,7 @@ class World(arcade.Window):
         self.hole_list = None
         self.hole_list = arcade.ShapeElementList()
         if self.box.dimensions < 3:
-            for hole in plane._holes:
+            for hole in plane.holes:
                 (point, radius) = hole
                 pnormal = numpy.array([plane.unitnormal[1], -plane.unitnormal[0]])
                 start = point - (radius * pnormal)
@@ -393,7 +393,7 @@ class World(arcade.Window):
                 line = arcade.create_line(*start, *end, arcade.color.GO_GREEN, 4)
                 self.hole_list.append(line)
         else:
-            for hole in plane._holes:
+            for hole in plane.holes:
                 (point, radius) = hole
                 shape = FlatD3Shape()
                 shape.regular_polygon_vertices(360)
