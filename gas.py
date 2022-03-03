@@ -460,7 +460,7 @@ class Box:
             plane._set_params()
 
             for hole in plane.holes:
-                (point, radius_) = hole
+                (point, _) = hole
                 cpos = point[:3] - self.center[:3]
                 point[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
 
@@ -737,7 +737,7 @@ class Box:
             center_of_mass = sum(ball.mass*ball.position for ball in self.particles)/total_mass
             dpos = self.center - center_of_mass
 
-            avg_speed = sum(ball.speed for ball in self.particles)/len(self.particles)
+            # avg_speed = sum(ball.speed for ball in self.particles)/len(self.particles)
             avg_momentum = sum(ball.momentum for ball in self.particles)/len(self.particles)
             for ball in self.particles:
                 if fixed and ball.fixed:
@@ -844,7 +844,7 @@ class Box:
     def _move_all(self):
         # move all balls
         for ball in self.particles:
-            position = ball.move()
+            _ = ball.move()
 
     def _get_kdtree(self):
         if not len(self.particles):
@@ -917,6 +917,7 @@ class Plane:
             return (hull, projection_coordinate)
 
         # project points on X,Y or Z plane as long as i has a non zero value for the normal
+        axis = 0
         for axis, x in enumerate(self.unitnormal):
             if x != 0:
                 break
@@ -1170,6 +1171,7 @@ class Plane:
             return points
 
         # project points on X,Y or Z plane as long as i has a non zero value for the normal
+        i = 0
         for i, x in enumerate(self.unitnormal):
             if x != 0:
                 break
@@ -1235,13 +1237,13 @@ class Plane:
         edges = []
         size = len(self.box_intersections)
 
-        for i, p in enumerate(self.box_intersections):
+        for i, _ in enumerate(self.box_intersections):
             edge = (i, (i-1) % size)
             edges.append(edge)
 
         return edges
 
-    def pass_through(self, ball):
+    def pass_through(self, ball): # pylint: disable=unused-argument
         return False
 
 
@@ -1253,7 +1255,7 @@ class _Membrane(Plane):
         self._bounced = 0
         super().__init__(box, normal=normal, point=point, points=points)
 
-    def no_filter(self, ball):
+    def no_filter(self, ball):  # pylint: disable=unused-argument
         return False
 
     def pass_through(self, ball):
@@ -1261,7 +1263,7 @@ class _Membrane(Plane):
         res = self._filter(ball)
         return res
 
-    def mass_filter(self, ball):
+    def mass_filter(self, ball):  # pylint: disable=unused-argument
         return False
 
     def size_filter(self, ball):
@@ -1306,7 +1308,6 @@ class _Membrane(Plane):
 
         if res:
             self.max_speed = (speed + self.max_speed * (self._bounced - 1))/self._bounced
-            pass
 
         return res
 
@@ -1920,6 +1921,7 @@ class _Rod(Spring):
         self.p2.position = pos2corr - self.p2.speed
 
     def _correct_by_center_and_rotation(self):
+        # pylint: disable=unused-variable
         crod = (self.p2.position + self.p1.position)/2
 
         pos1new = self.p1.position + self.p1.speed
@@ -1987,7 +1989,7 @@ def load_gas(data):
             reflect = p.get('reflect', 0)
             if 'pass_through_function' in p:
                 plane = _Membrane(box, normal, point)
-                plane._filter = getattr(plane, p['pass_through_function'])
+                plane._filter = getattr(plane, p['pass_through_function']) # pylint: disable=protected-access
                 plane.hole_size = p['hole_size']
                 plane.max_speed = p['max_speed']
             else:
@@ -2006,7 +2008,10 @@ def load_gas(data):
     return box
 
 class FlatD3Shape():
-    def __init__(self, vertices=[]) -> None:
+    def __init__(self, vertices=None) -> None:
+        if vertices is None:
+            vertices = []
+
         self.vertices = vertices
         self.center = [0,0,0]
         self.normal = None
@@ -2034,7 +2039,6 @@ class FlatD3Shape():
             points += ones
             i += 1
 
-        size = len(points)
         normal = linalg.solve(points[:3], numpy.array([1,1,1]))
         unitnormal = normal/math.sqrt(normal@normal)
 
@@ -2042,7 +2046,6 @@ class FlatD3Shape():
         vertices = [v-c for v in self.vertices]
         if not (numpy.allclose(vertices@unitnormal, numpy.zeros(len(vertices)))):
             raise ValueError("not all points in one plane")
-            pass
 
         return unitnormal
 

@@ -1,4 +1,4 @@
-from math import pi, sin, cos
+from math import pi, sin, cos  # pylint: disable=unused-import
 import sys
 import random
 import math
@@ -20,7 +20,7 @@ from direct.task import Task
 # from direct.actor.Actor import Actor
 # from direct.interval.IntervalGlobal import Sequence
 
-# pylint: disable=no-name-in-module
+# pylint: disable=no-name-in-module, unused-import
 from panda3d.core import NodePath, Material, Fog, AntialiasAttrib, PandaNode
 # from panda3d.core import Point3
 from panda3d.core import AmbientLight, Texture
@@ -41,8 +41,10 @@ from panda3d.core import Geom
 from panda3d.core import GeomVertexWriter
 from panda3d.core import GeomTriangles
 from panda3d.core import GeomNode
+# pylint: enable=no-name-in-module
 
-from gas import *  # pylint: disable=wildcard-import
+
+from gas import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from setupbox import Setup, ArrangeParticles
 
 def loaddialog():
@@ -68,8 +70,10 @@ def warning(title, message):
     root.destroy()
 
 class Polygon():
-    def __init__(self, vertices=[]):
-        # self.vertices=list(tuple(v) for v in vertices)
+    def __init__(self, vertices=None):
+        if vertices is None:
+            vertices = []
+
         self._vertices=numpy.array(vertices)
         self.center = numpy.zeros(3)
         self.normal = numpy.array([1,0,0])
@@ -99,7 +103,6 @@ class Polygon():
             points += ones
             i += 1
 
-        size = len(points)
         normal = linalg.solve(points[:3], numpy.array([1,1,1]))
         unitnormal = normal/math.sqrt(normal@normal)
 
@@ -116,6 +119,8 @@ class Polygon():
 
     def create_geom_node(self):
         xyzero = False
+
+        i = 0
         for i, x in enumerate(self.normal):
             if x == 1:
                 xyzero = True
@@ -127,7 +132,7 @@ class Polygon():
         fmt=GeomVertexFormat.getV3cp()
         vdata = GeomVertexData('name', fmt, Geom.UHStatic)
         vertex = GeomVertexWriter(vdata, 'vertex')
-        color = GeomVertexWriter(vdata, 'color')
+        _ = GeomVertexWriter(vdata, 'color')
 
         for point in self._vertices:
             (x,y,z) = point
@@ -157,7 +162,9 @@ class Polygon():
 
         return node
 
-    def create_outline_node(self, color=[1,1,1,1]):
+    def create_outline_node(self, color=None):
+        if color is None:
+            color = [1, 1, 1, 1]
         points = self._vertices
 
         outline = LineSegs()
@@ -182,30 +189,15 @@ class Polygon():
         self.set_vertices(points)
         return (points, edges)
 
-    def __regular_polygon_vertices(self, segments=36):
-        points = []
-        edges = []
-
-        theta = numpy.deg2rad(360/segments)
-        rot = numpy.array([[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]])
-
-
-        V = [1,0]
-        points.append(V)
-        edges.append((0,1))
-        for i in range(segments-1):
-            edges.append((i+1,(i+2)%segments))
-            V = V @ rot
-            points.append(V)
-
-        points = [numpy.insert(p,1, 0) for p in points]
-        self.set_vertices(points)
-
-        return (points, edges)
-
 class World(ShowBase):
     def __init__(self):
         super().__init__()
+        # attributes
+        self.world = None
+        self.worldLightNodePath = None
+        self.box = None
+        self.spheres = []
+        self.springs = []
 
         # defaults
         self.pause = False
@@ -358,7 +350,7 @@ class World(ShowBase):
         # Load the environment model.
         worldLight = AmbientLight("world light")
         worldLight.setColor(Vec4(1, 1, 1, 1))
-        texture = self.loader.loadModel("models/Sphere_HighPoly")
+        _ = self.loader.loadModel("models/Sphere_HighPoly")
         # texture.setWrapU(Texture.WM_repeat)
         # texture.setWrapV(Texture.WM_repeat)
         self.world = self.loader.loadModel("models/test")
@@ -494,14 +486,14 @@ class World(ShowBase):
 
         return new_pos_corrected
 
-    def task_move_camera(self, key="", mouse="", speed=15):
+    def task_move_camera(self, key="", mouse="", speed=15): # pylint: disable=unused-argument
 
         pos = numpy.array(self.camera.getPos())
         dir_ = self.render.getRelativeVector(self.camera, Vec3.forward())
 
         dx = numpy.array([dir_[1],-dir_[0],0]) * speed
         dy = dir_ * speed
-        dz = numpy.array([0,0,1]) * speed
+        # dz = numpy.array([0,0,1]) * speed
 
         # lef right
         if key == 'a':
@@ -535,7 +527,7 @@ class World(ShowBase):
         self.camera.lookAt(Vec3(*self.box.center[:3]))
         return Task.cont
 
-    def task_mouse_move(self, task):
+    def task_mouse_move(self, task): # pylint: disable=unused-argument
         if self.mouse1_down:
             mw = self.mouseWatcherNode
             speed = 5000
@@ -547,7 +539,7 @@ class World(ShowBase):
                     speed = 5000
 
                 pos = numpy.array(self.camera.getPos())
-                dir = self.render.getRelativeVector(self.camera, Vec3.forward())
+                dir_ = self.render.getRelativeVector(self.camera, Vec3.forward())
 
                 self.mouse_x = mw.getMouseX()
                 self.mouse_y = mw.getMouseY()
@@ -555,7 +547,7 @@ class World(ShowBase):
                 mouse_dx = self.mouse_x_old - self.mouse_x
                 mouse_dy = self.mouse_y_old - self.mouse_y
 
-                dx = numpy.array([dir[1],-dir[0],0]) * mouse_dx
+                dx = numpy.array([dir_[1],-dir_[0],0]) * mouse_dx
                 dpos = dx * speed
                 pos += dpos
                 pos = self.up_down(pos, mouse_dy*speed)
@@ -616,10 +608,11 @@ class World(ShowBase):
 
     def setup_box(self):
         setup = Setup(self, dimensions=3)
-        (box, balls) = setup.make()
+        (box, _) = setup.make()
         self.box = box
 
     def setup_box_(self):
+        # pylint: disable=unused-variable
         self.quiet = True
         self.tick_rate = 1
         sizes = numpy.array([1500, 1500, 1200, 1000, 1000, 1000, 1000, 1000])
@@ -903,8 +896,8 @@ class World(ShowBase):
         # draw springs
         self.springs = []
         for i, spring in enumerate(self.box.springs):
-            p1 = spring.p1.object
-            p2 = spring.p2.object
+            _ = spring.p1.object
+            _ = spring.p2.object
             line = LineSegs("spring[{}]".format(i))
             line.setColor(0.4, 0.4, 0.4, 1)
             line.moveTo((0,0,0))
@@ -944,7 +937,7 @@ class World(ShowBase):
 
         return self.box.particles
 
-    def task_box_go(self, task):
+    def task_box_go(self, task):  # pylint: disable=unused-argument
         if self.pause:
             return Task.cont
 

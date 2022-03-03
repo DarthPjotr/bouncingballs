@@ -1,14 +1,13 @@
 
-from ctypes.wintypes import HMODULE
 import numpy
 import time
 import random
 import math
 import networkx as nx
 
-from gas import *  # pylint: disable=wildcard-import
+from gas import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from gas import _Rod, _Membrane
-from pprint import pprint as pp
+from pprint import pprint as pp # pylint: disable=unused-import
 
 TEST = False
 
@@ -55,7 +54,7 @@ class ArrangeParticles:
     def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, extra_holes=0, reflect=True):
         balls = []
 
-        for i in range(nplanes):
+        for _ in range(nplanes):
             normal = self.box.random()
             distance = (min(self.box.center)/4) * (1-(2*random.random()))
             point = self.box.center + distance * normal
@@ -63,7 +62,7 @@ class ArrangeParticles:
             plane = Plane(self.box, normal=normal, point=point, color=None, reflect=reflect)
 
             self.box.planes.append(plane)
-            for j in range(extra_holes):
+            for _ in range(extra_holes):
                 # self.box.random_position()
                 _range = [min(self.box.box_sizes)//5, min(self.box.box_sizes)//3]
                 _range.sort()
@@ -73,7 +72,7 @@ class ArrangeParticles:
 
         balls += self.random_balls(nballs, charge=charge)
 
-        for i in range(nsprings):
+        for _ in range(nsprings):
             length = 100*random.random() + 50
             strength = 0.05
             damping = 0.001
@@ -300,7 +299,7 @@ class ArrangeParticles:
             rand_c = True
 
         balls = []
-        for i in range(nballs):
+        for _ in range(nballs):
             if rand_m:
                 mass = random.randrange(1, 30) * 1.0
             if rand_r:
@@ -432,7 +431,7 @@ class ArrangeParticles:
             self.box.springs.append(spring)
 
 
-        for i in range(nballs):
+        for _ in range(nballs):
             position = kube.random_position() + dcenter
             ball = self.box.add_particle(10, 50, position)
             balls.append(ball)
@@ -460,7 +459,7 @@ class ArrangeParticles:
         if charge is None:
             alternate = True
             charge = 1
-        for i in range(round(nballs/n)):
+        for _ in range(round(nballs/n)):
             pos1 = self.box.random_position()
             speed = self.box.random(3)
             if star and alternate:
@@ -469,7 +468,7 @@ class ArrangeParticles:
             bstart = b1
             balls.append(b1)
             if n > 1:
-                for i in range(n-1):
+                for _ in range(n-1):
                     if alternate:
                         if star:
                             charge = -1
@@ -880,7 +879,6 @@ class _Test():
                 print("user interupted")
                 break
 
-        from pprint import pp
         pp(box.out())
 
     def test_displacement(self):
@@ -924,7 +922,7 @@ class _Test():
         for s in box.springs:
             print(s)
 
-        for i in range(100):
+        for _ in range(100):
             box.go()
             print(box.ticks)
 

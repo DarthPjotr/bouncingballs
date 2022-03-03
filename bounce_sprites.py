@@ -15,7 +15,7 @@ from palettable.scientific.diverging import Roma_20_r as colormap
 import tkinter
 from tkinter import filedialog as fd
 
-from gas import * # pylint: disable=wildcard-import
+from gas import * # pylint: disable=wildcard-import, unused-wildcard-import
 from setupbox import Setup, ArrangeParticles
 
 # Set up the constants
@@ -103,6 +103,8 @@ class World(arcade.Window):
         self.text = True
         self._draw_planes = True
         self.left_mouse_down = False
+        self.mouse_x = 0
+        self.mouse_y = 0
         self.mouse_dx = 0
         self.mouse_dy = 0
         self.center = numpy.array(self.get_size(),dtype=float)/2
@@ -122,7 +124,6 @@ class World(arcade.Window):
             config = data['config']
         except KeyError:
             config = {}
-            pass
 
         try:
             self.fps = config['fps']
@@ -195,13 +196,12 @@ class World(arcade.Window):
 
     def setup_box(self):
         setup = Setup(self, dimensions=2)
-        (box, balls) = setup.make()
+        (box, _) = setup.make()
         self.box = box
         self.add_balls(self.box.particles)
 
     def setup_box_(self):
         self.quiet = True
-        self.tick_rate = 1
         sizes = numpy.array([1500, 1500, 1200, 1000, 1000, 1000, 1000, 1000])
         dimensions = 2
         #sizes = sizes/25
@@ -238,7 +238,6 @@ class World(arcade.Window):
         self.box.set_gravity(gravity_strength, gravity_direction)
 
         if hole_in_walls:
-            self._draw_box_planes = True
             for plane in self.box.planes[:self.box.dimensions*2]:
                 plane.reflect = True
                 plane.add_hole(plane.point, 500)
@@ -334,8 +333,8 @@ class World(arcade.Window):
         # balls = arrangement.create_pendulum()
         # balls = arrangement.test_rod(150)
         # balls = arrangement.test_fixed_charge(10000)
-
-        arrangement.set_charge_colors(balls)
+        if charge_colors:
+            arrangement.set_charge_colors(balls)
         self.add_balls(balls)
         #self.box.kick_all()
 
@@ -457,7 +456,7 @@ class World(arcade.Window):
                     try:
                         arcade.draw_line(x, y, x+value[0], y+value[1], [255,255,255], 1)
                         arcade.draw_circle_filled(x+value[0], y+value[1], 2, [255,255,255])
-                    except:
+                    except Exception:
                         pass
 
             self.background = arcade.Texture("background", arcade.get_image(0,0))
@@ -502,7 +501,7 @@ class World(arcade.Window):
             ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
             self.ball_list.append(ball.object)
 
-        for i, ball in enumerate(self.box.particles):
+        for _, ball in enumerate(self.box.particles):
             #arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
             end = ball.position + ball.speed
             # arcade.draw_line(ball.position[0], ball.position[1], end[0], end[1], arcade.color.GRAY_ASPARAGUS, 2)
@@ -520,7 +519,6 @@ class World(arcade.Window):
                 output = "+"
             if ball.charge != 0 and len(output) > 0 and self.box.interaction != 0:
                 arcade.draw_text(output, ball.position[0]+5, ball.position[1]-10, arcade.color.WHITE, 20, font_name="Calibri Bold")
-                pass
 
             # output = str(i)
             # arcade.draw_text(output, ball.position[0]-0, ball.position[1]+0, arcade.color.WHITE, 8, font_name="Calibri Bold")
@@ -533,7 +531,7 @@ class World(arcade.Window):
                 ball.object.alpha = 255*(ball.position[DALPHA]/self.box.box_sizes[DALPHA]) % 255
 
         # draw springs
-        for i, spring in enumerate(self.box.springs):
+        for _, spring in enumerate(self.box.springs):
             v = MAXCOLOR + 1/((spring.dlength()/10000) - INVMAXCOLOR)
             color = self.getcolor(v, 0, 255)
             if self.box.dimensions > DALPHA:
@@ -626,7 +624,7 @@ class World(arcade.Window):
     def on_update(self, delta_time):
         """ Movement and game logic """
         if not(self.pause):
-            for i in range(TICK_RATE):
+            for _ in range(TICK_RATE):
                 self.bounced = self.box.go()
 
     def on_mouse_press(self, x, y, button, modifiers):
