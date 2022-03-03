@@ -15,7 +15,7 @@ from palettable.scientific.diverging import Roma_20_r as colormap
 import tkinter
 from tkinter import filedialog as fd
 
-from gas import *
+from gas import * # pylint: disable=wildcard-import
 from setupbox import Setup, ArrangeParticles
 
 # Set up the constants
@@ -82,7 +82,7 @@ class World(arcade.Window):
     """ Main application class. """
 
     def __init__(self):
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True, visible=False, update_rate=UPDATE_RATE, antialiasing=True, samples=16)  
+        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True, visible=False, update_rate=UPDATE_RATE, antialiasing=True, samples=16)
         self.center_window()
         self.background = None
         self.fps = 1/UPDATE_RATE
@@ -113,7 +113,7 @@ class World(arcade.Window):
     def load(self, file):
         self.ball_list = None
         self.ball_list = arcade.SpriteList(use_spatial_hash=False)
-        
+
         data = yaml.load(file, Loader=yaml.FullLoader)
 
         # ugly ...
@@ -156,11 +156,11 @@ class World(arcade.Window):
         out = {"config": config}
         box = self.box.out()
         return {**out, **box}
-    
-    def save(self, file):     
+
+    def save(self, file):
         out = self.out()
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
-              
+
     def setup(self):
         self.set_visible(False)
         self.set_location(50,50)
@@ -264,7 +264,7 @@ class World(arcade.Window):
         # balls = arrangement.test_interaction(30000/100, M0=40, V0=6/10, D=300, ratio=0.1)
         # balls = arrangement.test_spring(length=300, distance=240, strength=0.0001, interaction=000)
         # self.add_balls(balls)
-        
+
         # self.box.set_friction(0.005)
         # direction = self.box.nullvector.copy()
         # direction[self.box.Z] = 1
@@ -304,7 +304,7 @@ class World(arcade.Window):
         #     ball.color = arcade.color.RED
         # balls = arrangement.create_kube_planes(500, 50)
 
-        
+
         # balls = arrangement.create_pendulum()
         # balls = arrangement.test_walls()
         # balls = arrangement.test_rod()
@@ -347,7 +347,7 @@ class World(arcade.Window):
         # balls = arrangement.create_simplex(50, self.box.center, 1)
         # for ball in balls:
         #     ball.speed[0] = -S/len(balls)
-        
+
         # self.add_balls(balls)
 
         # pos = self.box.center.copy()
@@ -377,10 +377,10 @@ class World(arcade.Window):
     def add_ball(self, mass, radius, position=None, speed=None, charge=0, fixed=False, color=None):
         ball = self.box.add_particle(mass, radius, position, speed, charge, fixed, color)
         ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, FUZZIE)
-        self.ball_list.append(ball.object) 
+        self.ball_list.append(ball.object)
 
         return ball
-    
+
     def draw_plane_holes(self, plane):
         self.hole_list = None
         self.hole_list = arcade.ShapeElementList()
@@ -478,7 +478,7 @@ class World(arcade.Window):
 
         if self.left_mouse_down:
             arcade.draw_line(self.mouse_x, self.mouse_y, self.mouse_dx, self.mouse_dy, arcade.color.WHITE, 1)
-                    
+
         # draw avg impuls vector
         start = self.box.box_sizes/2
         avg_impuls = self.box.avg_momentum()
@@ -494,13 +494,13 @@ class World(arcade.Window):
         while self.box.delete_particles:
             ball = self.box.delete_particles.pop()
             ball.object.kill()
-    
+
         while self.box.merged_particles:
             ball = self.box.merged_particles.pop()
             ball.object.kill()
             # +D_SPRITE_RADIUS
             ball.object = arcade.SpriteCircle(int(ball.radius)+D_SPRITE_RADIUS, ball.color, True)
-            self.ball_list.append(ball.object) 
+            self.ball_list.append(ball.object)
 
         for i, ball in enumerate(self.box.particles):
             #arcade.draw_circle_filled(ball.position[0], ball.position[1], ball.radius, ball.color)
@@ -521,7 +521,7 @@ class World(arcade.Window):
             if ball.charge != 0 and len(output) > 0 and self.box.interaction != 0:
                 arcade.draw_text(output, ball.position[0]+5, ball.position[1]-10, arcade.color.WHITE, 20, font_name="Calibri Bold")
                 pass
-            
+
             # output = str(i)
             # arcade.draw_text(output, ball.position[0]-0, ball.position[1]+0, arcade.color.WHITE, 8, font_name="Calibri Bold")
 
@@ -555,7 +555,7 @@ class World(arcade.Window):
             # start = self.box.center
             # end = self.box.center + dpos
             # arcade.draw_line(*start[:2], *end[:2], color=(0,255,0), line_width=2)
-        
+
         # draw rods
         for i, rod in enumerate(self.box.rods):
             arcade.draw_line(*rod.p1.position[:2], *rod.p2.position[:2], color=arcade.color.GRAY, line_width=2)
@@ -569,7 +569,7 @@ class World(arcade.Window):
             self.hole_list.draw()
         #self.sprite_list.draw_hit_boxes((255,255,255), 2)
 
-    
+
         if self.text:
             # Put the text on the screen.
 
@@ -589,19 +589,19 @@ class World(arcade.Window):
 
                 TE = KE + PE + SE
                 self._output["TE"] = "Total Energy: {:.2f}".format(TE)
-            
+
             try:
                 arcade.draw_text(self._output["KE"], 10, 50, arcade.color.WHITE, 14)
                 arcade.draw_text(self._output["PE"], 10, 80, arcade.color.WHITE, 14)
                 arcade.draw_text(self._output["SE"], 10, 120, arcade.color.WHITE, 14)
                 arcade.draw_text(self._output["TE"], 10, 150, arcade.color.WHITE, 14)
                 # arcade.draw_text(self._output["R"], 10, 180, arcade.color.WHITE, 14)
-            except KeyError: 
+            except KeyError:
                 pass
 
             # output = "Avg Impuls: {}".format(self.box.avg_momentum())
             # arcade.draw_text(output, 10, 80, arcade.color.WHITE, 14)
-            
+
             # P = self.box.pressure()
             # output = "pressure: {:}".format(P)
             # arcade.draw_text(output, 10, 110, arcade.color.WHITE, 14)
@@ -649,7 +649,7 @@ class World(arcade.Window):
             if len(self.box.particles) > 0:
                 ball = self.box.particles.pop(random.randrange(0, len(self.box.particles)))
                 ball.object.kill()
-    
+
     def on_mouse_drag(self, x: float, y: float, dx: float, dy: float, buttons: int, modifiers: int):
         if buttons == arcade.MOUSE_BUTTON_LEFT:
             self.mouse_dx = x
@@ -670,10 +670,10 @@ class World(arcade.Window):
                 speed = [dx/5,dy/5]
 
             self.add_ball(mass, mass, position, speed, charge, None)
-        
+
         self.left_mouse_down = False
         return super().on_mouse_release(x, y, button, modifiers)
-    
+
     def _do_rotation(self, symbol):
         action = {
                     arcade.key.A: (Box.Y,  ROTATION),
@@ -686,7 +686,7 @@ class World(arcade.Window):
         if symbol in action.keys():
             self.box.rotate_axis(*action[symbol])
             self.draw_planes(self.box.planes[2*self.box.dimensions:])
-        
+
     def on_key_press(self, symbol: int, modifiers: int):
         if symbol == arcade.key.P:
             # pause everything
@@ -702,7 +702,7 @@ class World(arcade.Window):
             self.box.stop_all()
         elif symbol == arcade.key.C:
             # center the balls
-            self.box.center_all(fixed=True)  
+            self.box.center_all(fixed=True)
         elif symbol == arcade.key.R:
             # reset framerate
             self.fps = 1/UPDATE_RATE
@@ -718,7 +718,7 @@ class World(arcade.Window):
                 self.fps = 1
             self.set_update_rate(1/self.fps)
         elif symbol == arcade.key.MINUS:
-            # decrease framerate     
+            # decrease framerate
             if self.fps < 10:
                 self.fps -=1
             else:
@@ -746,7 +746,7 @@ class World(arcade.Window):
         else:
             self._do_rotation(symbol)
         return super().on_key_press(symbol, modifiers)
-    
+
 
     def on_resize(self, width: float, height: float):
         if DIMENSIONS == 1:
@@ -758,14 +758,14 @@ class World(arcade.Window):
             arcade.draw_lrwh_rectangle_textured(0, 0,
                                             self.width, self.height,
                                             self.background)
-        numpy.array(self.get_size(),dtype=float)/2
+        # numpy.array(self.get_size(),dtype=float)/2
 
         self.draw_planes(self.box.planes[2*self.box.dimensions:])
 
         return super().on_resize(width, height)
 
 
-def main():
+def main():  # pylint: disable=function-redefined
     world = World()
     world.setup()
     arcade.run()

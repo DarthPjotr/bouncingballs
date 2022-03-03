@@ -19,6 +19,8 @@ from direct.gui.DirectGui import OnscreenText
 from direct.task import Task
 # from direct.actor.Actor import Actor
 # from direct.interval.IntervalGlobal import Sequence
+
+# pylint: disable=no-name-in-module
 from panda3d.core import NodePath, Material, Fog, AntialiasAttrib, PandaNode
 # from panda3d.core import Point3
 from panda3d.core import AmbientLight, Texture
@@ -40,7 +42,7 @@ from panda3d.core import GeomVertexWriter
 from panda3d.core import GeomTriangles
 from panda3d.core import GeomNode
 
-from gas import *
+from gas import *  # pylint: disable=wildcard-import
 from setupbox import Setup, ArrangeParticles
 
 def loaddialog():
@@ -84,12 +86,12 @@ class Polygon():
 
         Returns:
             numpy.array: unit normal vector
-        """   
-        # points = [v for v in self._vertices] 
+        """
+        # points = [v for v in self._vertices]
         if len(self._vertices) < 2:
             raise ValueError("minimal 3 vertices needed")
         c = self.center
-        points = [p-c for p in self._vertices]   
+        points = [p-c for p in self._vertices]
         shape = numpy.shape(points)
         ones = numpy.ones(shape)
         i = 0
@@ -105,9 +107,9 @@ class Polygon():
         vertices = [v-c for v in self._vertices]
         if not (numpy.allclose(vertices@unitnormal, numpy.zeros(len(vertices)))):
             raise ValueError("not all points in one plane")
-        
+
         return unitnormal
-    
+
     def set_vertices(self, vertices):
         self._vertices = vertices
         self.normal = self._get_normal()
@@ -138,7 +140,7 @@ class Polygon():
                 v = (x,z)
             elif i == 2:
                 v = (x,y)
-                    
+
             t.addPolygonVertex(t.addVertex(*v))
             vertex.addData3f(x,y,z)
         t.triangulate()
@@ -149,15 +151,15 @@ class Polygon():
 
         prim.closePrimitive()
         geom = Geom(vdata)
-        geom.addPrimitive(prim) 
+        geom.addPrimitive(prim)
         node = GeomNode('gnode')
         node.addGeom(geom)
 
         return node
-    
+
     def create_outline_node(self, color=[1,1,1,1]):
         points = self._vertices
-        
+
         outline = LineSegs()
         outline.setThickness(3)
         outline.setColor(*color)
@@ -166,13 +168,13 @@ class Polygon():
         outline.moveTo(*start[:3])
         for point in points[1:]:
             outline.drawTo(*point[:3])
-        
+
         outline.drawTo(*start[:3])
 
         node = outline.create()
 
         return node
-    
+
     def regular_polygon_vertices(self, segments=36):
         shape = FlatD3Shape()
         (points, edges) = shape.regular_polygon_vertices(segments=segments)
@@ -229,7 +231,7 @@ class World(ShowBase):
         properties.setSize(1800, 900)
         self.win.requestProperties(properties)
         self.render.setAntialias(8|64)
-    
+
         # setup the box
         self.setup_box()
         self.draw_box()
@@ -251,7 +253,7 @@ class World(ShowBase):
         self.mouse_y = 0
         self.mouse_x_old = 0
         self.mouse_y_old = 0
-    
+
         # register events and tasks
         self.register_key_and_mouse_events()
         self.taskMgr.add(self.task_box_go, 'move')
@@ -264,7 +266,7 @@ class World(ShowBase):
         mainLight.setShadowCaster(True)
         self.mainLightNodePath.setHpr(45, -80, 0)
         self.render.setLight(self.mainLightNodePath)
-        
+
         # ambientLight = AmbientLight("ambient light")
         # ambientLight.setColor(Vec4(0.2, 0.2, 0.2, 1))
         # self.ambientLightNodePath = self.render.attachNewNode(ambientLight)
@@ -311,7 +313,7 @@ class World(ShowBase):
 
         color = numpy.array([0.6, 0.6, 0.6])
         self.setBackgroundColor(*color)
-    
+
     def load_scene(self):
         # Load the scene.
         floorTex = self.loader.loadTexture('maps/grid.jpg')
@@ -376,18 +378,18 @@ class World(ShowBase):
     def draw_text(self, text, x, y):
         # self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
         textnode = OnscreenText(text=text,
-                     style=1, 
-                     fg=(1, 1, 1, 1), 
+                     style=1,
+                     fg=(1, 1, 1, 1),
                      # bg=(0, 0, 1, 1),
                      # shadow=(1, 0, 0, 1),
                      # frame=(0.5, 0.5, 0.5, 1),
                      pos=(x, y), scale=.05,
-                     parent=self.a2dTopLeft, 
-                     align=TextNode.ALeft, 
-                     mayChange=True, 
+                     parent=self.a2dTopLeft,
+                     align=TextNode.ALeft,
+                     mayChange=True,
                      font=self.font)
         return textnode
-    
+
     def move_line(self, line, start, end):
         line.setPos(start)
         line.lookAt(end)
@@ -396,7 +398,7 @@ class World(ShowBase):
             line.setScale(d)
         else:
             line.setScale(0.000001)
-    
+
     def move_trail(self, ball):
         i = ball.index()
         trail = self.trails[i]
@@ -407,10 +409,10 @@ class World(ShowBase):
             pend = Vec3(*end[:3])
             d = start - end
             length2 = d @ d
-            if self.box.torus and length2 > min(self.box.box_sizes/2)**2:  # 
-                print("skipped") 
+            if self.box.torus and length2 > min(self.box.box_sizes/2)**2:  #
+                print("skipped")
                 self.move_line(line, pstart, pstart)
-            else:      
+            else:
                 self.move_line(line, pstart, pend)
             pstart = pend
             start = end
@@ -437,24 +439,24 @@ class World(ShowBase):
         self.accept('control-s', self.task_save)
         self.accept('escape', sys.exit)
         self.accept('q', sys.exit)
-    
-    def task_toggle_quiet(self):  
+
+    def task_toggle_quiet(self):
         self.quiet = not(self.quiet)
         return Task.cont
 
-    def task_load(self): 
-        path = loaddialog() 
+    def task_load(self):
+        path = loaddialog()
         if path is None or len(path) == 0:
             return Task.cont
 
         with open(path) as file:
             self.load(file)
-        
+
         self.set_camera()
-        
+
         return Task.cont
 
-    def task_save(self):  
+    def task_save(self):
         path = savedialog()
         if path is None or len(path) == 0:
             return Task.cont
@@ -462,7 +464,7 @@ class World(ShowBase):
         with open(path, "w") as file:
             self.save(file)
         return Task.cont
-    
+
     def task_toggle_pause(self):
         self.pause = not self.pause
         return Task.cont
@@ -478,7 +480,7 @@ class World(ShowBase):
     def task_stop(self):
         self.box.stop_all()
         return Task.cont
-    
+
     def correct_camera_distance(self, new_pos):
         old_pos = numpy.array(self.camera.getPos())
         opos2center = old_pos - self.box.center[:3]
@@ -495,10 +497,10 @@ class World(ShowBase):
     def task_move_camera(self, key="", mouse="", speed=15):
 
         pos = numpy.array(self.camera.getPos())
-        dir = self.render.getRelativeVector(self.camera, Vec3.forward())
+        dir_ = self.render.getRelativeVector(self.camera, Vec3.forward())
 
-        dx = numpy.array([dir[1],-dir[0],0]) * speed
-        dy = dir * speed
+        dx = numpy.array([dir_[1],-dir_[0],0]) * speed
+        dy = dir_ * speed
         dz = numpy.array([0,0,1]) * speed
 
         # lef right
@@ -527,18 +529,18 @@ class World(ShowBase):
             self.mouse_y_old = mw.getMouseY()
         elif key == 'mouse1-up':
             self.mouse1_down = False
-    
+
         self.camera.setPos(*pos)
         self.camera.setR(0)
         self.camera.lookAt(Vec3(*self.box.center[:3]))
         return Task.cont
-        
+
     def task_mouse_move(self, task):
         if self.mouse1_down:
             mw = self.mouseWatcherNode
             speed = 5000
             if  mw.hasMouse():
-                
+
                 if mw.is_button_down('shift'):
                     speed = 1500
                 else:
@@ -547,7 +549,7 @@ class World(ShowBase):
                 pos = numpy.array(self.camera.getPos())
                 dir = self.render.getRelativeVector(self.camera, Vec3.forward())
 
-                self.mouse_x = mw.getMouseX() 
+                self.mouse_x = mw.getMouseX()
                 self.mouse_y = mw.getMouseY()
 
                 mouse_dx = self.mouse_x_old - self.mouse_x
@@ -555,7 +557,7 @@ class World(ShowBase):
 
                 dx = numpy.array([dir[1],-dir[0],0]) * mouse_dx
                 dpos = dx * speed
-                pos += dpos 
+                pos += dpos
                 pos = self.up_down(pos, mouse_dy*speed)
 
                 self.mouse_x_old = self.mouse_x
@@ -566,29 +568,29 @@ class World(ShowBase):
                 self.camera.setPos(*pos)
                 self.camera.setR(0)
                 self.camera.lookAt(Vec3(*self.box.center[:3]))
-        
+
         return Task.cont
-    
+
     def up_down(self, pos, speed):
         nz = numpy.array([0,0,1])
         center = pos - numpy.array(self.box.center[:3])
         vz = numpy.cross(center, numpy.cross(nz, center))
         vzn = vz/math.sqrt(vz@vz)
         pos += vzn * speed
-        
+
         return pos
-    
+
     def out(self):
         config = {}
 
         config['quiet'] = self.quiet
         config['pause'] = self.pause
         config['tickrate'] = self.tick_rate
- 
+
         out = {'config': config}
         box = self.box.out()
         return {**out, **box}
-    
+
     def load(self, file):
         data = yaml.load(file, Loader=yaml.FullLoader)
         config = data.get("config", {})
@@ -699,7 +701,7 @@ class World(ShowBase):
         # balls += arr.test_all(nplanes=2, nballs=20, nsprings=4, charge=None, extra_holes=2, reflect=True)
 
         # balls += arr.test_bounce()
- 
+
         # balls = arr.create_kube_planes(500, 20)
         ball = self.box.add_particle(mass=1, radius=150, position=self.box.center-[0,300,0], speed=numpy.array([0.5,1,0.3])*5, charge=1)
         balls.append(ball)
@@ -716,7 +718,7 @@ class World(ShowBase):
         #     speed = self.box.random(2)
         #     charge=0
         #     ball = self.box.add_particle(1, radius, pos, speed, charge=charge)
-    
+
         # plane = Plane(self.box, [1,1,1], self.box.center)
         # self.box.planes.append(plane)
 
@@ -730,23 +732,23 @@ class World(ShowBase):
 
         if charge_colors:
             arr.set_charge_colors(balls)
-        
+
         self.box.get_radi(interaction_factor=interaction_factor, neighbor_count=neigbor_count)
         if _dummy:
             self._dummy_ball = self.box.add_particle(1, self.box._interaction_radius, self.box.center, fixed=True, charge=0, color=[0,0,0])
-   
+
     def clear_box(self):
         for nodepath in self.boxnode.children:
             nodepath.removeNode()
             nodepath.clear()
-        
+
         self.trails = []
-    
+
     def _fix2d(self,vector):
         if len(vector) < 3:
             vector = numpy.append(vector, 0)
         return vector
-        
+
     def draw_box(self):
         # draw box
         self.boxnode = NodePath("the Box")
@@ -757,7 +759,7 @@ class World(ShowBase):
         self.draw_spheres()
         self.draw_springs()
         self.draw_trails()
-    
+
     def draw_edges(self):
         for (i, j) in self.box.edges:
             p1 = self.box.vertices[i]
@@ -774,7 +776,7 @@ class World(ShowBase):
             #nodepath.setColor((1, 1, 1, 1))
             # nodepath.reparentTo(self.render)
             nodepath.reparentTo(self.boxnode)
-    
+
     def draw_plane_holes(self, plane):
         # if plane.radius != 0:
         for hole in plane.holes:
@@ -810,7 +812,7 @@ class World(ShowBase):
                 look = point + plane.unitnormal
                 circle_np.lookAt(*look[:3])
 
-           
+
     def draw_planes(self):
         # draw extra planes
         if self._draw_planes == True:
@@ -845,7 +847,7 @@ class World(ShowBase):
                     # nodepath.setColor(0.5,0.5,1,0.3)
 
                 self.draw_plane_holes(plane)
-                
+
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]
                     p2 = plane.box_intersections[j]
@@ -857,15 +859,15 @@ class World(ShowBase):
                     node = lines.create()
                     circle_np = NodePath(node)
                     # nodepath.setColor((1, 1, 1, 1))
-                    # nodepath.reparentTo(self.render)         
+                    # nodepath.reparentTo(self.render)
                     circle_np.reparentTo(self.boxnode)
-        
+
     def draw_spheres(self):
         # draw spheres
         self.spheres = []
         for ball in self.box.particles:
             scale = ball.radius * 0.30
-            color = [c/255 for c in ball.color] 
+            color = [c/255 for c in ball.color]
             color.append(1)
 
             sphere = self.loader.loadModel("models/Sphere_HighPoly")
@@ -896,7 +898,7 @@ class World(ShowBase):
             ball.object = sphere
             # sphere.setColor(0, 100, 100, 10)
             self.spheres.append(sphere)
-    
+
     def draw_springs(self):
         # draw springs
         self.springs = []
@@ -916,7 +918,7 @@ class World(ShowBase):
             # nodepath.setColor(0,1,0,1)
             self.springs.append((nodepath, line))
             # spring.object = (nodepath, line)
-        
+
     def draw_trails(self):
         # draw trails
         # self.trails = []
@@ -924,21 +926,21 @@ class World(ShowBase):
             trail = []
             for j in range(self.box.trail):
                 line = LineSegs("trail[{},{}]".format(i, j))
-                color = [c/255 for c in ball.color] 
+                color = [c/255 for c in ball.color]
                 line.setColor(*color, 1)
                 # line.setColor(0.3, 0.3, 0.3, 1)
                 line.moveTo((0,0,0))
                 line.drawTo((0,1,0))
                 line.setThickness(1)
-                
+
                 node = line.create()
                 nodepath = NodePath(node)
-                # nodepath.reparentTo(self.render)  
+                # nodepath.reparentTo(self.render)
                 nodepath.reparentTo(self.boxnode)
                 # nodepath.reparentTo(ball.object)
                 # nodepath.setColor(0,0.5,0,1)
                 trail.append(nodepath)
-            self.trails.append(trail)   
+            self.trails.append(trail)
 
         return self.box.particles
 
@@ -955,7 +957,7 @@ class World(ShowBase):
             sphere.setScale(scale, scale, scale)
             material = Material()
             material.setShininess(1.0)
-            color = [c/255 for c in ball.color] 
+            color = [c/255 for c in ball.color]
             color.append(1)
             material.setAmbient(Vec4(*color))
             material.setSpecular(Vec4(0,1,1,1))
@@ -969,7 +971,7 @@ class World(ShowBase):
             sphere.removeNode()
             for nodepath in trail:
                 nodepath.removeNode()
-        
+
         for ball in self.box.particles:
             sphere = ball.object
             pos = ball.position # - self.box.center
@@ -990,11 +992,11 @@ class World(ShowBase):
             if self.dynamic_string_coloring:
                 color_index = 255 + 1/((spring.energy/10000) - 1/255)
                 color = colormap.mpl_colormap(color_index)
-                for i in range(line.getNumVertices()):
-                    line.setVertexColor(i,*color[:3])
+                for j in range(line.getNumVertices()):
+                    line.setVertexColor(j,*color[:3])
 
             self.move_line(ray, p1.getPos(), p2.getPos())
-       
+
         charge = sum(p.charge for p in self.box.particles)
         output = "Ticks: {}\nDimensions: {}\nBalls: {}\nCharge: {}\nInteraction: {}".format(self.box.ticks, self.box.dimensions, len(self.box.particles), charge, self.box.interaction)
         self.textnode.text = output
@@ -1005,7 +1007,7 @@ class World(ShowBase):
         return Task.cont
 
 
-def main():
+def main(): # pylint: disable=function-redefined
     loadPrcFile("config/Config.prc")
     world = World()
     world.run()

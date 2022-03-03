@@ -6,27 +6,27 @@ import random
 import math
 import networkx as nx
 
-from gas import *
-from gas import Rod, Membrane
+from gas import *  # pylint: disable=wildcard-import
+from gas import _Rod, _Membrane
 from pprint import pprint as pp
 
 TEST = False
 
-__all__ = ['ArrangeParticle', 'Setup']
+__all__ = ['ArrangeParticles', 'Setup']
 
 class ArrangeParticles:
     """
-    Standard particle arrangements 
-    """    
+    Standard particle arrangements
+    """
     def __init__(self, box: Box) -> None:
         """
         Creates particle arrangement
 
         Args:
             box (Box): The box
-        """        
+        """
         self.box = box
-    
+
     def set_charge_colors(self, balls):
         for ball in balls:
             if ball.charge >= 1:
@@ -45,13 +45,13 @@ class ArrangeParticles:
 
         R = 15
         for i in range(R):
-            c = (i*255/R) % 255 
+            c = (i*255/R) % 255
             color = [c,c,c]
             ball = self.box.add_particle(mass=1, radius=30, color=color)
             balls.append(ball)
 
         return balls
-    
+
     def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, extra_holes=0, reflect=True):
         balls = []
 
@@ -63,16 +63,16 @@ class ArrangeParticles:
             plane = Plane(self.box, normal=normal, point=point, color=None, reflect=reflect)
 
             self.box.planes.append(plane)
-            for i in range(extra_holes):
+            for j in range(extra_holes):
                 # self.box.random_position()
                 _range = [min(self.box.box_sizes)//5, min(self.box.box_sizes)//3]
                 _range.sort()
                 radius = random.randint(*_range)
                 point = self.box.center + self.box.random(min(self.box.box_sizes) - 3*radius)
                 plane.add_hole(point, radius)
-        
+
         balls += self.random_balls(nballs, charge=charge)
-    
+
         for i in range(nsprings):
             length = 100*random.random() + 50
             strength = 0.05
@@ -99,7 +99,7 @@ class ArrangeParticles:
 
         return balls
 
-    def cuboctahedral (self, radius=10, length=100, strength=0.05, damping=0.01,center=True):       
+    def cuboctahedral (self, radius=10, length=100, strength=0.05, damping=0.01,center=True):
         G = nx.Graph()
         edges = []
         start = 0
@@ -127,7 +127,7 @@ class ArrangeParticles:
         balls = self.arrange_from_graph(G, radius, length, strength, damping, center)
         return balls
 
-    def football(self, radius=10, length=100, strength=0.05, damping=0.01, center=True):       
+    def football(self, radius=10, length=100, strength=0.05, damping=0.01, center=True):
         G = nx.Graph()
         edges = []
         start = 0
@@ -135,7 +135,7 @@ class ArrangeParticles:
         for i in range(size):
             edge = (start+i, start+(i+1) % size)
             edges.append(edge)
-        
+
         print(edges)
         G.add_edges_from(edges)
 
@@ -171,7 +171,7 @@ class ArrangeParticles:
         for i in range(size):
             edge = (start+i, start + (i+1) % size)
             edges.append(edge)
-        
+
         # print(edges)
         G.add_edges_from(edges)
 
@@ -184,7 +184,7 @@ class ArrangeParticles:
         for i in range(size):
             edge = (start+i, start + (i+1) % size)
             edges.append(edge)
-        
+
         # print(edges)
         G.add_edges_from(edges)
 
@@ -254,7 +254,7 @@ class ArrangeParticles:
             speed = self.box.nullvector.copy()
             ball = self.box.add_particle(mass=1, radius=radius, position=position, speed=speed, charge=1, fixed=False)
             balls.append(ball)
-        
+
         for edge in G.edges:
             if len(edge) == 2:
                 node1,node2 = edge
@@ -268,7 +268,7 @@ class ArrangeParticles:
                 self.box.springs.append(spring)
             else:
                 print(edge)
-   
+
         if center:
             self.box.center_all()
 
@@ -287,7 +287,7 @@ class ArrangeParticles:
 
         Returns:
             list: list of balls
-        """        
+        """
         rand_m = False
         rand_r = False
         rand_c = False
@@ -298,7 +298,7 @@ class ArrangeParticles:
             rand_r = True
         if charge is None:
             rand_c = True
-            
+
         balls = []
         for i in range(nballs):
             if rand_m:
@@ -314,7 +314,7 @@ class ArrangeParticles:
             balls.append(ball)
 
         return balls
-    
+
     def create_simplex(self, size=200, position=None, charge=0, vertices=None):
         """
         Creates simplex
@@ -327,7 +327,7 @@ class ArrangeParticles:
 
         Returns:
             list: list of balls
-        """        
+        """
         if position is None:
             center = self.box.center
         else:
@@ -335,7 +335,7 @@ class ArrangeParticles:
 
         if vertices is None:
             vertices = self.box.dimensions+1
-        
+
         radius = size / 5
 
         balls = []
@@ -350,14 +350,14 @@ class ArrangeParticles:
 
         for i, b1 in enumerate(balls):
             for b2 in balls[i:]:
-                if b1 != b2:               
+                if b1 != b2:
                     spring = Spring(size, 0.05, 0.01, b1, b2)
                     self.box.springs.append(spring)
         return balls
 
     def create_box(self, size, position=None, charge=0):
         """
-        Creates a box 
+        Creates a box
 
         Args:
             size (float): size of the box
@@ -366,7 +366,7 @@ class ArrangeParticles:
 
         Returns:
             list: list of balls
-        """        
+        """
         ratio = max(self.box.box_sizes)/size
         sizes = self.box.box_sizes/ratio
         if position is None:
@@ -382,7 +382,7 @@ class ArrangeParticles:
             speed = self.box.nullvector.copy()
             ball = self.box.add_particle(1, 10, pos, speed, charge)
             balls.append(ball)
-        
+
         balls[0].speed = 5 * self.box.onevector.copy()
         balls[-1].speed = -5 * self.box.onevector.copy()
 
@@ -390,9 +390,9 @@ class ArrangeParticles:
         for edge in box.edges:
             spring = Spring(l, 0.01, 0.01, balls[edge[0]], balls[edge[1]])
             self.box.springs.append(spring)
-        
+
         return balls
-    
+
     def create_kube_planes(self, size, nballs):
         sizes = numpy.array(self.box.dimensions * [size*1.0])
         kube = Box(sizes)
@@ -402,13 +402,13 @@ class ArrangeParticles:
         # for plane in kube.planes:
         #     plane.point += dcenter
         #     plane.box = self.box
-        #     
+        #
         for plane in kube.planes:
             point = plane.point + dcenter
             normal = plane.unitnormal
             plane_ = Plane(self.box, normal, point)
             self.box.planes.append(plane_)
-    
+
         balls = []
 
         b = {}
@@ -426,7 +426,7 @@ class ArrangeParticles:
                 ball2 = self.box.add_particle(1,3, pos2, speed, 0, True, [255,255,255])
                 b[p2] = ball2
                 balls.append(ball2)
-            
+
             l = math.sqrt((b[p1].position - b[p2].position) @ (b[p1].position - b[p2].position))
             spring = Spring(l, 0, 0, b[p1], b[p2])
             self.box.springs.append(spring)
@@ -436,7 +436,7 @@ class ArrangeParticles:
             position = kube.random_position() + dcenter
             ball = self.box.add_particle(10, 50, position)
             balls.append(ball)
-        
+
         return balls
 
     def create_n_mer(self, nballs, n=2, star=False, circle=False, charge=0):
@@ -452,7 +452,7 @@ class ArrangeParticles:
 
         Returns:
             list: list of balls
-        """        
+        """
         radius = 20
         lspring = 150
         balls = []
@@ -487,7 +487,7 @@ class ArrangeParticles:
                     spring = Spring(lspring, 0.01, 0, b1, bstart)
                     self.box.springs.append(spring)
         return balls
-    
+
     def create_kube(self, size, position=None, charge=0):
         """
         Creates a kube
@@ -499,7 +499,7 @@ class ArrangeParticles:
 
         Returns:
             list: list of balls
-        """        
+        """
         if position is None:
             center = self.box.box_sizes/2
         else:
@@ -514,7 +514,7 @@ class ArrangeParticles:
             speed = self.box.nullvector.copy()
             ball = self.box.add_particle(1, 1, pos, speed, charge)
             balls.append(ball)
-        
+
         # balls[0].speed = 5 * self.box.onevector.copy()
         # balls[-1].speed = -5 * self.box.onevector.copy()
 
@@ -525,8 +525,8 @@ class ArrangeParticles:
                 d = math.sqrt((b0.position-b1.position) @ (b0.position-b1.position))
                 spring = Spring(d, 0.1, 0.02, b0, b1)
                 self.box.springs.append(spring)
-    
-        return balls 
+
+        return balls
 
     def create_pendulum(self, gravity=0.1, direction=None):
         self.box.set_gravity(gravity, direction)
@@ -537,7 +537,7 @@ class ArrangeParticles:
         speed = self.box.nullvector.copy()
         ancor = self.box.add_particle(1, 1, pos, speed, charge=0, fixed=True, color=[255,255,255])
         balls.append(ancor)
-        
+
         lspring = 150
         pos = pos.copy()
         pos[Box.X] += lspring
@@ -558,7 +558,7 @@ class ArrangeParticles:
         self.box.springs.append(spring)
 
         return balls
-    
+
     def test_interaction_simple(self, interaction, power=2):
         self.box.set_interaction(interaction, power)
         balls = []
@@ -645,7 +645,7 @@ class ArrangeParticles:
         self.box.springs.append(spring)
         spring = Spring(190, 0.02, 0.001, b1, b3)
         self.box.springs.append(spring)
-        
+
         return balls
 
     def test_spring(self, length=150, distance=240, strength=0.03, interaction=0 , center=None,speed=None):
@@ -678,9 +678,9 @@ class ArrangeParticles:
 
         spring = Spring(length, strength, 0.000, b1, b2)
         self.box.springs.append(spring)
-        
+
         return balls
-    
+
     def test_fixed_charge(self, interaction=10000):
         self.box.set_interaction(interaction)
 
@@ -698,13 +698,13 @@ class ArrangeParticles:
         balls.extend(balls_)
 
         return balls
-    
+
     def test_walls(self):
         normal = self.box.nullvector.copy()
         normal[0] = 1
         normal[1] = 0.3
         # wall = Plane(self.box, normal, self.box.center)
-        wall = Membrane(self.box, normal, self.box.center)
+        wall = _Membrane(self.box, normal, self.box.center)
         # wall.hole_size = 15
         wall.max_speed = 4
         wall._filter = wall.maxwells_demon_filter
@@ -720,7 +720,7 @@ class ArrangeParticles:
         balls.append(ball)
 
         position = self.box.center.copy()
-        position -= self.box.center/2 
+        position -= self.box.center/2
         speed = -3 * self.box.onevector.copy()
         ball = self.box.add_particle(1, 10, position, speed=speed, charge=0, fixed=False, color=[255,255,0])
         balls.append(ball)
@@ -751,18 +751,18 @@ class ArrangeParticles:
         pos = self.box.center + dpos
         speed = self.box.nullvector.copy()
         # speed[Box.Y] = 1.0 # self.box.random(0.5)
-        
+
         speed[Box.X] = 1.5
         speed[Box.Y] = -2.0
         ball = self.box.add_particle(1, 30, position=list(pos), speed=list(speed), charge=0, color=[0,255,0])
         balls.append(ball)
         b2 = ball
 
-        rod = Rod(length, b1, b2)
+        rod = _Rod(length, b1, b2)
         # spring = Spring(length, 1.0, 0, b1, b2)
         # self.box.rods.append(rod)
         self.box.rods.append(rod)
-        
+
         return balls
 
 class _Test():
@@ -773,7 +773,7 @@ class _Test():
         plane = Plane(box, [math.pi,2,5], [5,math.e,30])
         print(plane)
         planes.append(plane)
-        
+
 
         print("\n####\n")
 
@@ -873,20 +873,20 @@ class _Test():
                 SE = box.energy["SE"]
 
                 print("{};{};{};{};{};{}".format(i, KE, PE, SE, EE, KE+PE+SE).replace(".", ","))
-                
+
                 # print("{:,2f} {:,2f} {:,2f}".format(PV, E, PV/E))
 
             except KeyboardInterrupt:
                 print("user interupted")
                 break
-        
+
         from pprint import pp
-        pp(box.out())            
+        pp(box.out())
 
     def test_displacement(self):
         box = Box([10, 20])
         p1 = numpy.array([1,2])
-        p2 = numpy.array([2,19])  
+        p2 = numpy.array([2,19])
         p3 = numpy.array([9,19])
         box.torus = True
 
@@ -920,14 +920,14 @@ class _Test():
 
         for p in box.particles:
             print(p)
-        
+
         for s in box.springs:
             print(s)
-        
+
         for i in range(100):
             box.go()
             print(box.ticks)
-    
+
     def plane(self):
         # sizes = [1000, 900, 1080]
         sizes = [100, 200, 300]
@@ -963,13 +963,13 @@ class _Test():
             for point in points:
                 print(point)
             print("\n")
-        
+
         for plane in box.planes[2*box.dimensions:]:
             points = plane.box_intersections
             print(plane)
             for (i,j) in plane.edges:
                 print(i, j, points[i], points[j])
-            
+
             # print("\n")
             # results = []
             # points = []
@@ -987,7 +987,7 @@ class _Test():
             #         if not skip:
             #             points.append(intersection)
             #             results.append(((i,j),intersection))
-                
+
             # for p in results:
             #     print(p)
 
@@ -999,7 +999,7 @@ class _Test():
 
         for i in range(100):
             box.go()
-    
+
     def kdtree(self):
         sizes = [100, 200, 300, 500]
         box = Box(sizes)
@@ -1023,7 +1023,7 @@ class _Test():
 
         for i in range(100):
             box.go()
-        
+
         ticks = box.ticks
         return ticks
 
@@ -1070,7 +1070,7 @@ class Setup():
         self._setup_function = self._test_holes
         # self._setup_function = self._test_many_holes
         # self._setup_function = None
-    
+
     def hole_on_plane(self, plane, point, radius):
         polygon = FlatD3Shape()
         polygon.regular_polygon_vertices(36)
@@ -1082,7 +1082,7 @@ class Setup():
         on_plane = True
         for point in points:
             on_plane = on_plane and plane._on_plane(point)
-            
+
         return on_plane
 
     def _test_holes(self):
@@ -1120,7 +1120,7 @@ class Setup():
     def _test_many_holes(self):
         arr = ArrangeParticles(self.box)
         balls = arr.random_balls(nballs=100, mass=1, radius=40, max_speed=3, charge=0)
-    
+
         normal = [1,1,1,0,0,0,0,0]
         dpos = [0, -200,0,0,0,0,0 ]
         plane = Plane(self.box, normal[:self.box.dimensions], self.box.center + dpos[:self.box.dimensions], reflect=False)
@@ -1157,17 +1157,17 @@ class Setup():
                         repeat = True
                         break
                 N -= 1
-    
-            if N > 0:          
+
+            if N > 0:
                 points.append(point)
                 plane.add_hole(point, hole_size)
-                    
-    
+
+
     def _setup(self):
         balls = self.box.particles
         if self.charge_colors:
             self.layout.set_charge_colors(balls)
-        
+
         self.box.get_radi(interaction_factor=self.interaction_factor, neighbor_count=self.neigbor_count)
         self.balls = self.box.particles
 
@@ -1178,7 +1178,7 @@ class Setup():
             self._setup_function()
         self._setup()
         return (self.box, self.balls)
-    
+
     def show(self):
         # print stuff
         print(self.box)
@@ -1198,16 +1198,17 @@ class Setup():
                     on_plane = on_plane and plane._on_plane(point)
                 print(hole, on_plane)
 
-    
+
     def run(self):
         # run the box
         for i in range(1000):
             self.box.go()
-        
+
         ticks = self.box.ticks
         return ticks
 
-def main():
+
+def main():  # pylint: disable=function-redefined
     ticks = 0
     print("START")
 

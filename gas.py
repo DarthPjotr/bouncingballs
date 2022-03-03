@@ -2,21 +2,17 @@
 Ideal gas in n-dimensional box
 """
 import itertools
-from operator import length_hint
 import numpy
 from numpy import linalg
-# from pyglet.window.key import E, F
+# pylint: disable=no-name-in-module
 from scipy.spatial import ConvexHull
+# pylint: enable=no-name-in-module
 from scipy.spatial import KDTree
-import scipy.spatial as sp
 import random
 import math
 from math import sin, cos, acos
-import networkx as nx
 
 import yaml
-from pprint import pp
-import time
 
 import locale
 locale.setlocale(locale.LC_ALL, '')
@@ -30,18 +26,18 @@ __all__ = ['Box', 'Particle', 'Plane', 'Spring', 'Field', 'load', 'save', 'load_
 
 class Field:
     """
-    Different field equation. 
+    Different field equation.
 
-    A field equation changes the particles speed based on position in the box 
+    A field equation changes the particles speed based on position in the box
     and optionaly other parameters of the particle.
-    """    
+    """
     def __init__(self, box) -> None:
         """
         Creates field
 
         Args:
             box (Box): the box
-        """        
+        """
         self.box = box
         position = self.box.nullvector.copy()
         speed = self.box.nullvector.copy()
@@ -58,10 +54,10 @@ class Field:
         Args:
             position (numpy.array, optional): position. Defaults to None.
             ball (Particle, optional): A particle in the box. Defaults to None.
-    
+
         Returns:
             numpy.array: the effect of the field, usually the speed difference, but can also be an other vector or matrix
-        """        
+        """
         if ball is None:
             ball = self.dummy_ball
         if position is None:
@@ -82,7 +78,7 @@ class Field:
 
         Returns:
             numpy.array: change in speed, in this case the zero vector, so no change
-        """        
+        """
         if ball is None:
             ball = self.dummy_ball
         if position is None:
@@ -95,7 +91,7 @@ class Field:
 
     def rotate(self, position=None, ball=None):
         """
-        Applies matrix rotation to the particles speed. 
+        Applies matrix rotation to the particles speed.
         Causes all the particles to move in circles.
 
         Args:
@@ -107,12 +103,12 @@ class Field:
 
         Returns:
             numpy.array: change in speed
-        """        
+        """
         if ball is None:
             ball = self.dummy_ball
         if position is None:
             position = ball.position
-        
+
         if self.box.dimensions > 2:
             raise ValueError("Box dimensions must be 2 to use the rotation field")
 
@@ -121,12 +117,12 @@ class Field:
         c = math.cos(theta)
         s = math.sin(theta)
         M = numpy.array(((c, -s), (s, c)))
-        
+
         dspeed = numpy.matmul(M, ball.speed)
         if ball is not self.dummy_ball:
             ball.speed = dspeed
         return dspeed
-    
+
     def sinkR(self, position=None, ball=None):
         if ball is None:
             ball = self.dummy_ball
@@ -164,7 +160,7 @@ class Field:
         if ball is not self.dummy_ball:
             ball.speed += dspeed
         return dspeed
-    
+
     def rotate_flow(self, position=None, ball=None):
         """
         Rotates alle particles around the center (axis) of the box.
@@ -175,7 +171,7 @@ class Field:
 
         Returns:
             numpy.array: Vector
-        """        
+        """
         if ball is None:
             ball = self.dummy_ball
         if position is None:
@@ -183,7 +179,7 @@ class Field:
 
         center = self.box.box_sizes / 2
         Rc = position - center
-        
+
         u0 = Rc/math.sqrt(Rc.dot(Rc))
         vector = u0.copy()
         vector[0] = u0[1]
@@ -267,7 +263,7 @@ class Box:
         self.skip_trail = 1
         self.object = None
         self.simple_hole_bounce = False
-    
+
     def get_radi(self, interaction_factor=1, neighbor_count=None):
         try:
             self._max_radius = max([ball.radius for ball in self.particles])
@@ -283,12 +279,12 @@ class Box:
             self._avg_radius = 0
         # if len(self.particles) > 25:
         #     self._interaction_radius = interaction_factor*(self.interaction**(1/self.interaction_power))
-        # else: 
+        # else:
         #     self._interaction_radius = max(self.box_sizes)
         self._interaction_radius = interaction_factor * max(self.box_sizes) / (len(self.particles)**(1/self.dimensions))
         if neighbor_count is None:
             neighbor_count = max(10, int(0.1*len(self.particles)))
-        
+
         self._interaction_neighbors = min(len(self.particles), neighbor_count)
 
     def _get_vertices(self):
@@ -314,23 +310,23 @@ class Box:
                         c += 1
                 if c == self.dimensions-1:
                     self.edges.append((i,j))
-    
+
     def _get_axis(self):
         """
         Calculates the axis
 
         Returns:
             list of numpy.array: the axis
-        """        
+        """
         self.axis = []
         for i, size in enumerate(self.box_sizes):
             _axis = self.nullvector.copy()
             _axis[i] = size
             self.axis.append(_axis)
-        
+
         return self.axis
-    
-    def _get_planes(self):       
+
+    def _get_planes(self):
         coordinates = self.box_sizes
         for i, x in enumerate(coordinates):
             points = [p for p in self.vertices if p[i] == x]
@@ -356,7 +352,7 @@ class Box:
 
     def __str__(self) -> str:
         return str(self.box_sizes)
-    
+
     def out(self):
         box = {}
         box["sizes"] = [float(f) for f in self.box_sizes] # list(self.box_sizes)
@@ -379,7 +375,7 @@ class Box:
         output = {"box": box}
 
         return output
-    
+
     def random_position(self, edge=0):
         """
         Gives random position in the box
@@ -389,14 +385,14 @@ class Box:
 
         Returns:
             numpy.array: position
-        """        
+        """
         V = []
-        for max in self.box_sizes:
-            pos = edge + (max - edge*2)*random.random()
+        for max_ in self.box_sizes:
+            pos = edge + (max_ - edge*2)*random.random()
             V.append(pos)
         position = numpy.array(V)
         return position
-   
+
     def random(self, size=1):
         """
         Gives random vector
@@ -406,12 +402,12 @@ class Box:
 
         Returns:
             numpy.array: vector
-        """        
+        """
         V = numpy.array([random.random()-0.5 for d_ in self.box_sizes])
         L = math.sqrt(V.dot(V))
         vector = size*V/L
         return vector
-        
+
     def resize(self, new_sizes):
         """
         Resizes the box
@@ -427,13 +423,14 @@ class Box:
         self.planes = []
         self._get_planes()
         for plane in planes:
+            # pylint: disable=protected-access
             plane.box_intersections = plane._box_intersections()
             plane.edges = plane._edges()
         self.planes.extend(planes)
         self.center = sum(self.vertices)/len(self.vertices)
         self.ticks = 1
         self._normal_momentum = 0
-    
+
     def _rotation_matrix(self, α, β, γ):
         """
         rotation matrix of α, β, γ radians around x, y, z axes (respectively)
@@ -450,19 +447,20 @@ class Box:
     def rotate(self, α, β, γ):
         """
         Rotates content of box around x, y, z axes
-        """         
+        """
         if self.dimensions < 3:
             return
 
         for plane in self.planes[2*self.dimensions:]:
-            cpos = plane.point[:3] - self.center[:3] 
+            cpos = plane.point[:3] - self.center[:3]
             plane.point[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
             normal = plane.unitnormal[:3]
             plane.unitnormal[:3] = normal.dot(self._rotation_matrix(α, β, γ))
+            # pylint: disable=protected-access
             plane._set_params()
 
             for hole in plane.holes:
-                (point, radius) = hole
+                (point, radius_) = hole
                 cpos = point[:3] - self.center[:3]
                 point[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
 
@@ -471,7 +469,7 @@ class Box:
             ball.position[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
             speed = ball.speed[:3]
             ball.speed[:3] = speed.dot(self._rotation_matrix(α, β, γ))
-    
+
     def rotate_axis(self, axis, rad):
         """
         Rotates context of the box around an axis
@@ -479,13 +477,13 @@ class Box:
         Args:
             axis (int): The axis to rotate around: 0: X, 1: Y, 2: Z
             rad (float): radians to rotate
-        """        
+        """
         if self.dimensions < 3:
             return
         rotation = self.nullvector.copy()[:3]
         rotation[axis] = rad
         self.rotate(*rotation)
-    
+
     def volume(self) -> float:
         """
         Calculates the volume of the box
@@ -495,7 +493,7 @@ class Box:
         """
         V = numpy.product(self.box_sizes)
         return V
-    
+
     def area(self) -> float:
         """
         Calculates the area of the box
@@ -506,7 +504,7 @@ class Box:
         V = numpy.product(self.box_sizes)
         A = 2*sum([V/s for s in self.box_sizes])
         return A
-    
+
     def add_particle(self,mass=MASS, radius=RADIUS, position=None, speed=None, charge=0, fixed=False, color=None):
         """
         Adds a particle to the box
@@ -554,7 +552,7 @@ class Box:
 
     def _displacement(self, pos1, pos2):
         """
-        Calculates displacement vector between two position vectors. 
+        Calculates displacement vector between two position vectors.
         Accounts for wrapping around if self.torus == True.
 
         Args:
@@ -563,7 +561,7 @@ class Box:
 
         Returns:
             numpy.array: minimum vector from position 1 to 2
-        """        
+        """
         if self.torus == False:
             return pos1 - pos2
         else:
@@ -572,7 +570,7 @@ class Box:
             P1 = [pos1 + s for s in self.vertices]
             P2 = [pos2 + s for s in self.vertices]
             # print(P1)
-        
+
             dpos_dot = dpos.dot(dpos)
             for p1 in P1:
                 for p2 in P2:
@@ -585,7 +583,7 @@ class Box:
 
     def displacement(self, pos1, pos2):
         """
-        Calculates displacement vector between two position vectors. 
+        Calculates displacement vector between two position vectors.
         Accounts for wrapping around if self.torus == True.
 
         Args:
@@ -594,13 +592,13 @@ class Box:
 
         Returns:
             numpy.array: minimum vector from position 1 to 2
-        """  
-        dpos = pos1 - pos2   
+        """
+        dpos = pos1 - pos2
         if self.torus == True:
             dpos = numpy.array([math.remainder(d,s) for (d,s) in zip(dpos, self.box_sizes/2)])
 
         return dpos
-    
+
     def set_gravity(self, strength, direction=None):
         """
         Sets the gravity
@@ -615,14 +613,14 @@ class Box:
         self.gravity = self.nullvector.copy()
         if strength == 0:
             return self.gravity
-        
+
         if direction is None:
             direction = self.nullvector.copy()
             try:
                 direction[1]=-1
             except IndexError:
                 pass
-        
+
         direction = numpy.array(direction)
         D2 = direction.dot(direction)
         if D2 > 0:
@@ -630,7 +628,7 @@ class Box:
         self.gravity = strength * direction
 
         return self.gravity
-    
+
     def fall(self, particle):
         """
         Applies gravity to particles speed
@@ -656,7 +654,7 @@ class Box:
         """
         self.friction = friction
         return self.friction
-    
+
     def slide(self, particle):
         """
         Applies friction to particles speed
@@ -669,7 +667,7 @@ class Box:
         """
         particle.speed -= particle.speed*self.friction
         return particle
-    
+
     def set_interaction(self, interaction, power=2):
         """
         Sets the interaction between particles
@@ -683,10 +681,10 @@ class Box:
         self.interaction = interaction
         self.interaction_power = power
         return self.interaction
-    
+
     def avg_momentum(self):
         """
-        Calculates the average momentum of all particles in the box, 
+        Calculates the average momentum of all particles in the box,
         including the momentum of the box due to collisions
 
         Returns:
@@ -697,19 +695,19 @@ class Box:
         tot_momentum = sum([ball.momentum for ball in self.particles]) + self.momentum
         return tot_momentum/len(self.particles)
 
-    def avg_position(self):        
+    def avg_position(self):
         """
         Calculates the average positon of all particles in the box
 
         Returns:
             numpy.array: position vector
         """
-    
+
         if len(self.particles) == 0:
             return self.nullvector
         tot_position = sum([ball.position for ball in self.particles])
         return tot_position/len(self.particles)
-    
+
     def pressure(self):
         """
         Calculates the pressure on the box due to collisions of particles with the box
@@ -721,24 +719,24 @@ class Box:
             return self._normal_momentum/(self.ticks*self.area())
         except ZeroDivisionError:
             return self._normal_momentum/self.area()
-    
+
     def stop_all(self):
         """
         Stop all balls
-        """        
+        """
         for ball in self.particles:
             ball.speed = self.nullvector.copy()
         self.momentum = self.nullvector.copy()
-    
+
     def center_all(self, fixed=True):
         """
         Move center of mass to center of box and set total momentum to zero
-        """        
+        """
         if len(self.particles) > 0:
             total_mass = sum(ball.mass for ball in self.particles)
             center_of_mass = sum(ball.mass*ball.position for ball in self.particles)/total_mass
             dpos = self.center - center_of_mass
-            
+
             avg_speed = sum(ball.speed for ball in self.particles)/len(self.particles)
             avg_momentum = sum(ball.momentum for ball in self.particles)/len(self.particles)
             for ball in self.particles:
@@ -747,9 +745,9 @@ class Box:
                 ball.position += dpos
                 # ball.speed -= avg_speed
                 ball.speed -= avg_momentum/ball.mass
-            
+
             self.momentum = self.nullvector.copy()
-    
+
     def kick_all(self):
         """
         Kick all balls in random direction with 10% of average absolute speed with a minimum of 3
@@ -780,11 +778,11 @@ class Box:
             self._move_all()
 
         return bounced
-    
+
     def _speeds(self):
         bounced = False
-    
-        # apply springs 
+
+        # apply springs
         for spring in self.springs:
             spring.pull()
 
@@ -803,15 +801,15 @@ class Box:
             if self.friction != 0:
                 self.slide(ball)
             # bounce against planes
-            ball.bounce()  
+            ball.bounce()
 
         # collisions between balls
         pairs = []
         if self.optimized_collisions and self._kdtree:
             pairs = self._kdtree.query_pairs(2*self._max_radius)
-        else: 
+        else:
             pairs = itertools.combinations(range(len(self.particles)), 2)
-        
+
         for i, j in pairs:
             try:
                 ball1 = self.particles[i]
@@ -819,20 +817,20 @@ class Box:
             except IndexError:
                 continue
             if self.merge:
-                if ball1.merge(ball2): 
+                if ball1.merge(ball2):
                     bounced = True
                     if ball1.radius > self._max_radius:
                         self._max_radius = ball1.radius
                     # self._get_kdtree()
             else:
                 if ball1.collide(ball2): bounced = True
-        
+
         # apply rods
         for rod in self.rods:
             rod.pull()
 
         return bounced
-    
+
     def _energies(self):
         # calculate energies
         self.energy["KE"] = sum(ball.energy for ball in self.particles)
@@ -847,7 +845,7 @@ class Box:
         # move all balls
         for ball in self.particles:
             position = ball.move()
-    
+
     def _get_kdtree(self):
         if not len(self.particles):
             return
@@ -861,7 +859,7 @@ class Box:
 class Plane:
     """
     Plane
-    """    
+    """
     def __init__(self, box: Box, normal=None, point=None, points=None, color=None, reflect=True) -> None:
         """
         Creates plane
@@ -871,11 +869,11 @@ class Plane:
             normal (numpy.array, optional): the normal vector. Defaults to None.
             point (numpy.array, optional): a point on the plane. Defaults to None.
             points (list of numpy.array, optional): point on the plane. Defaults to None.
-            reflect (boolean): Does the plane reflect the particles? 
+            reflect (boolean): Does the plane reflect the particles?
                 If False the holes will reflect and act as disks
-        """        
+        """
         self.box = box
-        
+
         if normal is not None and point is not None:
             if len(normal) != self.box.dimensions or len(point) != self.box.dimensions:
                 raise ValueError("wrong size")
@@ -895,29 +893,29 @@ class Plane:
                 # self._test_normal(points)
         else:
             raise TypeError("missing required argument")
-        
+
         if color is None:
             color = [0,0,128]
         self.color = color
-        
+
         self._set_params()
         self.reflect = reflect
         self.holes = []
 
         self.object = None
-    
+
     def _set_params(self):
         self.D = self.unitnormal @ self.point
         self.box_intersections = self._box_intersections()
         self.edges = self._edges()
         self._projected_hull, self._projection_axis = self._get_projected_hull(self.box_intersections)
-    
+
     def _get_projected_hull(self, points):
         hull = None
         projection_coordinate = 0
         if len(points) < 3:
             return (hull, projection_coordinate)
-        
+
         # project points on X,Y or Z plane as long as i has a non zero value for the normal
         for axis, x in enumerate(self.unitnormal):
             if x != 0:
@@ -940,7 +938,7 @@ class Plane:
 
         Returns:
             tuple: (point, radius)
-        """        
+        """
         point = self.project_point(point)
         hole = (point, radius)
         self.holes.append(hole)
@@ -956,7 +954,7 @@ class Plane:
 
         Returns:
             numpy.array: unit normal vector
-        """        
+        """
         shape = numpy.shape(points)
         ones = numpy.ones(shape)
         i = 0
@@ -976,13 +974,13 @@ class Plane:
             d = p - q
             print(d @ self.unitnormal)
             p = q
-    
+
     def __str__(self) -> str:
         parts = []
         for i, p in enumerate(self.unitnormal):
             part = "{}*x{}".format(p, i)
             parts.append(part)
-        
+
         equation = " + ".join(parts)
         equation += " = {}".format(self.D)
         # pstr = "plane:\n normal: {}\n point: {}\n D: {}\nequation: {}".format(self.unitnormal, self.point, self.D, equation)
@@ -1002,7 +1000,7 @@ class Plane:
             plane["holes"].append({"point": point, "radius": float(radius)})
 
         return plane
-    
+
     def intersection(self, planes):
         """
         Calculates intersection point between planes
@@ -1012,10 +1010,10 @@ class Plane:
 
         Returns:
             numpy.array: the intersection point
-        """        
+        """
         if self not in planes:
             planes.append(self)
-        
+
         if len(planes) != self.box.dimensions:
             raise ValueError("not enough planes to calculate intersection")
         normals = [p.unitnormal for p in planes]
@@ -1024,7 +1022,7 @@ class Plane:
         intersection = linalg.solve(normals, Ds)
 
         return intersection
-    
+
     def distance(self, point):
         """
         Calculates distance between point and the plane
@@ -1034,11 +1032,11 @@ class Plane:
 
         Returns:
             float: the distance
-        """        
+        """
         point = numpy.array(point)
         v = point - self.point
         return v @ self.unitnormal
-    
+
     def _on_plane(self, point):
         hull = self._projected_hull
         axis = self._projection_axis
@@ -1073,7 +1071,7 @@ class Plane:
             return None
         dt = (self.point - point) @ self.unitnormal
         d = dt / dn
-        
+
         return point + vector * d
 
     def project_point(self, point):
@@ -1084,19 +1082,19 @@ class Plane:
             point (numpy.array): point to project on to plane
 
         Returns:
-            numpy.array: the projected point 
-        """  
-        point = numpy.array(point)      
+            numpy.array: the projected point
+        """
+        point = numpy.array(point)
         projected_point = self.intersect_line(point, self.unitnormal)
         return projected_point
-    
+
     def _box_intersections(self):
         """
         Calculates the intersection points with the box
 
         Returns:
             list of numpy.array: the intersection points
-        """        
+        """
         points = []
         for (i, j) in self.box.edges:
             v1 = self.box.vertices[i]
@@ -1127,25 +1125,25 @@ class Plane:
         points = self._sort_convexhull(points)
 
         return points
-    
+
     def _sort_by_distance(self, points):
         if len(points) > 0:
-            sorted = []
+            sorted_ = []
             imin = 0
             while len(points) > 0:
                 p0 = points.pop(imin)
-                sorted.append(p0)
+                sorted_.append(p0)
                 dmin2 = max(self.box.box_sizes) ** 2
                 for i, p1 in enumerate(points):
                     d01 = (p1-p0) @ (p1-p0)
                     if d01 < dmin2:
                         dmin2 = d01
                         imin = i
-            
-            points = sorted
+
+            points = sorted_
 
         return points
-    
+
     def _sort_by_angles(self, points):
         if len(points) > 0:
             p1 = points[0] - self.point
@@ -1157,38 +1155,38 @@ class Plane:
                 p1dp2 = p1@p2
 
                 if p1p2 != 0:
-                    cos = p1dp2/p1p2
+                    cos_ = p1dp2/p1p2
 
-                if cos >= -1 and cos <= 1:
-                    theta = 360*acos(cos)/(2*math.pi)
-                    pt.append([theta, cos, p])
+                if cos_ >= -1 and cos_ <= 1:
+                    theta = 360*acos(cos_)/(2*math.pi)
+                    pt.append([theta, cos_, p])
 
             points = [p[1] for p in pt]
-        
+
         return points
-    
+
     def _sort_convexhull(self, points):
         if len(points) < 3:
             return points
-        
+
         # project points on X,Y or Z plane as long as i has a non zero value for the normal
         for i, x in enumerate(self.unitnormal):
             if x != 0:
                 break
-    
+
         projected = [numpy.delete(p, i) for p in points]
 
         hull = ConvexHull(projected)
         vertices = hull.vertices
 
-        sorted = []
+        sorted_ = []
         for v in vertices:
-            sorted.append(points[v])
+            sorted_.append(points[v])
 
-        return sorted
-    
+        return sorted_
+
     def _sort_by_planes(self, points):
-        sorted = []
+        sorted_ = []
 
         if self.box.dimensions < 4:
             D = 1
@@ -1198,23 +1196,23 @@ class Plane:
         i = 0
         while len(points) > 0:
             p0 = points.pop(i)
-            sorted.append(p0)
+            sorted_.append(p0)
             for i, p1 in enumerate(points):
                 # if numpy.any(p0==p1):
                 if len([t for t in (p0==p1) if t]) == D:
-                    sorted.append(p1)
+                    sorted_.append(p1)
                     break
 
-        points = sorted
+        points = sorted_
         return points
-    
+
     def _edges__(self):
         """
         Calculates the edges
 
         Returns:
             list of (int, int): list of edges
-        """        
+        """
         edges = []
         points = self.box_intersections
         for i, p0 in enumerate(points):
@@ -1224,7 +1222,7 @@ class Plane:
                 if len([t for t in p0==p1 if t]) == self.box.dimensions - 2:
                     if (i,j) not in edges and (j,i) not in edges:
                         edges.append((i,j))
-        
+
         return edges
 
     def _edges(self):
@@ -1233,28 +1231,28 @@ class Plane:
 
         Returns:
             list of (int, int): list of edges
-        """        
+        """
         edges = []
         size = len(self.box_intersections)
 
         for i, p in enumerate(self.box_intersections):
             edge = (i, (i-1) % size)
             edges.append(edge)
-        
+
         return edges
 
     def pass_through(self, ball):
         return False
 
 
-class Membrane(Plane):
+class _Membrane(Plane):
     def __init__(self, box: Box, normal=None, point=None, points=None) -> None:
         self._filter = self.no_filter
         self.hole_size = 15
         self.max_speed = 4
         self._bounced = 0
         super().__init__(box, normal=normal, point=point, points=points)
-    
+
     def no_filter(self, ball):
         return False
 
@@ -1262,15 +1260,15 @@ class Membrane(Plane):
         # res = super().pass_through(ball)
         res = self._filter(ball)
         return res
-    
+
     def mass_filter(self, ball):
         return False
-    
+
     def size_filter(self, ball):
         if ball.radius < self.hole_size:
-            return True 
+            return True
         return False
-    
+
     def speed_filter(self, ball):
         if ball.speed < self.max_speed:
             return True
@@ -1282,10 +1280,10 @@ class Membrane(Plane):
         speed = math.sqrt(ball.speed@ball.speed)
         if speed < self.max_speed:
             res = True
-        
+
         self.max_speed = speed + (self.max_speed * (self._bounced - 1))/self._bounced
         return res
-    
+
     def maxwells_demon_filter(self, ball):
         res = False
         self._bounced += 1
@@ -1305,13 +1303,13 @@ class Membrane(Plane):
                 res = True
         else:
             res = False
-        
+
         if res:
             self.max_speed = (speed + self.max_speed * (self._bounced - 1))/self._bounced
             pass
 
         return res
-    
+
     def out(self):
         membrane = super().out()
         membrane['pass_through_function'] = self._filter.__name__
@@ -1326,7 +1324,7 @@ class Particle:
     """
     def __init__(self, box: Box, mass: float, radius: float, position: list, speed: list, charge: float, fixed: bool, color: list) -> None:
         """
-        Creates particle 
+        Creates particle
 
         Args:
             box (Box): box particle is contained in
@@ -1348,14 +1346,14 @@ class Particle:
         self.color = tuple(color)
         self.fixed = fixed
         self.object = None
-    
+
     def move(self):
         """
         Moves the particle
         """
         if self.fixed:
             self.speed = self.box.nullvector.copy()
-        
+
         if self.box.trail > 0:
             if self.box.ticks % self.box.skip_trail == 0:
                 self.positions.insert(0, self.position.copy())
@@ -1372,15 +1370,15 @@ class Particle:
             self.position = numpy.mod(self.position, self.box.box_sizes)
             return self.position
 
-        # Put the particle back in the box. Usefull when the box is resized 
+        # Put the particle back in the box. Usefull when the box is resized
         for i, x in enumerate(self.box.nullvector):
             if self.position[i] < x:
                 self.position[i] = 1.0*(x + self.radius)
-        
+
         for i, x in enumerate(self.box.box_sizes):
             if self.position[i] > x:
                 self.position[i] = 1.0*(x - self.radius)
-        
+
         return self.position
 
 
@@ -1401,11 +1399,11 @@ class Particle:
         for dpos in dposition:
             if dpos > min_distance:
                 return False
-        
+
         if (sum(dposition) > min_distance*min_distance):
             return False
         return True
-           
+
     def collide(self, ball):
         """
         Handles particle collision
@@ -1429,7 +1427,7 @@ class Particle:
         dposition = self.displacement(ball.position)
         distance2 = dposition.dot(dposition)
 
-        # only collide when particles are moving towards each other: 
+        # only collide when particles are moving towards each other:
         # dot product of speed difference and position different < 0
         dspeed = self.speed - ball.speed
         dot_speed_pos = dspeed.dot(dposition)
@@ -1444,10 +1442,10 @@ class Particle:
             self.speed = speed1
             ball.speed = speed2
             collided = True
-        
+
         # self.impuls = self.mass * self.speed
         return collided
-    
+
     def merge(self, ball):
         """
         Handles particle merge (inelastic collision)
@@ -1468,7 +1466,7 @@ class Particle:
         dposition = self.displacement(ball.position)
         distance2 = dposition.dot(dposition)
 
-        # only collide when particles are moving towards each other: 
+        # only collide when particles are moving towards each other:
         # dot product of speed difference and position different < 0
         dspeed = self.speed - ball.speed
         dot_speed_pos = dspeed.dot(dposition)
@@ -1517,7 +1515,7 @@ class Particle:
         # self.impuls = self.mass * self.speed
         return merged
 
-        
+
     def bounce_simple(self):
         """
         Check and handles particle hitting the box walls
@@ -1549,7 +1547,7 @@ class Particle:
         self.box.momentum += momentum
         self.box._normal_momentum += abs(momentum[index])
         return bounced
-    
+
     def bounce_from_hole(self, plane, hole):
         (center, radius) = hole
         HR2 = radius * radius
@@ -1573,14 +1571,14 @@ class Particle:
         reflect = True
         if plane.reflect and (BE2 > BR2) and (D2 < HR2): # hole
             reflect = False
-        
+
         if not plane.reflect and (BE2 > BR2) and (D2 > HR2): # disk
             reflect = False
-        
+
         # print(BE2 < BR2, edge, self.position, ball2edge, BE2, BR2)
 
         return reflect
-    
+
     def bounce(self):
         """
         Check and handles particle hitting the box walls and the other planes
@@ -1593,7 +1591,7 @@ class Particle:
         """
         bounced = False
         old_speed = self.speed.copy()
-        
+
         start = 0
         if self.box.torus:
             start = self.box.dimensions*2
@@ -1615,7 +1613,7 @@ class Particle:
                         break
 
                 if not reflect:
-                    continue                   
+                    continue
 
                 hitpoint = plane.intersect_line(self.position, self.speed)
                 if hitpoint is None:
@@ -1631,7 +1629,7 @@ class Particle:
                     #dn = self.speed - vspeed2plane
                     #self.speed = 2*dn - self.speed
                     self.speed = self.speed - 2*vspeed2plane
-                    
+
                     momentum = self.mass * (old_speed - self.speed)
                     self.box.momentum += momentum
                     self.box._normal_momentum += abs(momentum @ plane.unitnormal)
@@ -1639,7 +1637,7 @@ class Particle:
 
     def displacement(self, position):
         """
-        Calculates displacement vector between this particle and a position vectors. 
+        Calculates displacement vector between this particle and a position vectors.
         Accounts for wrapping around if self.torus == True.
 
         Args:
@@ -1647,7 +1645,7 @@ class Particle:
 
         Returns:
             numpy.array: minimum vector from particle to position
-        """      
+        """
         return self.box.displacement(self.position, position)
 
     def wrap(self):
@@ -1670,7 +1668,7 @@ class Particle:
                 self.position[i] = self.position[i] - self.box.box_sizes[i]
                 wrapped = True
         return wrapped
-    
+
     def interact(self):
         """
         Handles particle, particle interaction, when particles have charge and the box interaction is set
@@ -1720,7 +1718,7 @@ class Particle:
 
         self.speed += dspeed
         return self.speed
-    
+
     @property
     def potential_energy(self):
         PE = 0
@@ -1737,7 +1735,7 @@ class Particle:
                 pass
         PE = 0.5 * self.box.interaction * self.charge * S
         return PE
-    
+
     def check_inside(self, coords):
         """
         Checks if coordinates are inside the particle
@@ -1763,8 +1761,8 @@ class Particle:
         Returns:
             float: energy
         """
-        return 0.5 * self.mass * self.speed.dot(self.speed) 
-    
+        return 0.5 * self.mass * self.speed.dot(self.speed)
+
     @property
     def momentum(self):
         """
@@ -1783,7 +1781,7 @@ class Particle:
     def index(self):
         i = self.box.particles.index(self)
         return i
-    
+
     def out(self):
         particle = {}
         particle["mass"] = float(self.mass)
@@ -1817,7 +1815,7 @@ class Spring:
         self.p2 = p2
         self.fixed = self.p1.fixed and self.p2.fixed
         self.object = None
-    
+
     def __str__(self) -> str:
         return "{} {} {} {}".format(self.length, self.strength, self.damping, (self.p1.index(), self.p2.index()))
 
@@ -1828,7 +1826,7 @@ class Spring:
         spring["damping"] = float(self.damping)
         spring["particles"] = [self.p1.index(), self.p2.index()]
         return spring
-    
+
     def dlength(self):
         """
         Calculates how far spring is stretched or compressed
@@ -1882,7 +1880,7 @@ class Spring:
         self.p1.speed += dv1
         self.p2.speed += dv2
 
-class Rod(Spring):
+class _Rod(Spring):
     """
     A Rod is a Spring with a fixed length
     """
@@ -1903,7 +1901,7 @@ class Rod(Spring):
         # vrod = self.p2.position - self.p1.position
         # crod = (self.p2.position + self.p1.position)/2
         # vnormalrod = vrod / (vrod@vrod)
-        
+
         # speed1_rod = self.p1.speed @ vnormalrod
         # speed2_rod = self.p2.speed @ vnormalrod
 
@@ -1920,7 +1918,7 @@ class Rod(Spring):
 
         self.p1.position = pos1corr - self.p1.speed
         self.p2.position = pos2corr - self.p2.speed
-    
+
     def _correct_by_center_and_rotation(self):
         crod = (self.p2.position + self.p1.position)/2
 
@@ -1970,7 +1968,7 @@ def load_gas(data):
             charge = p.get('charge', 0)
             color = p.get('color', None)
             box.add_particle(p['mass'], p['radius'], p['position'], p['speed'], charge, fixed, color)
-    
+
     if "springs" in b.keys():
         for s in b['springs']:
             ps = s['particles']
@@ -1980,7 +1978,7 @@ def load_gas(data):
 
             spring = Spring(s['length'], s['strength'], damping, p1, p2)
             box.springs.append(spring)
-    
+
     if "planes" in b.keys():
         for p in b["planes"]:
             normal = p["normal"]
@@ -1988,13 +1986,13 @@ def load_gas(data):
             color = p.get('color', None)
             reflect = p.get('reflect', 0)
             if 'pass_through_function' in p:
-                plane = Membrane(box, normal, point)
+                plane = _Membrane(box, normal, point)
                 plane._filter = getattr(plane, p['pass_through_function'])
                 plane.hole_size = p['hole_size']
                 plane.max_speed = p['max_speed']
             else:
                 plane = Plane(box=box, normal=normal, point=point, color=color, reflect=reflect)
-            
+
             holes = p.get("holes", [])
             for h in holes:
                 point = h.get("point", None)
@@ -2023,12 +2021,12 @@ class FlatD3Shape():
 
         Returns:
             numpy.array: unit normal vector
-        """   
-        # points = [v for v in self._vertices] 
+        """
+        # points = [v for v in self._vertices]
         if len(self.vertices) < 2:
             raise ValueError("minimal 3 vertices needed")
         c = self.center
-        points = [p-c for p in self.vertices]   
+        points = [p-c for p in self.vertices]
         shape = numpy.shape(points)
         ones = numpy.ones(shape)
         i = 0
@@ -2045,9 +2043,9 @@ class FlatD3Shape():
         if not (numpy.allclose(vertices@unitnormal, numpy.zeros(len(vertices)))):
             raise ValueError("not all points in one plane")
             pass
-        
+
         return unitnormal
-    
+
     def _set_props(self, vertices):
         self.vertices = vertices
         if self.vertices:
@@ -2074,18 +2072,17 @@ class FlatD3Shape():
         self._set_props(points)
 
         return (points, edges)
-    
+
     def skew(self,a):
         return numpy.array([[0,-a[2],a[1]],[a[2],0,-a[0]],[-a[1],a[0],0]])
 
     def rotate(self, normal):
         normal = numpy.array(normal)
         normal = normal / math.sqrt(normal @ normal)
-        self.normal
 
         V = numpy.cross(self.normal, normal)
-        cos = self.normal @ normal
-        if cos == 1:
+        cos_ = self.normal @ normal
+        if cos_ == 1:
             return self.vertices
 
         # I = numpy.array([[1,0,0], [0,1,0], [0,0,1]])
@@ -2094,7 +2091,7 @@ class FlatD3Shape():
         # Vx2 = numpy.square(Vx)
         Vx2 = Vx @ Vx
 
-        mrot = I + Vx + Vx2*(1/(1-cos))
+        mrot = I + Vx + Vx2*(1/(1-cos_))
 
         c = self.center
         self.vertices = [c+((v-c) @ mrot) for v in self.vertices]
@@ -2106,7 +2103,7 @@ class FlatD3Shape():
         self.vertices = [c+((v-c)*size) for v in self.vertices]
         self._set_props(self.vertices)
         return self.vertices
-    
+
     def move(self, pos):
         self.vertices = [v+pos for v in self.vertices]
         self._set_props(self.vertices)
@@ -2116,5 +2113,5 @@ class FlatD3Shape():
 def main():
     pass
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     main()
