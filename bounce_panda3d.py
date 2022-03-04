@@ -746,7 +746,7 @@ class World(ShowBase):
 
         self.box.get_radi(interaction_factor=interaction_factor, neighbor_count=neigbor_count)
         if _dummy:
-            self._dummy_ball = self.box.add_particle(1, self.box._interaction_radius, self.box.center, fixed=True, charge=0, color=[0,0,0])
+            self._dummy_ball = self.box.add_particle(1, self.box.interaction_radius, self.box.center, fixed=True, charge=0, color=[0,0,0])
 
     def clear_box(self):
         for nodepath in self.boxnode.children:

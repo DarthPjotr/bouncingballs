@@ -1,6 +1,7 @@
 # pylint: disable=C,I
 # pylint: disable=invalid-name
 # pylint: disable=missing-function-docstring
+# pylint: disable=unused-variable
 
 import numpy
 import time
@@ -709,7 +710,7 @@ class ArrangeParticles:
         wall = _Membrane(self.box, normal, self.box.center)
         # wall.hole_size = 15
         wall.max_speed = 4
-        wall._filter = wall.maxwells_demon_filter
+        wall.filter = wall.maxwells_demon_filter
 
         self.box.planes.append(wall)
 
@@ -1017,10 +1018,10 @@ class _Test():
 
         box.get_radi(interaction_factor=1, neighbor_count=0)
 
-        box._interaction_radius = 60
-        box._interaction_neighbors = 20
+        box.interaction_radius = 60
+        box.interaction_neighbors = 20
         # print([ball.position for ball in box.particles])
-        print("nball: {}\noptimized collisions: {}\noptimized interaction: {}\ninteraction radius: {:.2f}\nneighbor count: {}".format(len(box.particles), box.optimized_collisions, box.optimized_interaction, box._interaction_radius, box._interaction_neighbors))
+        print("nball: {}\noptimized collisions: {}\noptimized interaction: {}\ninteraction radius: {:.2f}\nneighbor count: {}".format(len(box.particles), box.optimized_collisions, box.optimized_interaction, box.interaction_radius, box.interaction_neighbors))
 
         for i in range(100):
             box.go()
@@ -1068,7 +1069,8 @@ class Setup():
 
         self.balls = []
 
-        self._setup_function = self._test_holes
+        self._setup_function = self.many_interactions
+        # self._setup_function = self._test_holes
         # self._setup_function = self._test_many_holes
         # self._setup_function = None
 
@@ -1164,8 +1166,15 @@ class Setup():
                 points.append(point)
                 plane.add_hole(point, hole_size)
 
+    def many_interactions(self):
+        arr = ArrangeParticles(self.box)
+        nballs = 50
+        arr.random_balls(nballs, 1, 10, charge=1)
+        arr.random_balls(nballs, 1, 10, charge=-1)
+        arr.set_charge_colors(self.box.particles)
 
     def _setup(self):
+        self.box.interaction = 5000
         balls = self.box.particles
         if self.charge_colors:
             self.layout.set_charge_colors(balls)

@@ -255,12 +255,12 @@ class Box:
         self._max_radius = 0
         self._min_radius = 0
         self._avg_radius = 0
-        self._interaction_radius = max(self.box_sizes)
+        self.interaction_radius = max(self.box_sizes)
         self.optimized_collisions = True
         self.optimized_interaction = True
         self._kdtree = None
         self._neighbors = []
-        self._interaction_neighbors = 10
+        self.interaction_neighbors = 10
         # other properties
         self.calculate_energies = False
         self.trail = 0
@@ -282,14 +282,14 @@ class Box:
         except ZeroDivisionError:
             self._avg_radius = 0
         # if len(self.particles) > 25:
-        #     self._interaction_radius = interaction_factor*(self.interaction**(1/self.interaction_power))
+        #     self.interaction_radius = interaction_factor*(self.interaction**(1/self.interaction_power))
         # else:
-        #     self._interaction_radius = max(self.box_sizes)
-        self._interaction_radius = interaction_factor * max(self.box_sizes) / (len(self.particles)**(1/self.dimensions))
+        #     self.interaction_radius = max(self.box_sizes)
+        self.interaction_radius = interaction_factor * max(self.box_sizes) / (len(self.particles)**(1/self.dimensions))
         if neighbor_count is None:
             neighbor_count = max(10, int(0.1*len(self.particles)))
 
-        self._interaction_neighbors = min(len(self.particles), neighbor_count)
+        self.interaction_neighbors = min(len(self.particles), neighbor_count)
 
     def _get_vertices(self):
         """
@@ -373,7 +373,7 @@ class Box:
         box["interaction_power"] = self.interaction_power
         box["optimized_collisions"] = self.optimized_collisions
         box["optimized_interaction"] = self.optimized_interaction
-        box["neighbor_count"] = self._interaction_neighbors
+        box["neighbor_count"] = self.interaction_neighbors
         box['simple_hole_bounce'] = self.simple_hole_bounce
 
         output = {"box": box}
@@ -860,7 +860,7 @@ class Box:
         if self.torus:
             sizes = self.box_sizes
         self._kdtree = KDTree(positions, boxsize=sizes)
-        self._neighbors  = self._kdtree.query_ball_tree(self._kdtree, self._interaction_radius)
+        self._neighbors  = self._kdtree.query_ball_tree(self._kdtree, self.interaction_radius)
 
 class Plane:
     """
@@ -1255,7 +1255,7 @@ class Plane:
 
 class _Membrane(Plane):
     def __init__(self, box: Box, normal=None, point=None, points=None) -> None:
-        self._filter = self.no_filter
+        self.filter = self.no_filter
         self.hole_size = 15
         self.max_speed = 4
         self._bounced = 0
@@ -1266,7 +1266,7 @@ class _Membrane(Plane):
 
     def pass_through(self, ball):
         # res = super().pass_through(ball)
-        res = self._filter(ball)
+        res = self.filter(ball)
         return res
 
     def mass_filter(self, ball):  # pylint: disable=unused-argument
@@ -1319,7 +1319,7 @@ class _Membrane(Plane):
 
     def out(self):
         membrane = super().out()
-        membrane['pass_through_function'] = self._filter.__name__
+        membrane['pass_through_function'] = self.filter.__name__
         membrane['hole_size'] = self.hole_size
         membrane['max_speed'] = self.max_speed
         return membrane
@@ -1688,6 +1688,7 @@ class Particle:
         Returns:
             list: new speed vector
         """
+        # pylint: disable=protected-access
         if self.box.interaction == 0 or self.charge == 0 or self.fixed:
             return self.speed
         dspeed = self.box.nullvector.copy()
@@ -1699,8 +1700,8 @@ class Particle:
         if not self.box.optimized_interaction:
             particles = self.box.particles
         else:
-            if self.box._interaction_neighbors > 1:
-                distances, ids = self.box._kdtree.query(self.position, self.box._interaction_neighbors)
+            if self.box.interaction_neighbors > 1:
+                distances, ids = self.box._kdtree.query(self.position, self.box.interaction_neighbors)
                 particles = [self.box.particles[i] for i in ids]
             else:
                 # particles = []
@@ -1713,7 +1714,7 @@ class Particle:
             dpos = self.displacement(ball.position)
             distance2 = dpos.dot(dpos)
             if distance2 > (self.radius+ball.radius)*(self.radius+ball.radius):
-                if self.box.optimized_interaction and self.box._interaction_neighbors > 1:
+                if self.box.optimized_interaction and self.box.interaction_neighbors > 1:
                     distance = distances[i]
                 else:
                     distance = math.sqrt(distance2)
@@ -1966,7 +1967,7 @@ def load_gas(data):
     box.interaction_power = b.get("interaction_power", 2)
     box.optimized_collisions = b.get("optimized_collisions", True)
     box.optimized_interaction = b.get("optimized_interaction", True)
-    box._interaction_neighbors = b.get("neighbor_count",10)
+    box.interaction_neighbors = b.get("neighbor_count",10)
     box.simple_hole_bounce = b.get("simple_hole_bounce", False)
 
     if "particles" in b:
@@ -1994,7 +1995,7 @@ def load_gas(data):
             reflect = p.get('reflect', 0)
             if 'pass_through_function' in p:
                 plane = _Membrane(box, normal, point)
-                plane._filter = getattr(plane, p['pass_through_function']) # pylint: disable=protected-access
+                plane.filter = getattr(plane, p['pass_through_function']) # pylint: disable=protected-access
                 plane.hole_size = p['hole_size']
                 plane.max_speed = p['max_speed']
             else:

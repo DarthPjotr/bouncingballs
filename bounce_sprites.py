@@ -566,12 +566,10 @@ class World(arcade.Window):
         self.arrow_list.draw()
         self.ball_list.draw()
         self.trail_list.draw()
-        #if self._draw_planes:
-        if True:
+        if self._draw_planes:
             self.plane_list.draw()
             self.hole_list.draw()
         #self.sprite_list.draw_hit_boxes((255,255,255), 2)
-
 
         if self.text:
             # Put the text on the screen.
