@@ -2,6 +2,10 @@
 # pylint: disable=invalid-name
 # pylint: disable=missing-function-docstring
 
+"""
+3D engine to display moving balls using gas module
+"""
+
 from math import pi, sin, cos  # pylint: disable=unused-import
 import sys
 import random
@@ -48,9 +52,9 @@ from panda3d.core import GeomTriangles
 from panda3d.core import GeomNode
 # pylint: enable=no-name-in-module
 
-
 from gas import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from setupbox import Setup, ArrangeParticles
+
 
 def loaddialog():
     root = tkinter.Tk()
@@ -75,6 +79,9 @@ def warning(title, message):
     root.destroy()
 
 class Polygon():
+    """
+    Polygon class
+    """
     def __init__(self, vertices=None):
         if vertices is None:
             vertices = []
@@ -113,7 +120,7 @@ class Polygon():
 
         c = self.center
         vertices = [v-c for v in self._vertices]
-        if not (numpy.allclose(vertices@unitnormal, numpy.zeros(len(vertices)))):
+        if not numpy.allclose(vertices@unitnormal, numpy.zeros(len(vertices))):
             raise ValueError("not all points in one plane")
 
         return unitnormal
@@ -195,6 +202,12 @@ class Polygon():
         return (points, edges)
 
 class World(ShowBase):
+    """
+    The World
+
+    Args:
+        ShowBase (_type_): _description_
+    """
     def __init__(self):
         super().__init__()
         # attributes
@@ -438,7 +451,7 @@ class World(ShowBase):
         self.accept('q', sys.exit)
 
     def task_toggle_quiet(self):
-        self.quiet = not(self.quiet)
+        self.quiet = not self.quiet
         return Task.cont
 
     def task_load(self):
@@ -446,7 +459,7 @@ class World(ShowBase):
         if path is None or len(path) == 0:
             return Task.cont
 
-        with open(path) as file:
+        with open(path, encoding="utf8") as file:
             self.load(file)
 
         self.set_camera()
@@ -458,7 +471,7 @@ class World(ShowBase):
         if path is None or len(path) == 0:
             return Task.cont
 
-        with open(path, "w") as file:
+        with open(path, "w", encoding="utf8") as file:
             self.save(file)
         return Task.cont
 
@@ -762,7 +775,7 @@ class World(ShowBase):
         for (i, j) in self.box.edges:
             p1 = self.box.vertices[i]
             p2 = self.box.vertices[j]
-            lines = LineSegs("edge[{},{}]".format(i,j))
+            lines = LineSegs(f"edge[{i},{j}]")
             lines.setColor(0.7, 0.7, 0.7, 1)
             lines.moveTo(*p1[:3])
             lines.drawTo(*p2[:3])
@@ -849,7 +862,7 @@ class World(ShowBase):
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]
                     p2 = plane.box_intersections[j]
-                    lines = LineSegs("edge[{},{}]".format(i,j))
+                    lines = LineSegs(f"edge[{i},{j}]")
                     # lines.setColor(1, 1, 1, 1)
                     lines.moveTo(*p1[:3])
                     lines.drawTo(*p2[:3])
@@ -903,7 +916,7 @@ class World(ShowBase):
         for i, spring in enumerate(self.box.springs):
             _ = spring.p1.object
             _ = spring.p2.object
-            line = LineSegs("spring[{}]".format(i))
+            line = LineSegs(f"spring[{i}]")
             line.setColor(0.4, 0.4, 0.4, 1)
             line.moveTo((0,0,0))
             line.drawTo((0,1,0))
@@ -923,7 +936,7 @@ class World(ShowBase):
         for i, ball in enumerate(self.box.particles):
             trail = []
             for j in range(self.box.trail):
-                line = LineSegs("trail[{},{}]".format(i, j))
+                line = LineSegs(f"trail[{i},{j}]")
                 color = [c/255 for c in ball.color]
                 line.setColor(*color, 1)
                 # line.setColor(0.3, 0.3, 0.3, 1)
@@ -943,6 +956,15 @@ class World(ShowBase):
         return self.box.particles
 
     def task_box_go(self, task):  # pylint: disable=unused-argument
+        """
+        Makes th box Go
+
+        Args:
+            task (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         if self.pause:
             return Task.cont
 
@@ -996,10 +1018,10 @@ class World(ShowBase):
             self.move_line(ray, p1.getPos(), p2.getPos())
 
         charge = sum(p.charge for p in self.box.particles)
-        output = "Ticks: {}\nDimensions: {}\nBalls: {}\nCharge: {}\nInteraction: {}".format(self.box.ticks, self.box.dimensions, len(self.box.particles), charge, self.box.interaction)
+        output = f'Ticks: {self.box.ticks}\nDimensions: {self.box.dimensions}\nBalls: {len(self.box.particles)}\nCharge: {charge}\nInteraction: {self.box.interaction}'
         self.textnode.text = output
 
-        if self.bounced and not(self.quiet):
+        if self.bounced and not self.quiet:
             self.sound.play()
 
         return Task.cont

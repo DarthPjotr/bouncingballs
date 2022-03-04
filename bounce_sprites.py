@@ -577,21 +577,21 @@ class World(arcade.Window):
             # Put the text on the screen.
 
             charge = sum(p.charge for p in self.box.particles)
-            output = "Ticks: {}, Dimensions: {}, Balls: {}, Charge: {}".format(self.box.ticks, self.box.dimensions, len(self.box.particles), charge)
+            output = f"Ticks: {self.box.ticks}, Dimensions: {self.box.dimensions}, Balls: {len(self.box.particles)}, Charge: {charge}"
             arcade.draw_text(output, 10, 20, arcade.color.WHITE, 14)
 
             if self._frames < TEXT_REFRESH or self._frames % TEXT_REFRESH == 0:
                 KE = self.box.energy["KE"]
-                self._output["KE"] = "Kinetic energy: {:.2f}".format(KE)
+                self._output["KE"] = f"Kinetic energy: {KE:.2f}"
 
                 PE = self.box.energy["PE"]
-                self._output["PE"] = "Potential Energy: {:.2f}".format(PE)
+                self._output["PE"] = f"Potential Energy: {PE:.2f}"
 
                 SE = self.box.energy["SE"]
-                self._output["SE"] = "Spring Energy: {:.2f}".format(SE)
+                self._output["SE"] = f"Spring Energy: {SE:.2f}"
 
                 TE = KE + PE + SE
-                self._output["TE"] = "Total Energy: {:.2f}".format(TE)
+                self._output["TE"] = f"Total Energy: {TE:.2f}"
 
             try:
                 arcade.draw_text(self._output["KE"], 10, 50, arcade.color.WHITE, 14)
@@ -623,12 +623,12 @@ class World(arcade.Window):
             # arcade.draw_text(output, 10, 110, arcade.color.WHITE, 14)
 
         #play sound
-        if self.bounced and not(self.quiet):
+        if self.bounced and not self.quiet:
             arcade.play_sound(self.sound, 0.1)
 
     def on_update(self, delta_time):
         """ Movement and game logic """
-        if not(self.pause):
+        if not self.pause:
             for _ in range(TICK_RATE):
                 self.bounced = self.box.go()
 
@@ -693,10 +693,10 @@ class World(arcade.Window):
     def on_key_press(self, symbol: int, modifiers: int):
         if symbol == arcade.key.P:
             # pause everything
-            self.pause = not(self.pause)
+            self.pause = not self.pause
         elif symbol == arcade.key.O:
             # no sound
-            self.quiet = not(self.quiet)
+            self.quiet = not self.quiet
         elif symbol == arcade.key.K:
             # kick the balls
             self.box.kick_all()
@@ -732,19 +732,19 @@ class World(arcade.Window):
             self.set_update_rate(1/self.fps)
         elif symbol == arcade.key.T:
             # display text
-            self.text = not(self.text)
+            self.text = not self.text
         elif symbol == arcade.key.Q or symbol == arcade.key.ESCAPE:
             # quit
             self.close()
         elif symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
             path = loaddialog()
             if path is not None and len(path) > 0:
-                with open(path) as file:
+                with open(path, encoding="utf8") as file:
                     self.load(file)
         elif symbol == arcade.key.S and modifiers & arcade.key.MOD_CTRL:
             path = savedialog()
             if path is not None and len(path) > 0:
-                with open(path) as file:
+                with open(path, "w", encoding="utf8") as file:
                     self.save(file)
         else:
             self._do_rotation(symbol)

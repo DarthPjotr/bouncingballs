@@ -1,5 +1,6 @@
-# pylint: enable=F,E,W,C,I
+# pylint: disable=I
 # pylint: disable=invalid-name
+# pylint: disable=missing-function-docstring
 
 """
 Ideal gas in n-dimensional box
@@ -303,12 +304,12 @@ class Box:
         """
         Calculates the edges
         """
-        for i in range(len(self.vertices)):
+        for i, _ in enumerate(self.vertices):
             for j in range(i+1, len(self.vertices)):
                 v1 = self.vertices[i]
                 v2 = self.vertices[j]
                 c = 0
-                for k in range(len(v1)):
+                for k, _ in enumerate(v1):
                     if v1[k] == v2[k]:
                         c += 1
                 if c == self.dimensions-1:
@@ -434,7 +435,7 @@ class Box:
         self.ticks = 1
         self._normal_momentum = 0
 
-    def _rotation_matrix(self, α, β, γ):
+    def _rotation_matrix(self, α, β, γ): # pylint: disable=non-ascii-name
         """
         rotation matrix of α, β, γ radians around x, y, z axes (respectively)
         """
@@ -447,7 +448,7 @@ class Box:
             (sγ*sα - cα*sβ*cγ, cα*sγ*sβ + sα*cγ, cα*cβ)
         )
 
-    def rotate(self, α, β, γ):
+    def rotate(self, α, β, γ): # pylint: disable=non-ascii-name
         """
         Rotates content of box around x, y, z axes
         """
@@ -565,7 +566,7 @@ class Box:
         Returns:
             numpy.array: minimum vector from position 1 to 2
         """
-        if self.torus == False:
+        if not self.torus:
             return pos1 - pos2
         else:
             dpos = pos1 - pos2
@@ -597,7 +598,7 @@ class Box:
             numpy.array: minimum vector from position 1 to 2
         """
         dpos = pos1 - pos2
-        if self.torus == True:
+        if self.torus:
             dpos = numpy.array([math.remainder(d,s) for (d,s) in zip(dpos, self.box_sizes/2)])
 
         return dpos
@@ -757,7 +758,8 @@ class Box:
         """
         S = sum(abs(ball.speed) for ball in self.particles)
         ms = 0.1 * math.sqrt(S.dot(S))
-        if ms <0.5: ms = 0.5
+        if ms < 0.5:
+            ms = 0.5
         for ball in self.particles:
             ball.speed += self.random(ms)
 
@@ -826,7 +828,8 @@ class Box:
                         self._max_radius = ball1.radius
                     # self._get_kdtree()
             else:
-                if ball1.collide(ball2): bounced = True
+                if ball1.collide(ball2):
+                    bounced = True
 
         # apply rods
         for rod in self.rods:
@@ -982,13 +985,13 @@ class Plane:
     def __str__(self) -> str:
         parts = []
         for i, p in enumerate(self.unitnormal):
-            part = "{}*x{}".format(p, i)
+            part = f"{p}*x{i}"
             parts.append(part)
 
         equation = " + ".join(parts)
-        equation += " = {}".format(self.D)
+        equation += f" = {self.D}"
         # pstr = "plane:\n normal: {}\n point: {}\n D: {}\nequation: {}".format(self.unitnormal, self.point, self.D, equation)
-        pstr = "n:{},\tp:{}".format(self.unitnormal, self.point)
+        pstr = f"n:{self.unitnormal},\tp:{self.point}"
         return pstr
 
     def out(self):
@@ -1404,7 +1407,7 @@ class Particle:
             if dpos > min_distance:
                 return False
 
-        if (sum(dposition) > min_distance*min_distance):
+        if sum(dposition) > min_distance*min_distance:
             return False
         return True
 
@@ -1778,8 +1781,7 @@ class Particle:
         return self.mass * self.speed
 
     def __str__(self) -> str:
-        pstr = ""
-        pstr = "particle:\n mass: {}\n radius: {}\n position: {}\n speed: {}".format(self.mass, self.radius, self.position, self.speed)
+        pstr = f"particle:\n mass: {self.mass}\n radius: {self.radius}\n position: {self.position}\n speed: {self.speed}"
         return pstr
 
     def index(self):
@@ -1821,7 +1823,7 @@ class Spring:
         self.object = None
 
     def __str__(self) -> str:
-        return "{} {} {} {}".format(self.length, self.strength, self.damping, (self.p1.index(), self.p2.index()))
+        return f'{self.length} {self.strength} {self.damping} {(self.p1.index(), self.p2.index())}'
 
     def out(self):
         spring = {}
@@ -1892,7 +1894,7 @@ class _Rod(Spring):
         super().__init__(length=length, strength=0.01, damping=0, p1=p1, p2=p2)
 
     def __str__(self) -> str:
-        return "{} {}".format(self.length, (self.p1.index(), self.p2.index()))
+        return f"{self.length} {(self.p1.index(), self.p2.index())}"
 
     def pull(self):
         super().pull()
@@ -2011,6 +2013,9 @@ def load_gas(data):
     return box
 
 class FlatD3Shape():
+    """
+    Flat 3D shape
+    """
     def __init__(self, vertices=None) -> None:
         if vertices is None:
             vertices = []
@@ -2047,7 +2052,7 @@ class FlatD3Shape():
 
         c = self.center
         vertices = [v-c for v in self.vertices]
-        if not (numpy.allclose(vertices@unitnormal, numpy.zeros(len(vertices)))):
+        if not numpy.allclose(vertices@unitnormal, numpy.zeros(len(vertices))):
             raise ValueError("not all points in one plane")
 
         return unitnormal
