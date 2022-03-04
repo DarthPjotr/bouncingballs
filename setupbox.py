@@ -998,7 +998,7 @@ class _Test():
         arr = ArrangeParticles(box)
         balls = arr.shapes()
 
-        for i in range(100):
+        for _ in range(100):
             box.go()
 
     def kdtree(self):
@@ -1119,6 +1119,7 @@ class Setup():
         self.box.planes.append(plane)
 
     def _test_many_holes(self):
+        balls = self.balls
         arr = ArrangeParticles(self.box)
         balls = arr.random_balls(nballs=100, mass=1, radius=40, max_speed=3, charge=0)
 
@@ -1134,7 +1135,7 @@ class Setup():
         dholes = numpy.zeros(self.box.dimensions)
         dholes.fill(hole_size)
 
-        for i in range(nholes):
+        for _ in range(nholes):
             N = 100
             repeat = True
             while N > 0 and repeat:
