@@ -1,20 +1,23 @@
+# pylint: enable=F,E,W,C,I
+# pylint: disable=invalid-name
+
 """
 Ideal gas in n-dimensional box
 """
 import itertools
-import numpy
-from numpy import linalg
-# pylint: disable=no-name-in-module
-from scipy.spatial import ConvexHull
-# pylint: enable=no-name-in-module
-from scipy.spatial import KDTree
+
 import random
 import math
 from math import sin, cos, acos
 
-import yaml
-
 import locale
+
+import yaml
+import numpy
+from numpy import linalg
+from scipy.spatial import ConvexHull # pylint: disable=no-name-in-module
+from scipy.spatial import KDTree
+
 locale.setlocale(locale.LC_ALL, '')
 
 VMAX = 3
@@ -847,7 +850,7 @@ class Box:
             _ = ball.move()
 
     def _get_kdtree(self):
-        if not len(self.particles):
+        if not self.particles:
             return
         positions = [ball.position for ball in self.particles]
         sizes = None

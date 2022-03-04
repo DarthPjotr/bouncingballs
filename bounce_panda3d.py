@@ -1,14 +1,19 @@
+# pylint: disable=I
+# pylint: disable=invalid-name
+# pylint: disable=missing-function-docstring
+
 from math import pi, sin, cos  # pylint: disable=unused-import
 import sys
 import random
 import math
-import numpy
-from numpy import linalg
 
 import tkinter
 from tkinter import filedialog as fd
 from tkinter.messagebox import showwarning
 import yaml
+
+import numpy
+from numpy import linalg
 
 from palettable.scientific.diverging import Roma_20_r as colormap
 
@@ -808,7 +813,7 @@ class World(ShowBase):
 
     def draw_planes(self):
         # draw extra planes
-        if self._draw_planes == True:
+        if self._draw_planes:
             start = 2*self.box.dimensions
             if self._draw_box_planes:
                 start = 0

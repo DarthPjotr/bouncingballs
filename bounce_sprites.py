@@ -1,19 +1,24 @@
+# pylint: disable=I
+# pylint: disable=invalid-name
+# pylint: disable=missing-function-docstring
+
 """
 Bounce balls on the screen.
 Spawns a new ball for each mouse-click.
 """
 
-import arcade
 import random
 import math
-import numpy
-import yaml
-
-from palettable.scientific.diverging import Roma_20_r as colormap
-# from palettable.mycarta import CubeYF_20 as colormap
 
 import tkinter
 from tkinter import filedialog as fd
+
+import yaml
+import numpy
+import arcade
+
+from palettable.scientific.diverging import Roma_20_r as colormap
+# from palettable.mycarta import CubeYF_20 as colormap
 
 from gas import * # pylint: disable=wildcard-import, unused-wildcard-import
 from setupbox import Setup, ArrangeParticles
@@ -443,7 +448,7 @@ class World(arcade.Window):
                                             self.background)
         else:
             arcade.cleanup_texture_cache()
-            if self.box.field == None:
+            if self.box.field is None:
                 return
             gx = numpy.arange(0, self.box.box_sizes[0], 50)
             gy = numpy.arange(0, self.box.box_sizes[1], 50)
@@ -555,7 +560,7 @@ class World(arcade.Window):
             # arcade.draw_line(*start[:2], *end[:2], color=(0,255,0), line_width=2)
 
         # draw rods
-        for i, rod in enumerate(self.box.rods):
+        for _, rod in enumerate(self.box.rods):
             arcade.draw_line(*rod.p1.position[:2], *rod.p2.position[:2], color=arcade.color.GRAY, line_width=2)
 
         self.arrow_list.draw()
@@ -681,7 +686,7 @@ class World(arcade.Window):
                     arcade.key.X: (Box.Z,  ROTATION),
                     arcade.key.V: (Box.Z, -ROTATION),
                 }
-        if symbol in action.keys():
+        if symbol in action:
             self.box.rotate_axis(*action[symbol])
             self.draw_planes(self.box.planes[2*self.box.dimensions:])
 

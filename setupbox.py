@@ -1,3 +1,6 @@
+# pylint: disable=C,I
+# pylint: disable=invalid-name
+# pylint: disable=missing-function-docstring
 
 import numpy
 import time
@@ -1199,7 +1202,7 @@ class Setup():
 
     def run(self):
         # run the box
-        for i in range(1000):
+        for _ in range(1000):
             self.box.go()
 
         ticks = self.box.ticks
