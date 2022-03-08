@@ -24,6 +24,7 @@ from palettable.scientific.diverging import Roma_20_r as colormap
 from direct.showbase.ShowBase import ShowBase
 # from direct.showbase.DirectObject import DirectObject
 from direct.gui.DirectGui import OnscreenText
+from direct.gui.DirectGui import *
 # from direct.gui.DirectGui import OkDialog
 from direct.task import Task
 # from direct.actor.Actor import Actor
@@ -254,8 +255,9 @@ class World(ShowBase):
         self.set_spotlight()
         # self.set_background()
         self.set_background()
-        self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
-        self.textnode = self.draw_text("The Box:", 0.1, -0.1)
+
+        # GUI objects
+        self.draw_gui()
 
         # properties for camera control
         self.mouse1_down = False
@@ -268,6 +270,16 @@ class World(ShowBase):
         self.register_key_and_mouse_events()
         self.taskMgr.add(self.task_box_go, 'move')
         self.taskMgr.add(self.task_mouse_move, 'mouse')
+
+    def draw_gui(self):
+        # GUI objects
+        self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
+        self.textnode = self.gui_text("The Box:", 0.1, -0.1, scale=0.03)
+        self._slider_interaction = self.gui_slider(x=0.3, y=-0.9, range_=(0, 10000), value=self.box.interaction, command=self._set_interaction, text="interaction:")
+        max_friction = max(5*self.box.friction, 0.05)
+        self._slider_friction = self.gui_slider(x=0.3, y=-0.8, range_=(0, max_friction), value=self.box.friction, command=self._set_friction, text="friction:")
+        self._slider_gravity = self.gui_slider(x=0.3, y=-0.7, range_=(0, 2), value=0, command=self._set_gravity, text="gravity:")
+        self._slider_neighbors = self.gui_slider(x=0.3, y=-1.1, range_=(0, len(self.box.particles)), value=self.box.interaction_neighbors, command=self._set_neighbors, text="neighbors:")
 
     def set_main_lighting(self):
         mainLight = DirectionalLight("main light")
@@ -385,7 +397,7 @@ class World(ShowBase):
         # self.world.setTexture(texture, 1)
         # self.world.setShaderAuto()
 
-    def draw_text(self, text, x, y):
+    def gui_text(self, text, x, y, scale=0.05):
         # self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
         textnode = OnscreenText(text=text,
                      style=1,
@@ -393,12 +405,45 @@ class World(ShowBase):
                      # bg=(0, 0, 1, 1),
                      # shadow=(1, 0, 0, 1),
                      # frame=(0.5, 0.5, 0.5, 1),
-                     pos=(x, y), scale=.05,
+                     pos=(x, y), scale=scale,
                      parent=self.a2dTopLeft,
                      align=TextNode.ALeft,
                      mayChange=True,
                      font=self.font)
         return textnode
+
+    def gui_slider(self, x, y, range_, value, command, text=""):
+        if range_ is None:
+            range_ = (0, 100)
+        if value is None:
+            value = sum(range_)//len(range_)
+
+        pagesize = sum(range_)/(len(range_)*10)
+        self.gui_text(text, x-0.2, y+0.03, scale=0.03)
+        slider = DirectSlider(range=range_, value=value, pageSize=pagesize, thumb_relief=DGG.FLAT,
+                            command=command, pos=Vec3(x, 0, y), parent=self.a2dTopLeft, scale=0.2, relief=DGG.FLAT,
+                            frameColor=(0.5,0.5,0.5,1))
+        return slider
+
+    def _set_interaction(self):
+        interaction = self._slider_interaction['value']
+        self.box.set_interaction(interaction)
+
+    def _set_friction(self):
+        friction = self._slider_friction['value']
+        self.box.set_friction(friction)
+
+    def _set_gravity(self):
+        gravity = self._slider_gravity['value']
+        dir_ = self.box.nullvector.copy()
+        dir_[self.box.Z] = -1
+        self.box.set_gravity(gravity, dir_)
+
+    def _set_neighbors(self):
+        neighbors = self._slider_neighbors['value']
+        dir_ = self.box.nullvector.copy()
+        dir_[self.box.Z] = -1
+        self.box.interaction_neighbors = int(neighbors)
 
     def move_line(self, line, start, end):
         line.setPos(start)
@@ -617,15 +662,16 @@ class World(ShowBase):
             self.clear_box()
             self.box = load_gas(data)
             self.draw_box()
+            self.draw_gui()
         else:
-            warning("Warning", "2D boxes not supported")
+            warning("Warning", "2D5 boxes not supported")
 
     def save(self, file):
         out = self.out()
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
     def setup_box(self):
-        setup = Setup(self, dimensions=3)
+        setup = Setup(self, dimensions=4)
         (box, _) = setup.make()
         self.box = box
 
@@ -752,6 +798,10 @@ class World(ShowBase):
         for nodepath in self.boxnode.children:
             nodepath.removeNode()
             nodepath.clear()
+
+        for gui in self.a2dTopLeft.children:
+            gui.removeNode()
+            gui.clear()
 
         self.trails = []
 
@@ -1018,7 +1068,15 @@ class World(ShowBase):
             self.move_line(ray, p1.getPos(), p2.getPos())
 
         charge = sum(p.charge for p in self.box.particles)
-        output = f'Ticks: {self.box.ticks}\nDimensions: {self.box.dimensions}\nBalls: {len(self.box.particles)}\nCharge: {charge}\nInteraction: {self.box.interaction}'
+        gravity = math.sqrt(self.box.gravity @ self.box.gravity)
+        output = f'Ticks: {self.box.ticks}\nDimensions: {self.box.dimensions}\n\
+Balls: {len(self.box.particles)}\n\
+Charge: {charge}\n\
+Interaction: {self.box.interaction:.2f}\n\
+Friction: {self.box.friction:.3f}\n\
+Gravity: {gravity:.2f}\n\n\
+Neighbor count: {self.box.interaction_neighbors}'
+
         self.textnode.text = output
 
         if self.bounced and not self.quiet:

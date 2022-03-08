@@ -3,6 +3,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=unused-variable
 
+from types import MethodType
 import numpy
 import time
 import random
@@ -1049,12 +1050,12 @@ class Setup():
         interaction = 0 # 5000.0
         power = 2.0
         friction = 0.0 #0.035
-        gravity_strength = 0.5
+        gravity_strength = 0
         gravity_direction = self.box.nullvector.copy()
         if dimensions > 2:
-            gravity_direction[self.box.Z] = -0
+            gravity_direction[self.box.Z] = -1
         else:
-            gravity_direction[self.box.Y] = -0
+            gravity_direction[self.box.Y] = -1
 
         self.box.set_interaction(interaction, power)
         self.box.set_friction(friction)
@@ -1065,11 +1066,12 @@ class Setup():
         self.charge_colors = False
         self.hole_in_walls = False
         self.interaction_factor = 1
-        self.neigbor_count = 20
+        self.neighbor_count = 20
 
         self.balls = []
 
         self._setup_function = self.many_interactions
+        # self._setup_function = self._eight_dim
         # self._setup_function = self._test_holes
         # self._setup_function = self._test_many_holes
         # self._setup_function = None
@@ -1087,6 +1089,25 @@ class Setup():
             on_plane = on_plane and plane._on_plane(point)
 
         return on_plane
+
+    def _eight_dim(self):
+        self.box.interaction = 5000
+        self.box.friction = 0.05
+
+        balls = self.balls
+        nballs = 24
+        radius = 100
+        arr = ArrangeParticles(self.box)
+
+        dpos = [0, 300, 0, 0, 0, 0, 0, 0]
+        position = self.box.center - dpos[:self.box.dimensions]
+        speed = numpy.array([0.5, 1, 0.3, 0, 0, 0, 0])*5
+        ball = self.box.add_particle(
+            mass=1, radius=radius, position=position[:self.box.dimensions], speed=speed[:self.box.dimensions], charge=nballs)
+        balls.append(ball)
+
+        balls += arr.random_balls(nballs, 1, radius, charge=-1)
+        arr.set_charge_colors(balls)
 
     def _test_holes(self):
         balls = self.balls
@@ -1167,10 +1188,12 @@ class Setup():
                 plane.add_hole(point, hole_size)
 
     def many_interactions(self):
+        self.box.friction = 0.01
         arr = ArrangeParticles(self.box)
         nballs = 50
-        arr.random_balls(nballs, 1, 10, charge=1)
-        arr.random_balls(nballs, 1, 10, charge=-1)
+        radius = 30
+        arr.random_balls(nballs, 1, radius, 2, charge=1)
+        arr.random_balls(nballs, 1, radius, 2, charge=-1)
         arr.set_charge_colors(self.box.particles)
 
     def _setup(self):
@@ -1179,13 +1202,13 @@ class Setup():
         if self.charge_colors:
             self.layout.set_charge_colors(balls)
 
-        self.box.get_radi(interaction_factor=self.interaction_factor, neighbor_count=self.neigbor_count)
+        self.box.get_radi(interaction_factor=self.interaction_factor, neighbor_count=self.neighbor_count)
         self.balls = self.box.particles
 
         return balls
 
     def make(self):
-        if self._setup_function:
+        if isinstance(self._setup_function, MethodType):
             self._setup_function()
         self._setup()
         return (self.box, self.balls)
