@@ -1,11 +1,23 @@
+"""
+Generates n-dimensional rotation matrices
+"""
+
+# pylint: disable=I
+# pylint: disable=invalid-name
+# pylint: disable=missing-function-docstring
+
 import math
-import numpy
-from numpy import linalg
 from pprint import pprint as pp
 from itertools import combinations
 import random
 
+import numpy
+from numpy import linalg
+
 class RotationMatrix():
+    """
+    Generates n-dimensional rotation matrices
+    """
     def __init__(self, dimensions) -> None:
         self.dimensions = dimensions
         self.identity = numpy.eye(self.dimensions)
@@ -50,7 +62,6 @@ class RotationMatrix():
         R = self._kabsch_umeyama(A, B)
 
         return R
-
 
     def _kabsch_umeyama(self, A, B):
         assert A.shape == B.shape
@@ -125,11 +136,6 @@ def test_matrix():
     v2 = numpy.array([5, 6, 7, 8, 9,2,3,4,5])
     v2 = v2[:matrix.dimensions]
     v2 = v2 / math.sqrt(v2@v2)
-
-    z = numpy.array([0, 0, 0, 0, 0])
-
-    A = numpy.array([v1, z])
-    B = numpy.array([v2, z])
 
     print("\nKABSCH")
     pp(v1)
