@@ -257,6 +257,7 @@ class World(ShowBase):
         self.set_background()
 
         # GUI objects
+        self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
         self.draw_gui()
 
         # properties for camera control
@@ -273,12 +274,12 @@ class World(ShowBase):
 
     def draw_gui(self):
         # GUI objects
-        self.font = self.loader.load_font('fonts/CascadiaCode.ttf')
         self.textnode = self.gui_text("The Box:", 0.1, -0.1, scale=0.03)
         self._slider_interaction = self.gui_slider(x=0.3, y=-0.9, range_=(0, 10000), value=self.box.interaction, command=self._set_interaction, text="interaction:")
         max_friction = max(5*self.box.friction, 0.05)
         self._slider_friction = self.gui_slider(x=0.3, y=-0.8, range_=(0, max_friction), value=self.box.friction, command=self._set_friction, text="friction:")
-        self._slider_gravity = self.gui_slider(x=0.3, y=-0.7, range_=(0, 2), value=0, command=self._set_gravity, text="gravity:")
+        gravity = math.sqrt(self.box.gravity@self.box.gravity)
+        self._slider_gravity = self.gui_slider(x=0.3, y=-0.7, range_=(0, 2), value=gravity, command=self._set_gravity, text="gravity:")
         self._slider_neighbors = self.gui_slider(x=0.3, y=-1.1, range_=(0, len(self.box.particles)), value=self.box.interaction_neighbors, command=self._set_neighbors, text="neighbors:")
 
     def set_main_lighting(self):
@@ -664,7 +665,7 @@ class World(ShowBase):
             self.draw_box()
             self.draw_gui()
         else:
-            warning("Warning", "2D5 boxes not supported")
+            warning("Warning", "2D boxes not supported")
 
     def save(self, file):
         out = self.out()

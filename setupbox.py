@@ -1070,7 +1070,10 @@ class Setup():
 
         self.balls = []
 
-        self._setup_function = self.many_interactions
+        self.arrangement = ArrangeParticles(self.box)
+
+        self._setup_function = self.arrangement.create_pendulum
+        # self._setup_function = self.many_interactions
         # self._setup_function = self._eight_dim
         # self._setup_function = self._test_holes
         # self._setup_function = self._test_many_holes
