@@ -687,7 +687,7 @@ class World(ShowBase):
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
     def setup_box(self):
-        setup = Setup(self, dimensions=3)
+        setup = Setup(self, dimensions=4)
         (box, _) = setup.make()
         self.box = box
 

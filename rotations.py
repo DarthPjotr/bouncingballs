@@ -43,6 +43,8 @@ class RotationMatrix():
     def combined_rotations(self, rotations):
         M = self.identity.copy()
         for i, j, angle in rotations:
+            if i not in self.axis or j not in self.axis:
+                continue
             m = self.single_rotation(i, j, angle)
             M = M @ m
 

@@ -14,6 +14,8 @@ from gas import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from gas import _Rod, _Membrane
 from pprint import pprint as pp # pylint: disable=unused-import
 
+from rotations import RotationMatrix
+
 TEST = False
 
 __all__ = ['ArrangeParticles', 'Setup']
@@ -275,6 +277,22 @@ class ArrangeParticles:
 
         if center:
             self.box.center_all()
+
+        return balls
+
+
+    def add_rotation_speed(self, rotations, center=None, balls=None):
+        if center is None:
+            center = self.box.center
+        if balls is None:
+            balls = self.box.particles
+
+        rotor = RotationMatrix(self.box.dimensions)
+        R = rotor.combined_rotations(rotations)
+        for ball in balls:
+            position = ball.position - center
+            dpos = (position @ R) - position
+            ball.speed += dpos
 
         return balls
 
@@ -1072,8 +1090,9 @@ class Setup():
 
         self.arrangement = ArrangeParticles(self.box)
 
+        self._setup_function = self._test_rotation
         # self._setup_function = self.arrangement.create_pendulum
-        self._setup_function = self.many_interactions
+        # self._setup_function = self.many_interactions
         # self._setup_function = self._eight_dim
         # self._setup_function = self._test_holes
         # self._setup_function = self._test_many_holes
@@ -1198,6 +1217,16 @@ class Setup():
         arr.random_balls(nballs, 1, radius, 2, charge=1)
         arr.random_balls(nballs, 1, radius, 2, charge=-1)
         arr.set_charge_colors(self.box.particles)
+
+    def _test_rotation(self):
+        self.box.interaction = 15000
+        # balls = self.arrangement.create_kube(100, self.box.center, 1)
+        balls = self.arrangement.create_box(400, self.box.center, 1)
+        angle = math.pi/360
+        # rotations = [[0, 1, angle], [1, 2, 2*angle], [2, 3, 3*angle]]
+        rotations = [[0, 1, angle], [2, 3, angle]]
+        balls = self.arrangement.add_rotation_speed(rotations[:1], balls=balls)
+        return balls
 
     def _setup(self):
         self.box.interaction = 5000
