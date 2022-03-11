@@ -475,7 +475,7 @@ class World(ShowBase):
         trail = self.trails[i]
         start = ball.position
         pstart = Vec3(*start[:3])
-        for i, end in enumerate(ball.positions):
+        for i, end in enumerate(ball.positions[:MAX_TRAILS]):
             line = trail[i]
             pend = Vec3(*end[:3])
             d = start - end

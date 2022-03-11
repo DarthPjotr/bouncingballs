@@ -60,11 +60,11 @@ class RotationMatrix():
         B = numpy.array([v2, z])
 
         # R, c, t = self._full_kabsch_umeyama(A, B)
-        R = self._kabsch_umeyama(A, B)
+        R = self._simple_kabsch_umeyama(A, B)
 
         return R
 
-    def _kabsch_umeyama(self, A, B):
+    def _simple_kabsch_umeyama(self, A, B):
         assert A.shape == B.shape
         n, m = A.shape
 
@@ -77,7 +77,7 @@ class RotationMatrix():
 
         return R
 
-    def _full_kabsch_umeyama(self, A, B):
+    def _kabsch_umeyama(self, A, B):
         # https://zpl.fi/aligning-point-patterns-with-kabsch-umeyama-algorithm/
         assert A.shape == B.shape
         n, m = A.shape
