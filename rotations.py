@@ -10,6 +10,7 @@ import math
 from pprint import pprint as pp
 from itertools import combinations
 import random
+import sys
 
 import numpy
 from numpy import linalg
@@ -98,9 +99,12 @@ class RotationMatrix():
 
 
 def test_matrix():
+    numpy.set_printoptions(precision=4, suppress=True, linewidth=95)
+
     matrix = RotationMatrix(4)
     M = matrix.identity.copy()
     print(matrix.combinations)
+    print(len(matrix.combinations))
     for i, j in matrix.combinations:
         m = matrix.single_rotation(i, j, math.pi/4)
         pp(m)
@@ -114,10 +118,22 @@ def test_matrix():
     pp(M.conjugate())
     print("inverse")
     pp(linalg.inv(M))
-    print("")
+
+    M = matrix.single_rotation(
+        0, 1, math.pi/5) @ matrix.single_rotation(2, 3, math.pi/7)
+    print("\neigen values")
+    print(M)
+    W, V = linalg.eig(M)
+    print(W)
+    print(V)
+    print(linalg.eigvals(M))
+
+
 
     pp(M.trace())
     pp(linalg.det(M))
+
+    sys.exit()
 
     print("")
     # math.pi/4
@@ -153,6 +169,10 @@ def test_matrix():
     pp(v2 @ R.T)
     pp(v1)
     print(numpy.allclose(v2@R.T, v1))
+
+
+    print("")
+    pp(linalg.eig(R))
 
 def main():
     test_matrix()

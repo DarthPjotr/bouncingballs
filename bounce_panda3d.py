@@ -56,6 +56,7 @@ from panda3d.core import GeomNode
 from gas import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from setupbox import Setup, ArrangeParticles
 
+MAX_TRAILS = 30
 
 def loaddialog():
     root = tkinter.Tk()
@@ -282,6 +283,9 @@ class World(ShowBase):
         self._slider_gravity = self.gui_slider(x=0.3, y=-0.7, range_=(0, 2), value=gravity, command=self._set_gravity, text="gravity:")
         self._slider_neighbors = self.gui_slider(x=0.3, y=-1.1, range_=(0, len(self.box.particles)), value=self.box.interaction_neighbors, command=self._set_neighbors, text="neighbors:")
 
+        self._slider_trail = self.gui_slider(x=0.3, y=-1.3, range_=(0, MAX_TRAILS), value=self.box.trail, command=self._set_trail, text="trail length:")
+        self._slider_skip_trail = self.gui_slider(x=0.3, y=-1.4, range_=(1, 10), value=self.box.skip_trail, command=self._set_skip_trail, text="trail part length:")
+
     def set_main_lighting(self):
         mainLight = DirectionalLight("main light")
         mainLight.setColor(Vec4(0.3, 0.3, 0.3, 1))
@@ -423,7 +427,8 @@ class World(ShowBase):
         self.gui_text(text, x-0.2, y+0.03, scale=0.03)
         slider = DirectSlider(range=range_, value=value, pageSize=pagesize, thumb_relief=DGG.FLAT,
                             command=command, pos=Vec3(x, 0, y), parent=self.a2dTopLeft, scale=0.2, relief=DGG.FLAT,
-                            frameColor=(0.5,0.5,0.5,1))
+                            frameColor=(0.5,0.5,0.5,1),
+                              textMayChange=0)
         return slider
 
     def _set_interaction(self):
@@ -445,6 +450,16 @@ class World(ShowBase):
         dir_ = self.box.nullvector.copy()
         dir_[self.box.Z] = -1
         self.box.interaction_neighbors = int(neighbors)
+
+    def _set_trail(self):
+        trail = self._slider_trail['value']
+        self.box.trail = int(trail)
+        self.show_trails()
+        # self.draw_trails()
+
+    def _set_skip_trail(self):
+        skip = self._slider_skip_trail['value']
+        self.box.skip_trail = int(skip)
 
     def move_line(self, line, start, end):
         line.setPos(start)
@@ -672,7 +687,7 @@ class World(ShowBase):
         yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False)
 
     def setup_box(self):
-        setup = Setup(self, dimensions=4)
+        setup = Setup(self, dimensions=3)
         (box, _) = setup.make()
         self.box = box
 
@@ -986,7 +1001,8 @@ class World(ShowBase):
         # self.trails = []
         for i, ball in enumerate(self.box.particles):
             trail = []
-            for j in range(self.box.trail):
+            # for j in range(self.box.trail):
+            for j in range(MAX_TRAILS):
                 line = LineSegs(f"trail[{i},{j}]")
                 color = [c/255 for c in ball.color]
                 line.setColor(*color, 1)
@@ -1005,6 +1021,14 @@ class World(ShowBase):
             self.trails.append(trail)
 
         return self.box.particles
+
+    def show_trails(self):
+        for i, _ in enumerate(self.box.particles):
+            trail = self.trails[i]
+            for nodepath in trail[0:self.box.trail]:
+                nodepath.show()
+            for nodepath in trail[self.box.trail:MAX_TRAILS]:
+                nodepath.hide()
 
     def task_box_go(self, task):  # pylint: disable=unused-argument
         """

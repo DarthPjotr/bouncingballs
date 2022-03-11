@@ -1072,8 +1072,8 @@ class Setup():
 
         self.arrangement = ArrangeParticles(self.box)
 
-        self._setup_function = self.arrangement.create_pendulum
-        # self._setup_function = self.many_interactions
+        # self._setup_function = self.arrangement.create_pendulum
+        self._setup_function = self.many_interactions
         # self._setup_function = self._eight_dim
         # self._setup_function = self._test_holes
         # self._setup_function = self._test_many_holes
@@ -1193,7 +1193,7 @@ class Setup():
     def many_interactions(self):
         self.box.friction = 0.01
         arr = ArrangeParticles(self.box)
-        nballs = 50
+        nballs = 30
         radius = 30
         arr.random_balls(nballs, 1, radius, 2, charge=1)
         arr.random_balls(nballs, 1, radius, 2, charge=-1)
