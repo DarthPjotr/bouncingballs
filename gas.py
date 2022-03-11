@@ -435,7 +435,7 @@ class Box:
         self.ticks = 1
         self._normal_momentum = 0
 
-    def _rotation_matrix(self, α, β, γ): # pylint: disable=non-ascii-name
+    def _rotation_matrix_3d(self, α, β, γ): # pylint: disable=non-ascii-name
         """
         rotation matrix of α, β, γ radians around x, y, z axes (respectively)
         """
@@ -448,7 +448,7 @@ class Box:
             (sγ*sα - cα*sβ*cγ, cα*sγ*sβ + sα*cγ, cα*cβ)
         )
 
-    def rotate(self, α, β, γ): # pylint: disable=non-ascii-name
+    def rotate_3d(self, α, β, γ): # pylint: disable=non-ascii-name
         """
         Rotates content of box around x, y, z axes
         """
@@ -457,24 +457,24 @@ class Box:
 
         for plane in self.planes[2*self.dimensions:]:
             cpos = plane.point[:3] - self.center[:3]
-            plane.point[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
+            plane.point[:3] = self.center[:3] + cpos.dot(self._rotation_matrix_3d(α, β, γ))
             normal = plane.unitnormal[:3]
-            plane.unitnormal[:3] = normal.dot(self._rotation_matrix(α, β, γ))
+            plane.unitnormal[:3] = normal.dot(self._rotation_matrix_3d(α, β, γ))
             # pylint: disable=protected-access
             plane._set_params()
 
             for hole in plane.holes:
                 (point, _) = hole
                 cpos = point[:3] - self.center[:3]
-                point[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
+                point[:3] = self.center[:3] + cpos.dot(self._rotation_matrix_3d(α, β, γ))
 
         for ball in self.particles:
             cpos = ball.position[:3] - self.center[:3]
-            ball.position[:3] = self.center[:3] + cpos.dot(self._rotation_matrix(α, β, γ))
+            ball.position[:3] = self.center[:3] + cpos.dot(self._rotation_matrix_3d(α, β, γ))
             speed = ball.speed[:3]
-            ball.speed[:3] = speed.dot(self._rotation_matrix(α, β, γ))
+            ball.speed[:3] = speed.dot(self._rotation_matrix_3d(α, β, γ))
 
-    def rotate_axis(self, axis, rad):
+    def rotate_axis_3d(self, axis, rad):
         """
         Rotates context of the box around an axis
 
@@ -486,7 +486,7 @@ class Box:
             return
         rotation = self.nullvector.copy()[:3]
         rotation[axis] = rad
-        self.rotate(*rotation)
+        self.rotate_3d(*rotation)
 
     def volume(self) -> float:
         """

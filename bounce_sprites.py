@@ -685,7 +685,7 @@ class World(arcade.Window):
                     arcade.key.V: (Box.Z, -ROTATION),
                 }
         if symbol in action:
-            self.box.rotate_axis(*action[symbol])
+            self.box.rotate_axis_3d(*action[symbol])
             self.draw_planes(self.box.planes[2*self.box.dimensions:])
 
     def on_key_press(self, symbol: int, modifiers: int):
