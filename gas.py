@@ -19,6 +19,8 @@ from numpy import linalg
 from scipy.spatial import ConvexHull # pylint: disable=no-name-in-module
 from scipy.spatial import KDTree
 
+from rotations import RotationMatrix
+
 locale.setlocale(locale.LC_ALL, '')
 
 VMAX = 3
@@ -261,6 +263,8 @@ class Box:
         self._kdtree = None
         self._neighbors = []
         self.interaction_neighbors = 10
+        # properties for rotations of content
+        self._rotor = RotationMatrix(self.dimensions)
         # other properties
         self.calculate_energies = False
         self.trail = 0
@@ -447,6 +451,28 @@ class Box:
             (cα*sγ + sα*sβ*cγ, cα*cγ - sγ*sα*sβ, -cβ*sα),
             (sγ*sα - cα*sβ*cγ, cα*sγ*sβ + sα*cγ, cα*cβ)
         )
+
+    def rotate(self, rotations):
+        R = self._rotor.combined_rotations(rotations)
+
+        for plane in self.planes[2*self.dimensions:]:
+            cpos = plane.point - self.center
+            plane.point = self.center + cpos @ R
+            normal = plane.unitnormal
+            plane.unitnormal = normal @ R
+            # pylint: disable=protected-access
+            plane._set_params()
+
+            for hole in plane.holes:
+                (point, _) = hole
+                cpos = point - self.center
+                point = self.center + cpos @ R
+
+        for ball in self.particles:
+            cpos = ball.position - self.center
+            ball.position = self.center + cpos @ R
+            speed = ball.speed
+            ball.speed = speed @ R
 
     def rotate_3d(self, α, β, γ): # pylint: disable=non-ascii-name
         """

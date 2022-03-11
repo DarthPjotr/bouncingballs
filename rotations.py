@@ -24,6 +24,7 @@ class RotationMatrix():
         self.identity = numpy.eye(self.dimensions)
         self.axis = [i for i in range(self.dimensions)]
         self.combinations = list(combinations(self.axis, 2))
+        self.nrotations = len(self.combinations)
 
     def single_rotation(self, axis1, axis2, angle):
         matrix = self.identity.copy()
