@@ -377,7 +377,7 @@ class ArrangeParticles:
                     self.box.springs.append(spring)
         return balls
 
-    def create_box(self, size, position=None, charge=0):
+    def create_box(self, size, position=None, radius=10, charge=0):
         """
         Creates a box
 
@@ -402,7 +402,7 @@ class ArrangeParticles:
         for vertex in box.vertices:
             pos = center - (box.box_sizes/2) + vertex
             speed = self.box.nullvector.copy()
-            ball = self.box.add_particle(1, 10, pos, speed, charge)
+            ball = self.box.add_particle(1, radius, pos, speed, charge)
             balls.append(ball)
 
         balls[0].speed = 5 * self.box.onevector.copy()
@@ -1221,11 +1221,14 @@ class Setup():
     def _test_rotation(self):
         self.box.interaction = 15000
         # balls = self.arrangement.create_kube(100, self.box.center, 1)
-        balls = self.arrangement.create_box(400, self.box.center, 1)
+        balls = self.arrangement.create_box(size=400, position=self.box.center, radius=50, charge=1)
+        for ball in balls:
+            pass
+            ball.speed = self.box.nullvector.copy()
         angle = math.pi/360
-        # rotations = [[0, 1, angle], [1, 2, 2*angle], [2, 3, 3*angle]]
-        rotations = [[0, 1, angle], [2, 3, angle]]
-        balls = self.arrangement.add_rotation_speed(rotations[:1], balls=balls)
+        rotations = [[0, 1, -1*angle], [1, 2, 2*angle], [2, 3, 3*angle]]
+        # rotations = [[0, 1, -1*angle], [2, 3, 3*angle]]
+        balls = self.arrangement.add_rotation_speed(rotations, balls=balls)
         return balls
 
     def _setup(self):
