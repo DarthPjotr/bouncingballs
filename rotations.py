@@ -4,7 +4,6 @@ Generates n-dimensional rotation matrices
 
 # pylint: disable=I
 # pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
 
 import math
 from pprint import pprint as pp
@@ -27,6 +26,21 @@ class RotationMatrix():
         self.nrotations = len(self.combinations)
 
     def single_rotation(self, axis1, axis2, angle):
+        """
+        Single rotation in plane defined by the provided axis of the coordinate system, leaving the other axis stationary.
+        0 = x-axis
+        1 = y-axis
+        2 = z-axis
+        3.. = higher dimensional axis
+
+        Args:
+            axis1 (int): first axis
+            axis2 (int): second axis
+            angle (float): angle of rotation
+
+        Returns:
+            numpy.array: rotation matrix
+        """
         matrix = self.identity.copy()
         cos_ = math.cos(angle)
         matrix[axis1, axis1] = cos_
@@ -41,6 +55,15 @@ class RotationMatrix():
         return matrix
 
     def combined_rotations(self, rotations):
+        """
+        combines single rotations
+
+        Args:
+            rotations (list[(axis1: int, axis2: int, angle: float),...]): set of single rotations
+
+        Returns:
+            numpy.array: rotation matrix
+        """
         M = self.identity.copy()
         for i, j, angle in rotations:
             if i not in self.axis or j not in self.axis:
@@ -51,6 +74,16 @@ class RotationMatrix():
         return M
 
     def align(self, v1, v2):
+        """
+        calculates rotation matrix to align two vectors
+
+        Args:
+            v1 (numpy.array): first vector
+            v2 (numpy.array): second vector
+
+        Returns:
+            numpy.array: rotation matrix
+        """
         v1 = numpy.array(v1)
         v1 = v1 / math.sqrt(v1@v1)
 
@@ -68,11 +101,21 @@ class RotationMatrix():
         return R
 
     def _simple_kabsch_umeyama(self, A, B):
+        """
+        simplified Kabsch Uneyama algorithm
+
+        Args:
+            A (numpy.array): first set of vectors
+            B (numpy.array): second set of vectors
+
+        Returns:
+            numpy.array: rotation matrix
+        """
         assert A.shape == B.shape
         n, m = A.shape
 
         H = ((A).T @ (B)) / n
-        U, D, VT = numpy.linalg.svd(H)
+        U, D, VT = numpy.linalg.svd(H) # pylint: disable=unused-variable
         d = numpy.sign(numpy.linalg.det(U) * numpy.linalg.det(VT))
         S = numpy.diag([1] * (m - 1) + [d])
 
@@ -81,7 +124,17 @@ class RotationMatrix():
         return R
 
     def _kabsch_umeyama(self, A, B):
-        # https://zpl.fi/aligning-point-patterns-with-kabsch-umeyama-algorithm/
+        """
+        full Kabsch Uneyama algorithm.
+        using: https://zpl.fi/aligning-point-patterns-with-kabsch-umeyama-algorithm/
+
+        Args:
+            A (numpy.array): first set of vectors
+            B (numpy.array): second set of vectors
+
+        Returns:
+            numpy.array: rotation matrix
+        """
         assert A.shape == B.shape
         n, m = A.shape
 
@@ -102,6 +155,9 @@ class RotationMatrix():
 
 
 def test_matrix():
+    """
+    Tests
+    """
     numpy.set_printoptions(precision=4, suppress=True, linewidth=95)
 
     matrix = RotationMatrix(4)
@@ -178,6 +234,9 @@ def test_matrix():
     pp(linalg.eig(R))
 
 def main():
+    """
+    main
+    """
     test_matrix()
 
 if __name__ == "__main__":
