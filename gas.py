@@ -458,6 +458,34 @@ class Box:
         self.ticks = 1
         self._normal_momentum = 0
 
+    def project(self, position, axis=3):
+        """
+        projects extra dimension onto 3D in perspective
+
+        Args:
+            position (numpy.array): the position to project
+            axis (int, optional): axis to project. Defaults to 3.
+
+        Returns:
+            numpy.array: projected position
+        """
+        if self.dimensions < 4:
+            return position
+
+        position = position.copy()
+        min_ = 0.05
+        max_ = 0.95
+        A = (max_ - min_) / self.box_sizes[axis]
+        B = min_
+
+        pos_center_3d = position[:3] - self.center[:3]
+        w = position[axis]
+        f = A*w + B
+
+        pos = pos_center_3d*f + self.center[:3]
+        position[:3] = pos
+        return position
+
     def rotate(self, rotations):
         """
         rotates everything in the box around the center
@@ -1873,6 +1901,48 @@ class Particle:
     def __str__(self) -> str:
         pstr = f"particle:\n mass: {self.mass}\n radius: {self.radius}\n position: {self.position}\n speed: {self.speed}"
         return pstr
+
+    def project__(self, axis=3):
+        """
+        projects extra dimension onto 3D in perspective
+
+        Args:
+            axis (int, optional): axis to project. Defaults to 3.
+
+        Returns:
+            numpy.array: projected position
+        """
+        position = self.position.copy()
+
+        if self.box.dimensions < 4:
+            return position
+
+        min_ = 0.05
+        max_ = 0.95
+        A = (min_ - max_) / self.box.box_sizes[axis]
+        B = max_
+        B = min_
+
+        pos_center_3d = position[:3] - self.box.center[:3]
+        w = position[axis]
+        f = -A*w + B
+
+        pos = pos_center_3d*f + self.box.center[:3]
+        position[:3] = pos
+        return position
+
+    def project(self, axis=3):
+        """
+        projects extra dimension onto 3D in perspective
+
+        Args:
+            axis (int, optional): axis to project. Defaults to 3.
+
+        Returns:
+            numpy.array: projected position
+        """
+        position = self.box.project(self.position, axis)
+        return position
 
     def index(self):
         """

@@ -223,6 +223,7 @@ class World(ShowBase):
         self.pause = False
         self._draw_planes = True
         self._draw_box_planes = False
+        self.project4d = False
         self.dynamic_string_coloring = False
         self.trails = []
         self.tick_rate = 1
@@ -474,9 +475,13 @@ class World(ShowBase):
         i = ball.index()
         trail = self.trails[i]
         start = ball.position
+        if self.project4d:
+            start = self.box.project(start)
         pstart = Vec3(*start[:3])
         for i, end in enumerate(ball.positions[:MAX_TRAILS]):
             line = trail[i]
+            if self.project4d:
+                end = self.box.project(end)
             pend = Vec3(*end[:3])
             d = start - end
             length2 = d @ d
@@ -657,6 +662,7 @@ class World(ShowBase):
         config['quiet'] = self.quiet
         config['pause'] = self.pause
         config['tickrate'] = self.tick_rate
+        config['project4d'] = self.project4d
 
         out = {'config': config}
         box = self.box.out()
@@ -1069,7 +1075,11 @@ class World(ShowBase):
 
         for ball in self.box.particles:
             sphere = ball.object
-            pos = ball.position # - self.box.center
+            if self.project4d:
+                pos = ball.project()
+            else:
+                pos = ball.position
+
             sphere.setPos(*pos[:3])
             if self.box.dimensions > 3:
                 transparency = pos[3]/self.box.box_sizes[3]

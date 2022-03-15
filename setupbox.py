@@ -337,7 +337,7 @@ class ArrangeParticles:
 
         return balls
 
-    def create_simplex(self, size=200, position=None, charge=0, vertices=None):
+    def create_simplex(self, size=200, position=None, radius=10, charge=0, vertices=None):
         """
         Creates simplex
 
@@ -357,8 +357,6 @@ class ArrangeParticles:
 
         if vertices is None:
             vertices = self.box.dimensions+1
-
-        radius = size / 5
 
         balls = []
         for i in range(vertices):
@@ -1054,6 +1052,7 @@ class Setup():
         if world:
             world.quiet = True
             world.tick_rate = 1
+            world.project4d = True
 
         sizes = numpy.array([1500, 1500, 1200, 1000, 1000, 1000, 1000, 1000])
         self.box = Box(sizes[:dimensions])
@@ -1070,7 +1069,9 @@ class Setup():
         friction = 0.0 #0.035
         gravity_strength = 0
         gravity_direction = self.box.nullvector.copy()
-        if dimensions > 2:
+        if dimensions > 3:
+            gravity_direction[self.box.D4] = -1
+        elif dimensions > 2:
             gravity_direction[self.box.Z] = -1
         else:
             gravity_direction[self.box.Y] = -1
@@ -1221,14 +1222,16 @@ class Setup():
     def _test_rotation(self):
         self.box.interaction = 15000
         # balls = self.arrangement.create_kube(100, self.box.center, 1)
-        balls = self.arrangement.create_box(size=400, position=self.box.center, radius=50, charge=1)
+        # balls = self.arrangement.create_box(size=600, position=self.box.center, radius=50, charge=1)
+        balls = self.arrangement.create_simplex(size=600, position=self.box.center, radius=50, charge=1, vertices=None)
         for ball in balls:
-            pass
             ball.speed = self.box.nullvector.copy()
+
         angle = math.pi/360
-        rotations = [[0, 1, -1*angle], [1, 2, 2*angle], [2, 3, 3*angle]]
-        # rotations = [[0, 1, -1*angle], [2, 3, 3*angle]]
+        # rotations = [[0, 1, -1*angle], [1, 2, 2*angle], [2, 3, 3*angle]]
+        rotations = [[0, 1, -1*angle], [2, 3, 3*angle]]
         balls = self.arrangement.add_rotation_speed(rotations, balls=balls)
+        # self.box.gravity = numpy.array([0,0,0,-1])
         return balls
 
     def _setup(self):
