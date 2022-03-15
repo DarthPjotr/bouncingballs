@@ -179,7 +179,7 @@ def test_matrix():
     pp(linalg.inv(M))
 
     M = matrix.single_rotation(
-        0, 1, math.pi/5) @ matrix.single_rotation(2, 3, math.pi/7)
+        0, 1, math.pi/2) @ matrix.single_rotation(2, 3, math.pi/7)
     print("\neigen values")
     print(M)
     W, V = linalg.eig(M)

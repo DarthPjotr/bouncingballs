@@ -1,6 +1,6 @@
 # pylint: disable=I
 # pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
+# pylint: disable=too-many-lines
 
 """
 Ideal gas in n-dimensional box
@@ -130,6 +130,9 @@ class Field:
         return dspeed
 
     def sinkR(self, position=None, ball=None):
+        """
+        Field with a sink 1/R
+        """
         if ball is None:
             ball = self.dummy_ball
         if position is None:
@@ -149,6 +152,9 @@ class Field:
         return dspeed
 
     def sinkRR(self, position=None, ball=None):
+        """
+        Field with a sink 1/(R**2)
+        """
         if ball is None:
             ball = self.dummy_ball
         if position is None:
@@ -273,6 +279,13 @@ class Box:
         self.simple_hole_bounce = False
 
     def get_radi(self, interaction_factor=1, neighbor_count=None):
+        """
+        calculates parameters for KDtree optimization
+
+        Args:
+            interaction_factor (int, optional): factor for interaction radius. Defaults to 1.
+            neighbor_count (int, optional): number of neighbors to use. Defaults to None.
+        """
         try:
             self._max_radius = max([ball.radius for ball in self.particles])
         except ValueError:
@@ -362,6 +375,12 @@ class Box:
         return str(self.box_sizes)
 
     def out(self):
+        """
+        dumps all properties
+
+        Returns:
+            dict: the dump
+        """
         box = {}
         box["sizes"] = [float(f) for f in self.box_sizes] # list(self.box_sizes)
         box['torus'] = self.torus
@@ -439,20 +458,16 @@ class Box:
         self.ticks = 1
         self._normal_momentum = 0
 
-    def _rotation_matrix_3d(self, α, β, γ): # pylint: disable=non-ascii-name
-        """
-        rotation matrix of α, β, γ radians around x, y, z axes (respectively)
-        """
-        sα, cα = sin(α), cos(α)
-        sβ, cβ = sin(β), cos(β)
-        sγ, cγ = sin(γ), cos(γ)
-        return (
-            (cβ*cγ, -cβ*sγ, sβ),
-            (cα*sγ + sα*sβ*cγ, cα*cγ - sγ*sα*sβ, -cβ*sα),
-            (sγ*sα - cα*sβ*cγ, cα*sγ*sβ + sα*cγ, cα*cβ)
-        )
-
     def rotate(self, rotations):
+        """
+        rotates everything in the box around the center
+
+        Args:
+            rotations (list[(axis1: int, axis2: int, angle: float),...]): set of single rotations
+
+        Returns:
+            numpy.array: rotation matrix
+        """
         R = self._rotor.combined_rotations(rotations)
 
         for plane in self.planes[2*self.dimensions:]:
@@ -473,6 +488,19 @@ class Box:
             ball.position = self.center + cpos @ R
             speed = ball.speed
             ball.speed = speed @ R
+
+    def _rotation_matrix_3d(self, α, β, γ): # pylint: disable=non-ascii-name
+        """
+        rotation matrix of α, β, γ radians around x, y, z axes (respectively)
+        """
+        sα, cα = sin(α), cos(α)
+        sβ, cβ = sin(β), cos(β)
+        sγ, cγ = sin(γ), cos(γ)
+        return (
+            (cβ*cγ, -cβ*sγ, sβ),
+            (cα*sγ + sα*sβ*cγ, cα*cγ - sγ*sα*sβ, -cβ*sα),
+            (sγ*sα - cα*sβ*cγ, cα*sγ*sβ + sα*cγ, cα*cβ)
+        )
 
     def rotate_3d(self, α, β, γ): # pylint: disable=non-ascii-name
         """
@@ -1021,6 +1049,12 @@ class Plane:
         return pstr
 
     def out(self):
+        """
+        dumps all properties
+
+        Returns:
+            dict: the dump
+        """
         plane = {}
         plane["normal"] = [float(f) for f in self.unitnormal]
         plane["point"] = [float(f) for f in self.point]
@@ -1276,10 +1310,17 @@ class Plane:
         return edges
 
     def pass_through(self, ball): # pylint: disable=unused-argument
+        """
+        dummy pass through method
+        """
         return False
 
 
 class _Membrane(Plane):
+    """
+    conditionals lets particles pass though the plan
+    """
+    # pylint: disable=missing-function-docstring
     def __init__(self, box: Box, normal=None, point=None, points=None) -> None:
         self.filter = self.no_filter
         self.hole_size = 15
@@ -1344,6 +1385,12 @@ class _Membrane(Plane):
         return res
 
     def out(self):
+        """
+        dumps all properties
+
+        Returns:
+            dict: the dump
+        """
         membrane = super().out()
         membrane['pass_through_function'] = self.filter.__name__
         membrane['hole_size'] = self.hole_size
@@ -1582,6 +1629,16 @@ class Particle:
         return bounced
 
     def bounce_from_hole(self, plane, hole):
+        """
+        implements holes in a plane
+
+        Args:
+            plane (Plane): the Plane
+            hole (tuple(center: numpy.array, radius: float)): the Hole
+
+        Returns:
+            boolean: whether to reflect the particle
+        """
         (center, radius) = hole
         HR2 = radius * radius
         BR2 = self.radius * self.radius
@@ -1755,6 +1812,12 @@ class Particle:
 
     @property
     def potential_energy(self):
+        """
+        calculates the potential energy of all particles in the box
+
+        Returns:
+            float: the potential energy
+        """
         PE = 0
         S = 0
         for ball in self.box.particles:
@@ -1812,10 +1875,22 @@ class Particle:
         return pstr
 
     def index(self):
+        """
+        returns the index of the particle
+
+        Returns:
+            int: the index
+        """
         i = self.box.particles.index(self)
         return i
 
     def out(self):
+        """
+        dumps all properties
+
+        Returns:
+            dict: the dump
+        """
         particle = {}
         particle["mass"] = float(self.mass)
         particle["radius"] = float(self.radius)
@@ -1853,6 +1928,12 @@ class Spring:
         return f'{self.length} {self.strength} {self.damping} {(self.p1.index(), self.p2.index())}'
 
     def out(self):
+        """
+        dumps all properties
+
+        Returns:
+            dict: the dump
+        """
         spring = {}
         spring["length"] = float(self.length)
         spring["strength"] = float(self.strength)
@@ -1917,6 +1998,7 @@ class _Rod(Spring):
     """
     A Rod is a Spring with a fixed length
     """
+    # pylint: disable=missing-function-docstring
     def __init__(self, length, p1, p2) -> None:
         super().__init__(length=length, strength=0.01, damping=0, p1=p1, p2=p2)
 
@@ -1964,22 +2046,53 @@ class _Rod(Spring):
 
 
     def out(self):
+        """
+        dumps all properties
+
+        Returns:
+            dict: the dump
+        """
         rod = {}
         rod["length"] = float(self.length)
         rod["particles"] = [self.p1.index(), self.p2.index()]
         return rod
 
 def save(box, file):
+    """
+    saves the box and its content to a yaml file
+
+    Args:
+        box (Box): the Box
+        file (file): the file to save to
+    """
     out = box.out()
     yaml.dump(out, file, canonical=False, Dumper=yaml.Dumper, default_flow_style=False, width=120)
     # yaml.dump(out, file, canonical=False, default_flow_style=True, width=120)
 
 def load(file):
+    """
+    loads a box from a yaml
+
+    Args:
+        file (file): the file
+
+    Returns:
+        Box: the box with content
+    """
     data = yaml.load(file, Loader=yaml.FullLoader)
     box = load_gas(data)
     return box
 
 def load_gas(data):
+    """
+    initiates a box from a dicts, loaded from a yaml file
+
+    Args:
+        data (dict): the box data
+
+    Returns:
+        Box: the box with content
+    """
     b = data["box"]
     box = Box(b["sizes"])
 
@@ -2091,6 +2204,15 @@ class FlatD3Shape():
             self.normal = self._get_normal()
 
     def regular_polygon_vertices(self, segments=36):
+        """
+        creates a regular polygon
+
+        Args:
+            segments (int, optional): number of segments. Defaults to 36.
+
+        Returns:
+            polygon: the polygon
+        """
         points = []
         edges = []
 
@@ -2111,10 +2233,28 @@ class FlatD3Shape():
 
         return (points, edges)
 
-    def skew(self,a):
+    def skew(self, a):
+        """
+        creates a ske matrix from a vector
+
+        Args:
+            a (numpy.array): the vector
+
+        Returns:
+            numpy.array: the skew matrix
+        """
         return numpy.array([[0,-a[2],a[1]],[a[2],0,-a[0]],[-a[1],a[0],0]])
 
     def rotate(self, normal):
+        """
+        aligns the polygon with the given normal
+
+        Args:
+            normal (numpy.array): normal vector to align with
+
+        Returns:
+            list: the rotated vertices
+        """
         normal = numpy.array(normal)
         normal = normal / math.sqrt(normal @ normal)
 
@@ -2137,19 +2277,40 @@ class FlatD3Shape():
         return self.vertices
 
     def scale(self, size):
+        """
+        scales the polygon
+
+        Args:
+            size (float): scaling factor
+
+        Returns:
+            list: the scaled vertices
+        """
         c = self.center
         self.vertices = [c+((v-c)*size) for v in self.vertices]
         self._set_props(self.vertices)
         return self.vertices
 
     def move(self, pos):
+        """
+        moves the polygon
+
+        Args:
+            pos (numpy.array): the shift
+
+        Returns:
+            list: the moved vertices
+        """
         self.vertices = [v+pos for v in self.vertices]
         self._set_props(self.vertices)
         return self.vertices
 
 
 def main():
-    pass
+    """
+    main
+    """
+    pass # pylint: disable=unnecessary-pass
 
 if __name__ == "__main__":
     main()
