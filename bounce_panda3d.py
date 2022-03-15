@@ -286,6 +286,7 @@ class World(ShowBase):
 
         self._slider_trail = self.gui_slider(x=0.3, y=-1.3, range_=(0, MAX_TRAILS), value=self.box.trail, command=self._set_trail, text="trail length:")
         self._slider_skip_trail = self.gui_slider(x=0.3, y=-1.4, range_=(1, 10), value=self.box.skip_trail, command=self._set_skip_trail, text="trail part length:")
+        self._checkbox_project4d = self.gui_checkbox(x=0.3, y=-1.5, command=self._set_project4d, text="project 4d:", value=self.project4d)
 
     def set_main_lighting(self):
         mainLight = DirectionalLight("main light")
@@ -432,6 +433,18 @@ class World(ShowBase):
                               textMayChange=0)
         return slider
 
+    def gui_checkbox(self, x, y, command, text="", value=False):
+        self.gui_text(text, x-0.2, y, scale=0.03)
+        checkbox = DirectCheckButton(text="",
+                              command=command, pos=Vec3(x+0.04, 0, y+0.01), parent=self.a2dTopLeft, scale=0.03,
+                                     # frameColor=(0.5, 0.5, 0.5, 1),
+                                     relief=DGG.FLAT,
+                              textMayChange=0)
+
+        checkbox["indicatorValue"] = value
+        checkbox.setIndicatorValue()
+        return checkbox
+
     def _set_interaction(self):
         interaction = self._slider_interaction['value']
         self.box.set_interaction(interaction)
@@ -461,6 +474,9 @@ class World(ShowBase):
     def _set_skip_trail(self):
         skip = self._slider_skip_trail['value']
         self.box.skip_trail = int(skip)
+
+    def _set_project4d(self, status):
+        self.project4d = bool(status)
 
     def move_line(self, line, start, end):
         line.setPos(start)
@@ -677,6 +693,7 @@ class World(ShowBase):
         self.pause = config.get('pause', False)
         # self.text = config['text']
         self.tick_rate = config.get('tickrate', 1)
+        self.project4d = config.get('project4d', False)
 
         box = data["box"]
         sizes = box["sizes"]
@@ -1038,7 +1055,7 @@ class World(ShowBase):
 
     def task_box_go(self, task):  # pylint: disable=unused-argument
         """
-        Makes th box Go
+        Makes the box Go
 
         Args:
             task (_type_): _description_

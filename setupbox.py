@@ -16,6 +16,8 @@ from pprint import pprint as pp # pylint: disable=unused-import
 
 from rotations import RotationMatrix
 
+from p120cell import create_120cell
+
 TEST = False
 
 __all__ = ['ArrangeParticles', 'Setup']
@@ -282,10 +284,10 @@ class ArrangeParticles:
 
 
     def add_rotation_speed(self, rotations, center=None, balls=None):
-        if center is None:
-            center = self.box.center
         if balls is None:
             balls = self.box.particles
+        if center is None:
+            center = sum([ball.position for ball in balls])/len(balls)
 
         rotor = RotationMatrix(self.box.dimensions)
         R = rotor.combined_rotations(rotations)
@@ -1052,7 +1054,7 @@ class Setup():
         if world:
             world.quiet = True
             world.tick_rate = 1
-            world.project4d = True
+            world.project4d = False
 
         sizes = numpy.array([1500, 1500, 1200, 1000, 1000, 1000, 1000, 1000])
         self.box = Box(sizes[:dimensions])
@@ -1091,6 +1093,8 @@ class Setup():
 
         self.arrangement = ArrangeParticles(self.box)
 
+        self._setup_function = None
+        # self._setup_function = self.p120_cell
         self._setup_function = self._test_rotation
         # self._setup_function = self.arrangement.create_pendulum
         # self._setup_function = self.many_interactions
@@ -1131,6 +1135,13 @@ class Setup():
 
         balls += arr.random_balls(nballs, 1, radius, charge=-1)
         arr.set_charge_colors(balls)
+
+    def p120_cell(self):
+        self.box.friction = 0.02
+        self.box.interaction = 0.0
+        G = create_120cell()
+        ball = self.arrangement.arrange_from_graph(G)
+
 
     def _test_holes(self):
         balls = self.balls
@@ -1211,9 +1222,10 @@ class Setup():
                 plane.add_hole(point, hole_size)
 
     def many_interactions(self):
-        self.box.friction = 0.01
+        self.box.friction = 0.0
+        self.box.interaction = 0.0
         arr = ArrangeParticles(self.box)
-        nballs = 30
+        nballs = 300
         radius = 30
         arr.random_balls(nballs, 1, radius, 2, charge=1)
         arr.random_balls(nballs, 1, radius, 2, charge=-1)
@@ -1222,20 +1234,20 @@ class Setup():
     def _test_rotation(self):
         self.box.interaction = 15000
         # balls = self.arrangement.create_kube(100, self.box.center, 1)
-        # balls = self.arrangement.create_box(size=600, position=self.box.center, radius=50, charge=1)
-        balls = self.arrangement.create_simplex(size=600, position=self.box.center, radius=50, charge=1, vertices=None)
+        balls = self.arrangement.create_box(size=600, position=self.box.center, radius=50, charge=1)
+        # balls = self.arrangement.create_simplex(size=600, position=self.box.center, radius=50, charge=1, vertices=None)
         for ball in balls:
             ball.speed = self.box.nullvector.copy()
 
         angle = math.pi/360
-        # rotations = [[0, 1, -1*angle], [1, 2, 2*angle], [2, 3, 3*angle]]
-        rotations = [[0, 1, -1*angle], [2, 3, 3*angle]]
-        balls = self.arrangement.add_rotation_speed(rotations, balls=balls)
+        rotations = [[0, 1, -1*angle], [1, 2, 0.3*angle], [2, 3, 2*angle]]
+        # rotations = [[0, 1, -1*angle], [2, 3, 3*angle]]
+        balls = self.arrangement.add_rotation_speed(rotations, center=self.box.center, balls=balls)
         # self.box.gravity = numpy.array([0,0,0,-1])
         return balls
 
     def _setup(self):
-        self.box.interaction = 5000
+        # self.box.interaction = 5000
         balls = self.box.particles
         if self.charge_colors:
             self.layout.set_charge_colors(balls)
