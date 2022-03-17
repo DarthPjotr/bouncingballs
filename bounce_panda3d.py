@@ -311,6 +311,8 @@ class World(ShowBase):
         self.light.node().getLens().setFov(40)
         self.light.node().getLens().setNearFar(10, 10000)
         pos = self.box.center.copy()
+        if self.box.dimensions < 3:
+            pos = self.box.project3d(pos)
         pos[1] = -500
         pos[2] = 3000
         self.light.setPos(*pos[:3])
@@ -345,6 +347,8 @@ class World(ShowBase):
 
     def load_scene(self):
         # Load the scene.
+        if self.box.dimensions < 3:
+            return
         floorTex = self.loader.loadTexture('maps/grid.jpg')
 
         cm = CardMaker('')
@@ -456,13 +460,16 @@ class World(ShowBase):
     def _set_gravity(self):
         gravity = self._slider_gravity['value']
         dir_ = self.box.nullvector.copy()
-        dir_[self.box.Z] = -1
+        if self.box.dimensions < 3:
+            dir_[0] = -1
+        else:
+            dir_[self.box.Z] = -1
         self.box.set_gravity(gravity, dir_)
 
     def _set_neighbors(self):
         neighbors = self._slider_neighbors['value']
-        dir_ = self.box.nullvector.copy()
-        dir_[self.box.Z] = -1
+        # dir_ = self.box.nullvector.copy()
+        # dir_[self.box.Z] = -1
         self.box.interaction_neighbors = int(neighbors)
 
     def _set_trail(self):
@@ -492,12 +499,12 @@ class World(ShowBase):
         trail = self.trails[i]
         start = ball.position
         if self.project4d:
-            start = self.box.project(start)
+            start = self.box.project3d(start)
         pstart = Vec3(*start[:3])
         for i, end in enumerate(ball.positions[:MAX_TRAILS]):
             line = trail[i]
             if self.project4d:
-                end = self.box.project(end)
+                end = self.box.project3d(end)
             pend = Vec3(*end[:3])
             d = start - end
             length2 = d @ d
@@ -511,6 +518,8 @@ class World(ShowBase):
 
     def set_camera(self):
         cam_pos = self.box.center.copy()[:3]
+        if self.box.dimensions < 3:
+            cam_pos = self.box.project3d(cam_pos)
         cam_pos[self.box.Y] = -2000
         self.camera.setPos(*cam_pos)
         self.camera.setHpr(0, 0, 0)
@@ -575,14 +584,19 @@ class World(ShowBase):
 
     def correct_camera_distance(self, new_pos):
         old_pos = numpy.array(self.camera.getPos())
-        opos2center = old_pos - self.box.center[:3]
+        box_center = self.box.center
+
+        if self.box.dimensions < 3:
+            box_center = self.box.project3d(self.box.center)
+
+        opos2center = old_pos - box_center[:3]
         distance2center = math.sqrt(opos2center @ opos2center)
 
         new_pos = numpy.array(new_pos)
-        npos2center = new_pos - self.box.center[:3]
+        npos2center = new_pos - box_center[:3]
         npos_normal = npos2center / math.sqrt(npos2center @ npos2center)
 
-        new_pos_corrected = self.box.center[:3] + (distance2center * npos_normal)
+        new_pos_corrected = box_center[:3] + (distance2center * npos_normal)
 
         return new_pos_corrected
 
@@ -665,7 +679,10 @@ class World(ShowBase):
 
     def up_down(self, pos, speed):
         nz = numpy.array([0,0,1])
-        center = pos - numpy.array(self.box.center[:3])
+        box_center = self.box.center
+        if self.box.dimensions < 3:
+            box_center = self.box.project3d(box_center)
+        center = pos - numpy.array(box_center[:3])
         vz = numpy.cross(center, numpy.cross(nz, center))
         vzn = vz/math.sqrt(vz@vz)
         pos += vzn * speed
@@ -697,13 +714,13 @@ class World(ShowBase):
 
         box = data["box"]
         sizes = box["sizes"]
-        if len(sizes) > 2:
+        if len(sizes) > 0:
             self.clear_box()
             self.box = load_gas(data)
             self.draw_box()
             self.draw_gui()
         else:
-            warning("Warning", "2D boxes not supported")
+            warning("Warning", "0D boxes not supported")
 
     def save(self, file):
         out = self.out()
@@ -864,6 +881,9 @@ class World(ShowBase):
         for (i, j) in self.box.edges:
             p1 = self.box.vertices[i]
             p2 = self.box.vertices[j]
+            if self.box.dimensions < 3:
+                p1 = self.box.project3d(p1)
+                p2 = self.box.project3d(p2)
             lines = LineSegs(f"edge[{i},{j}]")
             lines.setColor(0.7, 0.7, 0.7, 1)
             lines.moveTo(*p1[:3])
@@ -881,6 +901,12 @@ class World(ShowBase):
         # if plane.radius != 0:
         for hole in plane.holes:
             (point, radius) = hole
+            unitnormal = plane.unitnormal
+
+            if self.box.dimensions < 3:
+                point = self.box.project3d(point)
+                unitnormal = self.box.project3d(unitnormal)
+
             # vertices = regular_polygon_vertices(72)
             poly = Polygon()
             poly.regular_polygon_vertices(72)
@@ -898,7 +924,7 @@ class World(ShowBase):
                 circle_outline_np.setColor(*color, 1)
                 circle_outline_np.setPos(*point[:3])
                 circle_outline_np.setScale(abs(radius))
-                look = point + plane.unitnormal
+                look = point + unitnormal
                 circle_outline_np.lookAt(*look[:3])
             else:
                 circle = poly.create_geom_node()
@@ -909,7 +935,7 @@ class World(ShowBase):
                 circle_np.setColor(*color, 0.3)
                 circle_np.setPos(*point[:3])
                 circle_np.setScale(abs(radius))
-                look = point + plane.unitnormal
+                look = point + unitnormal
                 circle_np.lookAt(*look[:3])
 
 
@@ -951,6 +977,9 @@ class World(ShowBase):
                 for (i,j) in plane.edges:
                     p1 = plane.box_intersections[i]
                     p2 = plane.box_intersections[j]
+                    if self.box.dimensions < 3:
+                        p1 = self.box.project3d(p1)
+                        p2 = self.box.project3d(p2)
                     lines = LineSegs(f"edge[{i},{j}]")
                     # lines.setColor(1, 1, 1, 1)
                     lines.moveTo(*p1[:3])
@@ -986,7 +1015,10 @@ class World(ShowBase):
 
             sphere.reparentTo(self.boxnode)
 
-            sphere.setPos(*ball.position[:3])
+            position = ball.position
+            if self.box.dimensions < 3:
+                position = self.box.project3d(position)
+            sphere.setPos(*position[:3])
             if self.box.dimensions > 3:
                 sphere.setTransparency(TransparencyAttrib.M_dual, 1)
             # if ball == self._dummy_ball:
@@ -1092,8 +1124,8 @@ class World(ShowBase):
 
         for ball in self.box.particles:
             sphere = ball.object
-            if self.project4d:
-                pos = ball.project()
+            if self.project4d  or self.box.dimensions < 3:
+                pos = ball.project3d()
             else:
                 pos = ball.position
 

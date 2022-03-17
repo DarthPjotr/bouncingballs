@@ -458,7 +458,7 @@ class Box:
         self.ticks = 1
         self._normal_momentum = 0
 
-    def project(self, position, axis=3):
+    def project3d(self, position, axis=3):
         """
         projects extra dimension onto 3D in perspective
 
@@ -469,22 +469,27 @@ class Box:
         Returns:
             numpy.array: projected position
         """
-        if self.dimensions < 4:
+        if self.dimensions == 3:
             return position
+        elif self.dimensions < 3:
+            projection = numpy.zeros(3)
+            projection[self.Z] = 600
+            projection[:len(position)] = position
+            return projection
 
-        position = position.copy()
+        projection = position.copy()
         min_ = 0.05
         max_ = 0.95
         A = (max_ - min_) / self.box_sizes[axis]
         B = min_
 
-        pos_center_3d = position[:3] - self.center[:3]
-        w = position[axis]
+        pos_center_3d = projection[:3] - self.center[:3]
+        w = projection[axis]
         f = A*w + B
 
         pos = pos_center_3d*f + self.center[:3]
-        position[:3] = pos
-        return position
+        projection[:3] = pos
+        return projection
 
     def rotate(self, rotations):
         """
@@ -1931,7 +1936,7 @@ class Particle:
         position[:3] = pos
         return position
 
-    def project(self, axis=3):
+    def project3d(self, axis=3):
         """
         projects extra dimension onto 3D in perspective
 
@@ -1941,7 +1946,7 @@ class Particle:
         Returns:
             numpy.array: projected position
         """
-        position = self.box.project(self.position, axis)
+        position = self.box.project3d(self.position, axis)
         return position
 
     def index(self):

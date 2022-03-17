@@ -1073,10 +1073,12 @@ class Setup():
         gravity_direction = self.box.nullvector.copy()
         if dimensions > 3:
             gravity_direction[self.box.D4] = -1
-        elif dimensions > 2:
+        elif dimensions == 3:
             gravity_direction[self.box.Z] = -1
-        else:
+        elif dimensions == 2:
             gravity_direction[self.box.Y] = -1
+        else:
+            gravity_direction[self.box.X] = -1
 
         self.box.set_interaction(interaction, power)
         self.box.set_friction(friction)
@@ -1094,8 +1096,9 @@ class Setup():
         self.arrangement = ArrangeParticles(self.box)
 
         self._setup_function = None
-        # self._setup_function = self.p120_cell
-        self._setup_function = self._test_rotation
+        # self._setup_function = self.two_balls
+        self._setup_function = self.p120_cell
+        # self._setup_function = self._test_rotation
         # self._setup_function = self.arrangement.create_pendulum
         # self._setup_function = self.many_interactions
         # self._setup_function = self._eight_dim
@@ -1163,7 +1166,7 @@ class Setup():
 
         normal = [0.2,1,0.2,0,0,0,0,0]
         dpos = [0, -200,0,0,0,0,0 ]
-        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center + dpos[:self.box.dimensions], reflect=False)
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center + dpos[:self.box.dimensions], reflect=True)
 
         dpoint = [-450,0,0,0,0,0,0]
         point = self.box.center + dpoint[:self.box.dimensions]
@@ -1226,6 +1229,16 @@ class Setup():
         self.box.interaction = 0.0
         arr = ArrangeParticles(self.box)
         nballs = 300
+        radius = 30
+        arr.random_balls(nballs, 1, radius, 2, charge=1)
+        arr.random_balls(nballs, 1, radius, 2, charge=-1)
+        arr.set_charge_colors(self.box.particles)
+
+    def two_balls(self):
+        self.box.friction = 0.0
+        self.box.interaction = 1000.0
+        arr = ArrangeParticles(self.box)
+        nballs = 1
         radius = 30
         arr.random_balls(nballs, 1, radius, 2, charge=1)
         arr.random_balls(nballs, 1, radius, 2, charge=-1)

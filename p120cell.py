@@ -11,6 +11,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 from pprint import pprint as pp  # pylint: disable=unused-import
+from p120cell_def import p120cell_edges
 
 def get_neighbours():
     path = "d:\\temp\\120cell\\neighbours.txt"
@@ -73,7 +74,8 @@ def get_vertices(indices):
 
     return vertices
 
-def create_120cell():
+def load_120cell():
+    edges = []
     indices = get_indices()
     vertices = get_vertices(indices)
     print(len(vertices))
@@ -88,14 +90,28 @@ def create_120cell():
         rest = n[1:]
         for r in rest:
             v2 = vertices[r]
+            edge = (v1, v2)
+            edges.append(edge)
             G.add_edge(v1, v2)
+
+    path = "d:\\temp\\p120cell_def.py"
+    with open(path, encoding="utf8", mode="w") as file:
+        pp(object=edges, stream=file)
+    return G
+
+
+def create_120cell():
+    G = nx.Graph()
+
+    for (v1, v2) in p120cell_edges:
+        G.add_edge(v1, v2)
 
     return G
 
 def main():
     G = create_120cell()
     pp(G)
-    # nx.draw(G)
+    nx.draw(G)
     # for i, node in enumerate(G.nodes):
     #     print(i, node)
 
@@ -103,10 +119,10 @@ def main():
     #     print(i, edge)
 
     # Set margins for the axes so that nodes aren't clipped
-    # ax = plt.gca()
-    # ax.margins(0.20)
-    # plt.axis("off")
-    # plt.show()
+    ax = plt.gca()
+    ax.margins(0.20)
+    plt.axis("off")
+    plt.show()
 
 
 
