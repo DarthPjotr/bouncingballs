@@ -6,6 +6,7 @@
 3D engine to display moving balls using gas module
 """
 
+from audioop import avg
 from math import pi, sin, cos  # pylint: disable=unused-import
 import sys
 import random
@@ -57,7 +58,7 @@ from gas import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from setupbox import Setup, ArrangeParticles
 
 MAX_TRAILS = 30
-DIMENSIONS = 2
+DIMENSIONS = 4
 
 def loaddialog():
     root = tkinter.Tk()
@@ -222,6 +223,7 @@ class World(ShowBase):
 
         # defaults
         self.pause = False
+        self._paused = False
         self._draw_planes = True
         self._draw_box_planes = False
         self.project4d = False
@@ -230,6 +232,7 @@ class World(ShowBase):
         self.tick_rate = 1
         self.quiet = True
         self.bounced = False
+        self._toggled_setting = False
 
         self.boxnode = None
         self._dummy_ball = None
@@ -283,11 +286,20 @@ class World(ShowBase):
         self._slider_friction = self.gui_slider(x=0.3, y=-0.8, range_=(0, max_friction), value=self.box.friction, command=self._set_friction, text="friction:")
         gravity = math.sqrt(self.box.gravity@self.box.gravity)
         self._slider_gravity = self.gui_slider(x=0.3, y=-0.7, range_=(0, 2), value=gravity, command=self._set_gravity, text="gravity:")
-        self._slider_neighbors = self.gui_slider(x=0.3, y=-1.1, range_=(0, len(self.box.particles)), value=self.box.interaction_neighbors, command=self._set_neighbors, text="neighbors:")
+        nballs = max(1, len(self.box.particles))
+        self._slider_neighbors = self.gui_slider(x=0.3, y=-1.1, range_=(0, nballs), value=self.box.interaction_neighbors, command=self._set_neighbors, text="neighbors:")
 
         self._slider_trail = self.gui_slider(x=0.3, y=-1.3, range_=(0, MAX_TRAILS), value=self.box.trail, command=self._set_trail, text="trail length:")
         self._slider_skip_trail = self.gui_slider(x=0.3, y=-1.4, range_=(1, 10), value=self.box.skip_trail, command=self._set_skip_trail, text="trail part length:")
-        self._checkbox_project4d = self.gui_checkbox(x=0.3, y=-1.5, command=self._set_project4d, text="project 4d:", value=self.project4d)
+
+        if self.box.dimensions > 3:
+            self._checkbox_project4d = self.gui_checkbox(x=0.3, y=-1.5, command=self._set_project4d, text="project 4d:", value=self.project4d)
+
+        if self.box.springs:
+            avg_strength = sum([s.strength for s in self.box.springs])/len(self.box.springs)
+
+            self._slider_spring_strength = self.gui_slider(
+                x=0.3, y=-1.7, range_=(0, max(1, avg_strength*2)), value=avg_strength, command=self._set_spring_strength, text="spring strenght:")
 
     def set_main_lighting(self):
         mainLight = DirectionalLight("main light")
@@ -492,6 +504,18 @@ class World(ShowBase):
 
     def _set_project4d(self, status):
         self.project4d = bool(status)
+        self._toggled_setting = True
+
+    def _set_spring_strength(self):
+        strength = self._slider_spring_strength['value']
+        avg_strength = sum([s.strength for s in self.box.springs])/len(self.box.springs)
+        if avg_strength:
+            factor = strength / avg_strength
+            for spring in self.box.springs:
+                spring.strength *= factor
+        else:
+            for spring in self.box.springs:
+                spring.strength = strength
 
     def move_line(self, line, start, end):
         line.setPos(start)
@@ -1166,11 +1190,13 @@ class World(ShowBase):
         Returns:
             _type_: _description_
         """
-        if self.pause:
+
+        if self.pause and not self._toggled_setting:
             return Task.cont
 
-        self.bounced = self.box.go(steps=self.tick_rate)
+        self._toggled_setting = False
 
+        # self.bounced = self.box.go(steps=self.tick_rate)
         while self.box.merged_particles:
             ball = self.box.merged_particles.pop()
             sphere = ball.object
@@ -1209,6 +1235,9 @@ class World(ShowBase):
             if self.box.trail > 0:
                 self.move_trail(ball)
 
+        if self._paused and self.pause:
+            return Task.cont
+
         for i, spring in enumerate(self.box.springs):
             p1 = spring.p1.object
             p2 = spring.p2.object
@@ -1233,6 +1262,11 @@ Gravity: {gravity:.2f}\n\n\
 Neighbor count: {self.box.interaction_neighbors}'
 
         self.textnode.text = output
+
+        if self.pause:
+            return Task.cont
+
+        self.bounced = self.box.go(steps=self.tick_rate)
 
         if self.bounced and not self.quiet:
             self.sound.play()

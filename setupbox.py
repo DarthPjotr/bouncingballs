@@ -255,7 +255,7 @@ class ArrangeParticles:
 
             if lnode > 2:
                 position = numpy.array(node[:self.box.dimensions])
-                position = (position * length) # + self.box.center
+                position = (position*length) # + self.box.center
             else:
                 position = self.box.center + self.box.random() * length
 
@@ -1095,11 +1095,11 @@ class Setup():
 
         self.arrangement = ArrangeParticles(self.box)
 
-        self._setup_function = None
+        self._setup_function = self._nothing
         # self._setup_function = self.two_balls
         # self._setup_function = self.p120_cell
-        # self._setup_function = self._test_rotation
-        self._setup_function = self.arrangement.create_pendulum
+        self._setup_function = self._test_rotation
+        # self._setup_function = self.arrangement.create_pendulum
         # self._setup_function = self.many_interactions
         # self._setup_function = self._eight_dim
         # self._setup_function = self._test_holes
@@ -1119,6 +1119,9 @@ class Setup():
             on_plane = on_plane and plane._on_plane(point)
 
         return on_plane
+
+    def _nothing(self):
+        pass
 
     def _eight_dim(self):
         self.box.interaction = 5000
@@ -1143,7 +1146,7 @@ class Setup():
         self.box.friction = 0.02
         self.box.interaction = 5000.0
         G = create_120cell()
-        balls = self.arrangement.arrange_from_graph(G)
+        balls = self.arrangement.arrange_from_graph(G=G, radius=10, length=100, strength=0.5, damping=0.01)
 
     def _test_holes(self):
         balls = self.balls
@@ -1252,8 +1255,8 @@ class Setup():
             ball.speed = self.box.nullvector.copy()
 
         angle = math.pi/360
-        rotations = [[0, 1, -1*angle], [1, 2, 0.3*angle], [2, 3, 2*angle]]
-        # rotations = [[0, 1, -1*angle], [2, 3, 3*angle]]
+        # rotations = [[0, 1, -1*angle], [1, 2, 0.3*angle], [2, 3, 2*angle]]
+        rotations = [[0, 1, -1*angle], [2, 3, 1*angle]]
         balls = self.arrangement.add_rotation_speed(rotations, center=self.box.center, balls=balls)
         # self.box.gravity = numpy.array([0,0,0,-1])
         return balls

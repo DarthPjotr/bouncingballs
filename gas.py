@@ -2054,14 +2054,20 @@ class Spring:
         if numpy.all(dpos==0):
             return
 
-        length2 = dpos.dot(dpos)
+        length2 = dpos @ dpos
         length = math.sqrt(length2)
         dlength = self.length - length
-        N = dpos/length
+        unitnormal = dpos/length
+
+        if dlength:
+            sign = dlength/abs(dlength)
+        else:
+            sign = 1
+        dlength = sign * min(abs(dlength), self.length/20)
 
         dspeed = self.p1.speed - self.p2.speed
-        D = self.damping * dspeed.dot(dpos)*dpos/length2
-        F = -self.strength*(dlength)*N
+        D = self.damping * (dspeed @ dpos)*dpos/length2
+        F = -self.strength*dlength*unitnormal
 
         dv1 = -F/self.p1.mass - D
         dv2 = F/self.p2.mass + D
