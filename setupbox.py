@@ -1097,9 +1097,9 @@ class Setup():
 
         self._setup_function = None
         # self._setup_function = self.two_balls
-        self._setup_function = self.p120_cell
+        # self._setup_function = self.p120_cell
         # self._setup_function = self._test_rotation
-        # self._setup_function = self.arrangement.create_pendulum
+        self._setup_function = self.arrangement.create_pendulum
         # self._setup_function = self.many_interactions
         # self._setup_function = self._eight_dim
         # self._setup_function = self._test_holes
@@ -1141,10 +1141,9 @@ class Setup():
 
     def p120_cell(self):
         self.box.friction = 0.02
-        self.box.interaction = 0.0
+        self.box.interaction = 5000.0
         G = create_120cell()
-        ball = self.arrangement.arrange_from_graph(G)
-
+        balls = self.arrangement.arrange_from_graph(G)
 
     def _test_holes(self):
         balls = self.balls
