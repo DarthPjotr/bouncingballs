@@ -254,7 +254,7 @@ class World(ShowBase):
         self.draw_box()
 
         # setup scene, camera lighting and text
-        self.load_scene()
+        self.draw_floor()
         self.set_camera()
         self.disableMouse()
         self.set_main_lighting()
@@ -358,7 +358,7 @@ class World(ShowBase):
         color = numpy.array([0.6, 0.6, 0.6])
         self.setBackgroundColor(*color)
 
-    def load_scene(self):
+    def draw_floor(self):
         # Load the scene.
         # if self.box.dimensions < 3:
         #     return
@@ -374,6 +374,7 @@ class World(ShowBase):
         cm.setFrame(0, X, 0, Y)
         # cm.setFrame(0, 0, self.box.box_sizes[0], self.box.box_sizes[1])
         floor = self.render.attachNewNode(PandaNode("floor"))
+        floor.reparentTo(self.boxnode)
         for y in range(1):
             for x in range(1):
                 nn = floor.attachNewNode(cm.generate())
@@ -758,6 +759,7 @@ class World(ShowBase):
             self.box = load_gas(data)
             self.draw_box()
             self.draw_gui()
+            self.draw_floor()
         else:
             warning("Warning", "0D boxes not supported")
 
