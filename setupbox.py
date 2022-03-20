@@ -267,7 +267,7 @@ class ArrangeParticles:
             if lnode > 2:
                 position = numpy.array(node[:self.box.dimensions])
                 # + self.box.center
-                position = (position*length)
+                position = (position*1.35*length)
             else:
                 position = self.box.center + self.box.random() * length
 
