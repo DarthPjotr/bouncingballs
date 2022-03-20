@@ -110,6 +110,9 @@ def create_120cell():
 
 
 def main():
+
+    # The 120-cell with long radius √8 = 2√2 ≈ 2.828 has edge length 2/φ2 = 3−√5 ≈ 0.764.
+
     G = create_120cell()
     # colors = nx.greedy_color(G)
     max_degree = max(degree for (node, degree) in G.degree())

@@ -759,6 +759,7 @@ class World(ShowBase):
             self.draw_box()
             self.draw_gui()
             self.draw_floor()
+            self._toggled_setting = True
         else:
             warning("Warning", "0D boxes not supported")
 
