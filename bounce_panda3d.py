@@ -6,7 +6,6 @@
 3D engine to display moving balls using gas module
 """
 
-from audioop import avg
 from math import pi, sin, cos  # pylint: disable=unused-import
 import sys
 import random

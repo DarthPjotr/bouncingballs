@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from pprint import pprint as pp  # pylint: disable=unused-import
 from p120cell_def import p120cell_edges
 
-def get_neighbours():
+def _get_neighbours():
     path = "d:\\temp\\120cell\\neighbours.txt"
     with open(path, encoding="utf8") as file:
         lines = file.readlines()
@@ -29,7 +29,7 @@ def get_neighbours():
 
     return neighbours
 
-def get_indices():
+def _get_indices():
     indices = [0,1,2,3,4,5,6,7]
 
     v0 = 0
@@ -52,7 +52,7 @@ def get_indices():
 
     return indices
 
-def get_vertices(indices):
+def _get_vertices(indices):
     path = "d:\\temp\\120cell\\vertices.txt"
     with open(path, encoding="utf8") as file:
         lines = file.readlines()
@@ -74,14 +74,14 @@ def get_vertices(indices):
 
     return vertices
 
-def load_120cell():
+def _load_120cell():
     edges = []
-    indices = get_indices()
-    vertices = get_vertices(indices)
+    indices = _get_indices()
+    vertices = _get_vertices(indices)
     print(len(vertices))
     G = nx.Graph()
 
-    neighbours = get_neighbours()
+    neighbours = _get_neighbours()
     print(len(neighbours))
 
     for n in neighbours:
@@ -108,9 +108,17 @@ def create_120cell():
 
     return G
 
+
 def main():
     G = create_120cell()
+    # colors = nx.greedy_color(G)
+    max_degree = max(degree for (node, degree) in G.degree())
+    print(max_degree)
+    colors = nx.equitable_color(G, max_degree+1)
+    print(set(colors.values()))
+
     pp(G)
+    # print(colors)
     nx.draw(G)
     # for i, node in enumerate(G.nodes):
     #     print(i, node)

@@ -245,7 +245,18 @@ class ArrangeParticles:
 
         return balls
 
-    def arrange_from_graph(self, G, radius=10, length=100, strength=0.05, damping=0.01, center=True):
+    def arrange_from_graph(self, G, radius=10, length=100, strength=0.05, damping=0.01, center=True, colors=None):
+        if colors is None:
+            colors = {}
+
+        values = set(colors.values())
+        color_values = []
+        for value in values:
+            color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+            color_values.append(color)
+
+        # color_values = [(255, 0, 0), (0, 255, 0),(0,0,255),(255,255,0),(255,0,255),(0,255,255)]
+
         balls = []
         for node in G.nodes:
             try:
@@ -260,7 +271,13 @@ class ArrangeParticles:
                 position = self.box.center + self.box.random() * length
 
             speed = self.box.nullvector.copy()
-            ball = self.box.add_particle(mass=1, radius=radius, position=position, speed=speed, charge=1, fixed=False)
+            try:
+                color_idx = colors[node]
+                color = color_values[color_idx]
+            except KeyError:
+                color = None
+
+            ball = self.box.add_particle(mass=1, radius=radius, position=position, speed=speed, charge=1, fixed=False, color=color)
             balls.append(ball)
 
         for edge in G.edges:
@@ -1097,8 +1114,8 @@ class Setup():
 
         self._setup_function = self._nothing
         # self._setup_function = self.two_balls
-        # self._setup_function = self.p120_cell
-        self._setup_function = self._test_rotation
+        self._setup_function = self.p120_cell
+        # self._setup_function = self._test_rotation
         # self._setup_function = self.arrangement.create_pendulum
         # self._setup_function = self.many_interactions
         # self._setup_function = self._eight_dim
@@ -1146,7 +1163,11 @@ class Setup():
         self.box.friction = 0.02
         self.box.interaction = 5000.0
         G = create_120cell()
-        balls = self.arrangement.arrange_from_graph(G=G, radius=10, length=100, strength=0.5, damping=0.01)
+        max_degree = max(degree for (node, degree) in G.degree())
+
+        # colors = nx.greedy_color(G)
+        colors = nx.equitable_color(G, max_degree+1)
+        balls = self.arrangement.arrange_from_graph(G=G, radius=10, length=100, strength=0.5, damping=0.01, colors=colors)
 
     def _test_holes(self):
         balls = self.balls
