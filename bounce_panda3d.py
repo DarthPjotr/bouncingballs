@@ -223,6 +223,8 @@ class World(ShowBase):
         # defaults
         self.pause = False
         self._paused = False
+        self.rotate = False
+        self.rotations = [(0,1,math.pi/360)]  # list[(axis1: int, axis2: int, angle: float),...]
         self._draw_planes = True
         self._draw_box_planes = False
         self.project4d = False
@@ -564,6 +566,7 @@ class World(ShowBase):
             self.accept("shift-"+key+"-repeat", self.task_move_camera,  [key, "", 20])
 
         self.accept('p', self.task_toggle_pause)
+        self.accept('r', self.task_toggle_rotate)
         self.accept('o', self.task_toggle_quiet)
         self.accept('k', self.task_kick)
         self.accept('c', self.task_center)
@@ -600,6 +603,11 @@ class World(ShowBase):
 
     def task_toggle_pause(self):
         self.pause = not self.pause
+        return Task.cont
+
+    def task_toggle_rotate(self):
+        self.rotate = not self.rotate
+        # self.pause = self.rotate
         return Task.cont
 
     def task_kick(self):
@@ -1182,6 +1190,10 @@ class World(ShowBase):
             for nodepath in trail[self.box.trail:MAX_TRAILS]:
                 nodepath.hide()
 
+    def rotate_all(self):
+        rotations = self.rotations
+        self.box.rotate(rotations)
+
     def task_box_go(self, task):  # pylint: disable=unused-argument
         """
         Makes the box Go
@@ -1192,7 +1204,6 @@ class World(ShowBase):
         Returns:
             _type_: _description_
         """
-
         if self.pause and not self._toggled_setting:
             return Task.cont
 
@@ -1268,10 +1279,12 @@ Neighbor count: {self.box.interaction_neighbors}'
         if self.pause:
             return Task.cont
 
-        self.bounced = self.box.go(steps=self.tick_rate)
-
-        if self.bounced and not self.quiet:
-            self.sound.play()
+        if self.rotate:
+            self.rotate_all()
+        else:
+            self.bounced = self.box.go(steps=self.tick_rate)
+            if self.bounced and not self.quiet:
+                self.sound.play()
 
         return Task.cont
 

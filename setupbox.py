@@ -1069,6 +1069,7 @@ class _Test():
 
 class Setup():
     def __init__(self, world=None, dimensions=3) -> None:
+        self.world = world
         if world:
             world.quiet = True
             world.tick_rate = 1
@@ -1161,6 +1162,9 @@ class Setup():
         arr.set_charge_colors(balls)
 
     def p120_cell(self):
+        angle = math.pi/360
+        self.world.rotations = [[0, 1, -1*angle], [2, 3, 1*angle]]
+
         self.box.friction = 0.02
         self.box.interaction = 5000.0
         G = create_120cell()
