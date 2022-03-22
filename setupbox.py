@@ -1117,11 +1117,11 @@ class Setup():
         self._setup_function = self._nothing
         # self._setup_function = self.two_balls
         # self._setup_function = self.p120_cell
-        self._setup_function = self._test_rotation
+        # self._setup_function = self._test_rotation
         # self._setup_function = self.arrangement.create_pendulum
         # self._setup_function = self.many_interactions
         # self._setup_function = self._eight_dim
-        # self._setup_function = self._test_holes
+        self._setup_function = self._test_holes
         # self._setup_function = self._test_many_holes
         # self._setup_function = None
 
@@ -1175,6 +1175,8 @@ class Setup():
         balls = self.arrangement.arrange_from_graph(G=G, radius=10, length=100, strength=0.5, damping=0.01, colors=colors)
 
     def _test_holes(self):
+        angle = math.pi/360
+        self.box.rotations = [[0, 1, -1*angle], [2, 3, 1*angle]]
         balls = self.balls
         radius = 100
         hole_size = 300
@@ -1194,7 +1196,7 @@ class Setup():
 
         normal = [0.2,1,0.2,0,0,0,0,0]
         dpos = [0, -200,0,0,0,0,0 ]
-        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center + dpos[:self.box.dimensions], reflect=True)
+        plane = Plane(self.box, normal[:self.box.dimensions], self.box.center + dpos[:self.box.dimensions], reflect=False)
 
         dpoint = [-450,0,0,0,0,0,0]
         point = self.box.center + dpoint[:self.box.dimensions]

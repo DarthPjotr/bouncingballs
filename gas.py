@@ -513,10 +513,12 @@ class Box:
             # pylint: disable=protected-access
             plane._set_params()
 
-            for hole in plane.holes:
-                (point, _) = hole
+            for i, hole in enumerate(plane.holes):
+                (point, radius) = hole
                 cpos = point - self.center
                 point = self.center + cpos @ R
+                hole = (point, radius)
+                plane.holes[i] = hole
 
         for ball in self.particles:
             cpos = ball.position - self.center

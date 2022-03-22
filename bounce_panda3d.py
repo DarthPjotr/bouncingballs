@@ -57,7 +57,7 @@ from gas import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from setupbox import Setup, ArrangeParticles
 
 MAX_TRAILS = 30
-DIMENSIONS = 4
+DIMENSIONS = 3
 
 def loaddialog():
     root = tkinter.Tk()
@@ -236,6 +236,7 @@ class World(ShowBase):
         self._toggled_setting = False
 
         self.boxnode = None
+        self.planenodes = None
         self._dummy_ball = None
         self.sound = self.loader.load_sfx('sounds/c_bang1.wav')
         # self.sound = self.loader.load_sfx('sounds/Knife Hit Short - QuickSounds.com.mp3')
@@ -1025,7 +1026,7 @@ class World(ShowBase):
             if plane.reflect:
                 circle_outline = poly.create_outline_node()
                 circle_outline_np = NodePath(circle_outline)
-                circle_outline_np.reparentTo(self.boxnode)
+                circle_outline_np.reparentTo(self.planenodes)
                 circle_outline_np.setColor(*color, 1)
                 circle_outline_np.setPos(*point[:3])
                 circle_outline_np.setScale(abs(radius))
@@ -1034,7 +1035,7 @@ class World(ShowBase):
             else:
                 circle = poly.create_geom_node()
                 circle_np = NodePath(circle)
-                circle_np.reparentTo(self.boxnode)
+                circle_np.reparentTo(self.planenodes)
                 circle_np.setTwoSided(True)
                 circle_np.setTransparency(TransparencyAttrib.M_dual, 1)
                 circle_np.setColor(*color, 0.3)
@@ -1047,6 +1048,14 @@ class World(ShowBase):
     def draw_planes(self):
         # draw extra planes
         if self._draw_planes:
+            if self.planenodes is not None:
+                for nodepath in self.planenodes.children:
+                    nodepath.removeNode()
+                    nodepath.clear()
+
+            self.planenodes = NodePath("the Planes")
+            self.planenodes.reparentTo(self.boxnode)
+
             start = 2*self.box.dimensions
             if self._draw_box_planes:
                 start = 0
@@ -1063,7 +1072,8 @@ class World(ShowBase):
                     node = poly.create_geom_node()
                     circle_np = NodePath(node)
                     # nodepath.reparentTo(self.render)
-                    circle_np.reparentTo(self.boxnode)
+                    # circle_np.reparentTo(self.boxnode)
+                    circle_np.reparentTo(self.planenodes)
 
                     circle_np.setTwoSided(True)
                     circle_np.setTransparency(TransparencyAttrib.M_dual, 1)
@@ -1094,7 +1104,8 @@ class World(ShowBase):
                     circle_np = NodePath(node)
                     # nodepath.setColor((1, 1, 1, 1))
                     # nodepath.reparentTo(self.render)
-                    circle_np.reparentTo(self.boxnode)
+                    # circle_np.reparentTo(self.boxnode)
+                    circle_np.reparentTo(self.planenodes)
 
     def draw_spheres(self):
         # draw spheres
@@ -1194,6 +1205,7 @@ class World(ShowBase):
 #         rotations = self.rotations
         # self.box.rotations = self.rotations
         self.box.rotate(self.box.rotations)
+        self.draw_planes()
 
     def task_box_go(self, task):  # pylint: disable=unused-argument
         """
