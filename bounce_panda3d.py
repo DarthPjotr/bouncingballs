@@ -1191,8 +1191,9 @@ class World(ShowBase):
                 nodepath.hide()
 
     def rotate_all(self):
-        rotations = self.rotations
-        self.box.rotate(rotations)
+#         rotations = self.rotations
+        # self.box.rotations = self.rotations
+        self.box.rotate(self.box.rotations)
 
     def task_box_go(self, task):  # pylint: disable=unused-argument
         """

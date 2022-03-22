@@ -270,6 +270,7 @@ class Box:
         self._neighbors = []
         self.interaction_neighbors = 10
         # properties for rotations of content
+        self.rotations = []
         self._rotor = RotationMatrix(self.dimensions)
         # other properties
         self.calculate_energies = False
@@ -398,6 +399,7 @@ class Box:
         box["optimized_interaction"] = self.optimized_interaction
         box["neighbor_count"] = self.interaction_neighbors
         box['simple_hole_bounce'] = self.simple_hole_bounce
+        box['rotations'] = [{'fixed_plane' : [int(x1), int(x2)], 'angle': float(angle)} for (x1, x2, angle) in self.rotations]
 
         output = {"box": box}
 
@@ -2189,6 +2191,13 @@ def load_gas(data):
     box.optimized_interaction = b.get("optimized_interaction", True)
     box.interaction_neighbors = b.get("neighbor_count",10)
     box.simple_hole_bounce = b.get("simple_hole_bounce", False)
+    rotations = []
+    for rotation in b.get('rotations', []):
+        x1 = rotation['fixed_plane'][0]
+        x2 = rotation['fixed_plane'][1]
+        angle = rotation['angle']
+        rotations.append((x1, x2, angle))
+    box.rotations = rotations
 
     if "particles" in b:
         for p in b['particles']:
