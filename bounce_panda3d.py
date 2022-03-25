@@ -57,7 +57,7 @@ from gas import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from setupbox import Setup, ArrangeParticles
 
 MAX_TRAILS = 30
-DIMENSIONS = 3
+DIMENSIONS = 4
 
 def loaddialog():
     root = tkinter.Tk()
@@ -1112,6 +1112,7 @@ class World(ShowBase):
         self.spheres = []
         for ball in self.box.particles:
             sphere = self.loader.loadModel("models/Sphere_HighPoly")
+            # sphere = self.loader.loadModel("models/sphere")
             # model_radius = abs(sphere.getTightBounds()[0][0])
 
             size1, size2 = sphere.getTightBounds()
