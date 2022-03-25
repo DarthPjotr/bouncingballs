@@ -1111,11 +1111,18 @@ class World(ShowBase):
         # draw spheres
         self.spheres = []
         for ball in self.box.particles:
-            scale = ball.radius * 0.30
+            sphere = self.loader.loadModel("models/Sphere_HighPoly")
+            # model_radius = abs(sphere.getTightBounds()[0][0])
+
+            size1, size2 = sphere.getTightBounds()
+            min_ = min(list(size1)+list(size2))
+            max_ = max(list(size1)+list(size2))
+            model_radius = (max_ - min_)/2
+
+            # scale = ball.radius * 0.30
+            scale = ball.radius / model_radius
             color = [c/255 for c in ball.color]
             color.append(1)
-
-            sphere = self.loader.loadModel("models/Sphere_HighPoly")
             sphere.setScale(scale, scale, scale)
 
             material = Material()

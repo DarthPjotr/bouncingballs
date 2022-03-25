@@ -18,6 +18,7 @@ import numpy
 from numpy import linalg
 from scipy.spatial import ConvexHull # pylint: disable=no-name-in-module
 from scipy.spatial import KDTree
+# from numba import jit
 
 from rotations import RotationMatrix
 
@@ -1796,6 +1797,7 @@ class Particle:
                 wrapped = True
         return wrapped
 
+    # @jit
     def interact(self):
         """
         Handles particle, particle interaction, when particles have charge and the box interaction is set

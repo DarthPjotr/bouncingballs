@@ -1116,12 +1116,12 @@ class Setup():
 
         self._setup_function = self._nothing
         # self._setup_function = self.two_balls
-        # self._setup_function = self.p120_cell
+        self._setup_function = self.p120_cell
         # self._setup_function = self._test_rotation
         # self._setup_function = self.arrangement.create_pendulum
         # self._setup_function = self.many_interactions
         # self._setup_function = self._eight_dim
-        self._setup_function = self._test_holes
+        # self._setup_function = self._test_holes
         # self._setup_function = self._test_many_holes
         # self._setup_function = None
 
