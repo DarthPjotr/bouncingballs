@@ -18,7 +18,7 @@ import numpy
 from numpy import linalg
 from scipy.spatial import ConvexHull # pylint: disable=no-name-in-module
 from scipy.spatial import KDTree
-# from numba import jit
+from numba import jit
 
 from rotations import RotationMatrix
 
@@ -1797,7 +1797,6 @@ class Particle:
                 wrapped = True
         return wrapped
 
-    # @jit
     def interact(self):
         """
         Handles particle, particle interaction, when particles have charge and the box interaction is set
@@ -2022,6 +2021,7 @@ class Spring:
         spring["particles"] = [self.p1.index(), self.p2.index()]
         return spring
 
+    # @jit
     def dlength(self):
         """
         Calculates how far spring is stretched or compressed
@@ -2047,6 +2047,7 @@ class Spring:
         dlength = self.dlength()
         return 0.5 * self.strength * dlength * dlength
 
+    # @jit
     def pull(self):
         """
         Uses Hooks law including damping to calculate new particle speeds
