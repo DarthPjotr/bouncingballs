@@ -10,7 +10,7 @@ import random
 import clifford as cf
 import numpy
 
-class RotationMatrix():
+class Rotations():
     """
     Generates n-dimensional rotation matrices
     """
@@ -25,6 +25,14 @@ class RotationMatrix():
 
     def __str__(self):
         return f"{self.dimensions}, {self.layout.blades_of_grade(1)}, {self.layout.blades_of_grade(DIMENSIONS)}"
+
+    def to_ga_vector(self,v):
+        V = v@self.unitvectors
+        return V
+
+    def to_np_vector(self, V):
+        v = numpy.array([V[e] for e in self.unitvectors])
+        return v
 
     def to_matrix(self, rotor):
         B = [rotor*a*~rotor for a in self.unitvectors]
@@ -72,7 +80,6 @@ class RotationMatrix():
         rotor = R/abs(R)
         return rotor
 
-
     def combined_rotations(self, rotations):
         """
         combines single rotations
@@ -111,12 +118,12 @@ class RotationMatrix():
         return rotor
 
 
-DIMENSIONS = 10
+DIMENSIONS = 4
 
 def main():
     print("\nRotationMatrix")
     numpy.set_printoptions(precision=2, suppress=True)
-    M = RotationMatrix(DIMENSIONS)
+    M = Rotations(DIMENSIONS)
     locals().update(M.blades)
     print(M)
     print()
