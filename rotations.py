@@ -6,6 +6,7 @@ Generates n-dimensional rotation matrices
 # pylint: disable=invalid-name
 
 import math
+from math import sin, cos
 from pprint import pprint as pp
 from itertools import combinations
 import random
@@ -13,6 +14,166 @@ import sys
 
 import numpy
 from numpy import linalg
+
+import clifford
+
+
+class Rotations():
+    """
+    Generates n-dimensional rotors using Geometric Algebra
+
+    >>> R = Rotations(4)
+    >>> rotor = R.bivector_rotation(R.blades['e12'], pi/4) # rotation
+    >>> Vr = rotor*V*~rotor
+    or
+    >>> v = R.to_np_vector(V)
+    >>> matrix = R.to_matrix(rotor)
+    >>> vr = matrix@v
+
+    """
+
+    def __init__(self, dimensions) -> None:
+        """
+        Creates Geometric Algebra Rotations class for n-dimensions
+
+        Args:
+            dimensions (int): number of dimensions
+        """
+        self.dimensions = dimensions
+        self.layout, self.blades = clifford.Cl(dimensions)
+        for name in self.blades:
+            setattr(self, name, self.blades[name])
+
+        self.unitvectors = self.layout.blades_of_grade(1)
+
+    def __str__(self):
+        return f"{self.dimensions}, {self.layout.blades_of_grade(1)}"
+
+    def to_ga_vector(self, v):
+        """
+        Converts numpy.array vector to GA vector
+
+        Args:
+            v (numpy.array): vector
+
+        Returns:
+            GA vector: GA vector
+        """
+        V = v@self.unitvectors
+        return V
+
+    def to_np_vector(self, V):
+        """
+        Converts GA vector to numpy.array vector
+
+        Args:
+            V (GA vector): GA vector
+
+        Returns:
+            numpy.array: vector
+        """
+        v = numpy.array([V[e] for e in self.unitvectors])
+        return v
+
+    def to_matrix(self, rotor):
+        """
+        Converts GA rotor to numy.array matrix
+
+        Args:
+            rotor (GA rotor): the rotor
+
+        Returns:
+            numpy.array: rotation matrix
+        """
+        B = [rotor*a*~rotor for a in self.unitvectors]
+
+        matrix = numpy.array([
+            [float((b | a)(0)) for b in B]
+            for a in self.unitvectors])
+        return matrix
+
+    def bivector_rotation(self, B, angle):
+        """
+        Creates rotor by the provided bivector and angle.
+
+        Args:
+            B (bivector): plane of rotation
+            angle (float): angle of rotation
+
+        Returns:
+            GA rotor: the rotor
+        """
+        B = B/abs(B)
+        R = cos(angle/2) - sin(angle/2)*B
+        # R = e**(-angle/2*B)  # enacts rotation by
+        rotor = R/abs(R)
+        return rotor
+
+    def rotation(self, V1, V2, angle):
+        """
+        Creates rotor by provided vectors and angle
+
+        Args:
+            V1 (GA vector): vector 1
+            V2 (GA vector): vector 2
+            angle (float): angle in radians
+
+        Returns:
+            GA rotor: the rotor
+        """
+        B = V1^V2
+        if abs(B) == 0:
+            raise ValueError(f"invalid or parallel vectors: {V1} and {V2}")
+        return self.bivector_rotation(B, angle)
+
+    def axis_rotation(self, axis1, axis2, angle):
+        """
+        Creates rotor by provides axis and angle
+
+        Args:
+            axis1 (int): axis (1: x, 2: y, 3: z, ...)
+            axis2 (int): axis (1: x, 2: y, 3: z, ...)
+            angle (float): angle in radians
+
+        Returns:
+            GA rotor: the rotor
+        """
+        E = self.blades[f"e{axis1}{axis2}"]
+        return self.bivector_rotation(E, angle)
+
+    def combined_rotations(self, rotations):
+        """
+        combines single rotations
+
+        Args:
+            rotations (list of rotors): set of single rotors
+
+        Returns:
+            numpy.array: rotation matrix
+        """
+        rotor = self.blades['']
+        for R in rotations:
+            rotor = rotor*R
+
+        return rotor
+
+    def align(self, V1, V2):
+        """
+        calculates rotor to align two vectors
+
+        Args:
+            v1 (numpy.array): first vector
+            v2 (numpy.array): second vector
+
+        Returns:
+            numpy.array: rotation matrix
+        """
+        N1 = V1/abs(V1)
+        N2 = V2/abs(V2)
+        Nm = (N1+N2)/abs(N1+N2)
+        rotor = Nm*N1
+
+        return rotor
 
 class RotationMatrix():
     """

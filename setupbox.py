@@ -1116,8 +1116,8 @@ class Setup():
 
         self._setup_function = self._nothing
         # self._setup_function = self.two_balls
-        self._setup_function = self.p120_cell
-        # self._setup_function = self._test_rotation
+        # self._setup_function = self.p120_cell
+        self._setup_function = self._test_rotation
         # self._setup_function = self.arrangement.create_pendulum
         # self._setup_function = self.many_interactions
         # self._setup_function = self._eight_dim
@@ -1285,7 +1285,19 @@ class Setup():
         angle = math.pi/360
         # rotations = [[0, 1, -1*angle], [1, 2, 0.3*angle], [2, 3, 2*angle]]
         rotations = [[0, 1, -1*angle], [2, 3, 1*angle]]
-        self.box.rotations = [[0, 1, -1*angle], [1, 2, 0.3*angle], [2, 3, 2*angle]]
+        v1 = self.box.random()
+        v2 = self.box.random()
+        # self.box.rotations = [[0, 1, -1*angle], [1, 2, 0.3*angle], [2, 3, 2*angle]]
+        # rotations = [[v1, v2, -1*angle]]
+        # rotations = [[self.box.axis[0], self.box.axis[1], -1*angle], [self.box.axis[2], self.box.axis[3], 2*angle]]
+        if self.box.dimensions == 1:
+            self.box.rotations = []
+        elif self.box.dimensions == 2:
+            self.box.rotations = [[self.box.axis[0], self.box.axis[1], angle]]
+        elif self.box.dimensions == 3:
+            self.box.rotations = [[self.box.axis[0], self.box.axis[1], angle], [self.box.axis[1], self.box.axis[2], 2*angle]]
+        else:
+            self.box.rotations = [[self.box.axis[0], self.box.axis[1], angle], [self.box.axis[2], self.box.axis[3], 2*angle]]
         # balls = self.arrangement.add_rotation_speed(rotations, center=self.box.center, balls=balls)
         # self.box.gravity = numpy.array([0,0,0,-1])
         return balls

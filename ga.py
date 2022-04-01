@@ -24,7 +24,7 @@ class Rotations():
         self.unitvectors = self.layout.blades_of_grade(1)
 
     def __str__(self):
-        return f"{self.dimensions}, {self.layout.blades_of_grade(1)}, {self.layout.blades_of_grade(DIMENSIONS)}"
+        return f"{self.dimensions}, {self.layout.blades_of_grade(1)}"
 
     def to_ga_vector(self,v):
         V = v@self.unitvectors
@@ -42,28 +42,7 @@ class Rotations():
             for a in self.unitvectors])
         return matrix
 
-    def single_rotation(self, axis1, axis2, angle):
-        """
-        Single rotation in plane defined by the provided axis of the coordinate system, leaving the other axis stationary.
-        0 = x-axis
-        1 = y-axis
-        2 = z-axis
-        3.. = higher dimensional axis
-
-        Args:
-            axis1 (int): first axis
-            axis2 (int): second axis
-            angle (float): angle of rotation
-
-        Returns:
-            numpy.array: rotation matrix
-        """
-        E = self.blades[f"e{axis1}{axis2}"]
-        rotor = cos(angle/2) - sin(angle/2)*E
-        # rotor = e**(-angle*(E))  # enacts rotation by pi/2
-        return rotor
-
-    def single_bivector_rotation(self, B, angle):
+    def bivector_rotation(self, B, angle):
         """
         Single rotation in plane defined by the provided bivector.
 
@@ -80,6 +59,16 @@ class Rotations():
         rotor = R/abs(R)
         return rotor
 
+    def rotation(self, V1, V2, angle):
+        B = V1^V2
+        if abs(B) == 0:
+            raise ValueError(f"invalid or parallel vectors: {V1} and {V2}")
+        return self.bivector_rotation(B, angle)
+
+    def axis_rotation(self, axis1, axis2, angle):
+        E = self.blades[f"e{axis1}{axis2}"]
+        self.bivector_rotation(E, angle)
+
     def combined_rotations(self, rotations):
         """
         combines single rotations
@@ -91,13 +80,12 @@ class Rotations():
             numpy.array: rotation matrix
         """
         rotor = self.blades['']
-        for axis1, axis2, angle in rotations:
-            R1 = self.single_rotation(axis1, axis2, angle)
-            rotor = rotor*R1
+        for R in rotations:
+            rotor = rotor*R
 
         return rotor
 
-    def align(self, v1, v2):
+    def align(self, V1, V2):
         """
         calculates rotation matrix to align two vectors
 
@@ -108,8 +96,6 @@ class Rotations():
         Returns:
             numpy.array: rotation matrix
         """
-        V1 = numpy.array([v1])@self.unitvectors
-        V2 = numpy.array([v2])@self.unitvectors
         N1 = V1/abs(V1)
         N2 = V2/abs(V2)
         Nm = (N1+N2)/abs(N1+N2)
@@ -163,9 +149,17 @@ def main():
     # print()
     # print(V^V1, V)
 
+
+    # n = numpy.ones(DIMENSIONS)
+    # V1 = M.to_ga_vector(n)
+    # V2 = M.to_ga_vector(n)
+    # print(V1)
+
     B = V1^V2
+    angle = pi/4
     # B = N1^N2
-    rotor  = M.single_bivector_rotation(B, pi/4)
+    rotor  = M.rotation(V1, V2, angle)
+    print(rotor)
     matrix = M.to_matrix(rotor)
 
     V = 1.0*V1
@@ -188,7 +182,7 @@ def main():
     # print(V ^ V1, V)
     # sys.exit()
 
-    rotor = M.align(v1, v2)
+    rotor = M.align(V1, V2)
     V3 = rotor*V1*~rotor
     print(f"\nAlign Vectors:\n{V1}\n{V2}\n{V3}\n{V3^V2}")
 

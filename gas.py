@@ -20,7 +20,7 @@ from scipy.spatial import ConvexHull # pylint: disable=no-name-in-module
 from scipy.spatial import KDTree
 from numba import jit
 
-from rotations import RotationMatrix
+from rotations import RotationMatrix, Rotations
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -272,7 +272,8 @@ class Box:
         self.interaction_neighbors = 10
         # properties for rotations of content
         self.rotations = []
-        self._rotor = RotationMatrix(self.dimensions)
+        # self._rotor = RotationMatrix(self.dimensions)
+        self._rotor = Rotations(self.dimensions)
         # other properties
         self.calculate_energies = False
         self.trail = 0
@@ -400,7 +401,11 @@ class Box:
         box["optimized_interaction"] = self.optimized_interaction
         box["neighbor_count"] = self.interaction_neighbors
         box['simple_hole_bounce'] = self.simple_hole_bounce
-        box['rotations'] = [{'fixed_plane' : [int(x1), int(x2)], 'angle': float(angle)} for (x1, x2, angle) in self.rotations]
+        box['rotations'] = []
+        for (v1, v2, angle) in self.rotations:
+            rotation = {'vector1': [float(v) for v in v1], 'vector2':  [float(v) for v in v2], 'angle': float(angle)}
+            box['rotations'].append(rotation)
+        # box['rotations'] = [{'fixed_plane' : [int(x1), int(x2)], 'angle': float(angle)} for (v1, 22, angle) in self.rotations]
 
         output = {"box": box}
 
@@ -504,7 +509,15 @@ class Box:
         Returns:
             numpy.array: rotation matrix
         """
-        R = self._rotor.combined_rotations(rotations)
+        # R = self._rotor.combined_rotations(rotations)
+        rotor = self._rotor.blades[""]
+        for (v1, v2, angle) in rotations:
+            V1 = self._rotor.to_ga_vector(v1)
+            V2 = self._rotor.to_ga_vector(v2)
+            rotor_ = self._rotor.rotation(V1, V2, angle)
+            rotor = rotor*rotor_
+
+        R = self._rotor.to_matrix(rotor)
 
         for plane in self.planes[2*self.dimensions:]:
             cpos = plane.point - self.center
@@ -2196,13 +2209,15 @@ def load_gas(data):
     box.optimized_interaction = b.get("optimized_interaction", True)
     box.interaction_neighbors = b.get("neighbor_count",10)
     box.simple_hole_bounce = b.get("simple_hole_bounce", False)
-    rotations = []
-    for rotation in b.get('rotations', []):
-        x1 = rotation['fixed_plane'][0]
-        x2 = rotation['fixed_plane'][1]
-        angle = rotation['angle']
-        rotations.append((x1, x2, angle))
-    box.rotations = rotations
+    if box.dimensions > 1:
+        rotations = []
+        for rotation in b.get('rotations', []):
+            v1 = numpy.array(rotation.get('vector1', box.axis[0]))
+            v2 = numpy.array(rotation.get('vector2', box.axis[1]))
+            # v2 = numpy.array(rotation['vector2'])
+            angle = rotation.get('angle', 0)
+            rotations.append((v1, v2, angle))
+        box.rotations = rotations
 
     if "particles" in b:
         for p in b['particles']:
@@ -2330,7 +2345,7 @@ class FlatD3Shape():
 
     def skew(self, a):
         """
-        creates a ske matrix from a vector
+        creates a skew matrix from a vector
 
         Args:
             a (numpy.array): the vector
