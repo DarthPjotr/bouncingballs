@@ -57,7 +57,7 @@ from gas import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from setupbox import Setup, ArrangeParticles
 
 MAX_TRAILS = 30
-DIMENSIONS = 4
+DIMENSIONS = 5
 
 def loaddialog():
     root = tkinter.Tk()

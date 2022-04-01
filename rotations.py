@@ -45,6 +45,17 @@ class Rotations():
             setattr(self, name, self.blades[name])
 
         self.unitvectors = self.layout.blades_of_grade(1)
+        # self._heatup()
+
+    def _heatup(self):
+        """
+        do some calculation to get the jit to kick in
+        """
+        V1 = self.layout.randomV()
+        V2 = self.layout.randomV()
+        B = V1^V2
+        R = self.bivector_rotation(B, 0.5)
+        _ = R*V1*~R
 
     def __str__(self):
         return f"{self.dimensions}, {self.layout.blades_of_grade(1)}"

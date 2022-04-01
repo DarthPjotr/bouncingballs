@@ -1296,8 +1296,13 @@ class Setup():
             self.box.rotations = [[self.box.axis[0], self.box.axis[1], angle]]
         elif self.box.dimensions == 3:
             self.box.rotations = [[self.box.axis[0], self.box.axis[1], angle], [self.box.axis[1], self.box.axis[2], 2*angle]]
-        else:
+        elif self.box.dimensions == 4:
             self.box.rotations = [[self.box.axis[0], self.box.axis[1], angle], [self.box.axis[2], self.box.axis[3], 2*angle]]
+        elif self.box.dimensions == 5:
+            self.box.rotations = [[self.box.axis[0], self.box.axis[1], angle], [self.box.axis[3], self.box.axis[4], 2*angle]]
+            # self.box.rotations = [[self.box.axis[3], self.box.axis[4], 2*angle]]
+        else:
+            self.box.rotations = [[self.box.axis[0], self.box.axis[1], angle], [self.box.axis[3], self.box.axis[4], 2*angle]]
         # balls = self.arrangement.add_rotation_speed(rotations, center=self.box.center, balls=balls)
         # self.box.gravity = numpy.array([0,0,0,-1])
         return balls
