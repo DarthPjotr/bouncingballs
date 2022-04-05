@@ -57,7 +57,7 @@ from gas import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from setupbox import Setup, ArrangeParticles
 
 MAX_TRAILS = 30
-DIMENSIONS = 5
+DIMENSIONS = 4
 
 def loaddialog():
     root = tkinter.Tk()
@@ -283,25 +283,29 @@ class World(ShowBase):
     def draw_gui(self):
         # GUI objects
         self.textnode = self.gui_text("The Box:", 0.1, -0.1, scale=0.03)
-        self._slider_interaction = self.gui_slider(x=0.3, y=-0.9, range_=(0, 10000), value=self.box.interaction, command=self._set_interaction, text="interaction:")
-        max_friction = max(5*self.box.friction, 0.05)
-        self._slider_friction = self.gui_slider(x=0.3, y=-0.8, range_=(0, max_friction), value=self.box.friction, command=self._set_friction, text="friction:")
+
         gravity = math.sqrt(self.box.gravity@self.box.gravity)
-        self._slider_gravity = self.gui_slider(x=0.3, y=-0.7, range_=(0, 2), value=gravity, command=self._set_gravity, text="gravity:")
+        self._slider_gravity = self.gui_slider(x=0.3, y=-0.5, range_=(0, 2), value=gravity, command=self._set_gravity, text="gravity:")
+        max_friction = max(5*self.box.friction, 0.05)
+        self._slider_friction = self.gui_slider(x=0.3, y=-0.6, range_=(0, max_friction), value=self.box.friction, command=self._set_friction, text="friction:")
+
+        self._slider_interaction = self.gui_slider(x=0.3, y=-0.7, range_=(0, 10000), value=self.box.interaction, command=self._set_interaction, text="interaction:")
         nballs = max(1, len(self.box.particles))
-        self._slider_neighbors = self.gui_slider(x=0.3, y=-1.1, range_=(0, nballs), value=self.box.interaction_neighbors, command=self._set_neighbors, text="neighbors:")
-
-        self._slider_trail = self.gui_slider(x=0.3, y=-1.3, range_=(0, MAX_TRAILS), value=self.box.trail, command=self._set_trail, text="trail length:")
-        self._slider_skip_trail = self.gui_slider(x=0.3, y=-1.4, range_=(1, 10), value=self.box.skip_trail, command=self._set_skip_trail, text="trail part length:")
-
-        if self.box.dimensions > 3:
-            self._checkbox_project4d = self.gui_checkbox(x=0.3, y=-1.5, command=self._set_project4d, text="project 4d:", value=self.project4d)
+        self._slider_neighbors = self.gui_slider(x=0.3, y=-0.8, range_=(0, nballs), value=self.box.interaction_neighbors, command=self._set_neighbors, text="neighbors:")
 
         if self.box.springs:
             avg_strength = sum([s.strength for s in self.box.springs])/len(self.box.springs)
-
             self._slider_spring_strength = self.gui_slider(
-                x=0.3, y=-1.7, range_=(0, max(1, avg_strength*2)), value=avg_strength, command=self._set_spring_strength, text="spring strenght:")
+                x=0.3, y=-0.9, range_=(0, max(1, avg_strength*2)), value=avg_strength, command=self._set_spring_strength, text="spring strenght:")
+
+        self._slider_trail = self.gui_slider(x=0.3, y=-1.05, range_=(0, MAX_TRAILS), value=self.box.trail, command=self._set_trail, text="trail length:")
+        self._slider_skip_trail = self.gui_slider(x=0.3, y=-1.15, range_=(1, 10), value=self.box.skip_trail, command=self._set_skip_trail, text="trail part length:")
+
+        if self.box.dimensions > 3:
+            self._checkbox_project4d = self.gui_checkbox(x=0.3, y=-1.25, command=self._set_project4d, text="project 4d:", value=self.project4d)
+
+        self._checkbox_pause = self.gui_checkbox(x=0.3, y=-1.35, command=self._set_pause, text="pause:", value=self.pause)
+        self._checkbox_rotate = self.gui_checkbox(x=0.3, y=-1.45, command=self._set_rotate, text="rotate:", value=self.rotate)
 
     def set_main_lighting(self):
         mainLight = DirectionalLight("main light")
@@ -509,6 +513,14 @@ class World(ShowBase):
         self.project4d = bool(status)
         self._toggled_setting = True
 
+    def _set_pause(self, status):
+        self.pause = bool(status)
+        # self._toggled_setting = True
+
+    def _set_rotate(self, status):
+        self.rotate = bool(status)
+        # self._toggled_setting = True
+
     def _set_spring_strength(self):
         strength = self._slider_spring_strength['value']
         avg_strength = sum([s.strength for s in self.box.springs])/len(self.box.springs)
@@ -604,11 +616,14 @@ class World(ShowBase):
 
     def task_toggle_pause(self):
         self.pause = not self.pause
+        self._checkbox_pause["indicatorValue"] = self.pause
+        self._checkbox_pause.setIndicatorValue()
         return Task.cont
 
     def task_toggle_rotate(self):
         self.rotate = not self.rotate
-        # self.pause = self.rotate
+        self._checkbox_rotate["indicatorValue"] = self.rotate
+        self._checkbox_rotate.setIndicatorValue()
         return Task.cont
 
     def task_kick(self):
@@ -1212,7 +1227,7 @@ class World(ShowBase):
     def rotate_all(self):
 #         rotations = self.rotations
         # self.box.rotations = self.rotations
-        self.box.rotate(self.box.rotations)
+        self.box.rotate()
         self.draw_planes()
 
     def task_box_go(self, task):  # pylint: disable=unused-argument

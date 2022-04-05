@@ -3,7 +3,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=unused-variable
 
-from types import MethodType
+from types import FunctionType, MethodType
 import numpy
 import time
 import random
@@ -60,8 +60,14 @@ class ArrangeParticles:
 
         return balls
 
-    def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, extra_holes=0, reflect=True):
+    def test_all(self, nplanes=1, nballs=1, nsprings=1, charge=0, extra_holes=0, reflect=True, rotations=True):
         balls = []
+
+        if rotations:
+            v1 = self.box.random()
+            v2 = self.box.random()
+            angle = math.pi/360
+            self.box.rotations = [(v1, v2, angle)]
 
         for _ in range(nplanes):
             normal = self.box.random()
@@ -1085,7 +1091,7 @@ class Setup():
         self.box.optimized_interaction = True
         self.box.simple_hole_bounce = False
 
-        interaction = 0 # 5000.0
+        interaction = 5000.0
         power = 2.0
         friction = 0.0 #0.035
         gravity_strength = 0
@@ -1115,15 +1121,25 @@ class Setup():
         self.arrangement = ArrangeParticles(self.box)
 
         self._setup_function = self._nothing
+        self._function_params = {}
         # self._setup_function = self.two_balls
         # self._setup_function = self.p120_cell
-        self._setup_function = self._test_rotation
+        # self._setup_function = self._test_rotation
         # self._setup_function = self.arrangement.create_pendulum
         # self._setup_function = self.many_interactions
         # self._setup_function = self._eight_dim
         # self._setup_function = self._test_holes
         # self._setup_function = self._test_many_holes
         # self._setup_function = None
+        self._setup_function = self.arrangement.test_all
+        self._function_params = {"nplanes": 1,
+                                "nballs":  2,
+                                "nsprings":  1,
+                                "charge":  1,
+                                "extra_holes": 1,
+                                "reflect": True,
+                                "rotations": True}
+
 
     def hole_on_plane(self, plane, point, radius):
         polygon = FlatD3Shape()
@@ -1255,10 +1271,10 @@ class Setup():
                 plane.add_hole(point, hole_size)
 
     def many_interactions(self):
-        self.box.friction = 0.0
-        self.box.interaction = 0.0
+        self.box.friction = 0.02
+        self.box.interaction = 5000.0
         arr = ArrangeParticles(self.box)
-        nballs = 300
+        nballs = 100
         radius = 30
         arr.random_balls(nballs, 1, radius, 2, charge=1)
         arr.random_balls(nballs, 1, radius, 2, charge=-1)
@@ -1315,12 +1331,13 @@ class Setup():
 
         self.box.get_radi(interaction_factor=self.interaction_factor, neighbor_count=self.neighbor_count)
         self.balls = self.box.particles
+        self.box.set_rotations()
 
         return balls
 
     def make(self):
-        if isinstance(self._setup_function, MethodType):
-            self._setup_function()
+        if isinstance(self._setup_function, (MethodType, FunctionType)):
+            self._setup_function(**self._function_params)
         self._setup()
         return (self.box, self.balls)
 

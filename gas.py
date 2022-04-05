@@ -18,9 +18,9 @@ import numpy
 from numpy import linalg
 from scipy.spatial import ConvexHull # pylint: disable=no-name-in-module
 from scipy.spatial import KDTree
-from numba import jit
+# from numba import jit
 
-from rotations import RotationMatrix, Rotations
+from rotations import Rotations
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -272,6 +272,7 @@ class Box:
         self.interaction_neighbors = 10
         # properties for rotations of content
         self.rotations = []
+        self._rotation_matrix = numpy.eye(self.dimensions)
         # self._rotor = RotationMatrix(self.dimensions)
         self._rotor = Rotations(self.dimensions)
         # other properties
@@ -499,17 +500,15 @@ class Box:
         projection[:3] = pos
         return projection
 
-    def rotate(self, rotations):
+    def set_rotations(self, rotations=None):
         """
-        rotates everything in the box around the center
+        calculates rotation matrix
 
         Args:
-            rotations (list[(axis1: int, axis2: int, angle: float),...]): set of single rotations
-
-        Returns:
-            numpy.array: rotation matrix
+            rotations (list[(vector1: numpy.array, vector2: numpy.array: int, angle: float),...]): set of single rotations
         """
-        # R = self._rotor.combined_rotations(rotations)
+        if rotations is None:
+            rotations = self.rotations
         rotor = self._rotor.blades[""]
         for (v1, v2, angle) in rotations:
             V1 = self._rotor.to_ga_vector(v1)
@@ -518,6 +517,28 @@ class Box:
             rotor = rotor*rotor_
 
         R = self._rotor.to_matrix(rotor)
+        self._rotation_matrix = R
+
+    def rotate(self):
+        """
+        rotates everything in the box around the center
+
+        Args:
+            rotations (list[(vector1: numpy.array, vector2: numpy.array: int, angle: float),...]): set of single rotations
+
+        Returns:
+            numpy.array: rotation matrix
+        """
+        # R = self._rotor.combined_rotations(rotations)
+        # rotor = self._rotor.blades[""]
+        # for (v1, v2, angle) in rotations:
+        #     V1 = self._rotor.to_ga_vector(v1)
+        #     V2 = self._rotor.to_ga_vector(v2)
+        #     rotor_ = self._rotor.rotation(V1, V2, angle)
+        #     rotor = rotor*rotor_
+
+        # R = self._rotor.to_matrix(rotor)
+        R = self._rotation_matrix
 
         for plane in self.planes[2*self.dimensions:]:
             cpos = plane.point - self.center
@@ -2218,6 +2239,8 @@ def load_gas(data):
             angle = rotation.get('angle', 0)
             rotations.append((v1, v2, angle))
         box.rotations = rotations
+
+    box.set_rotations(box.rotations)
 
     if "particles" in b:
         for p in b['particles']:
