@@ -14,6 +14,7 @@ import math
 import tkinter
 from tkinter import filedialog as fd
 from tkinter.messagebox import showwarning
+import traceback
 import yaml
 
 import numpy
@@ -779,7 +780,11 @@ class World(ShowBase):
         sizes = box["sizes"]
         if len(sizes) > 0:
             self.clear_box()
-            self.box = load_gas(data)
+            try:
+                self.box = load_gas(data)
+            except Exception: # pylint: disable=broad-except
+                message = f"Error loading yaml: {file.name}\n\nException: {traceback.format_exc()}"
+                warning("Error", message)
             self.draw_box()
             self.draw_gui()
             self.draw_floor()

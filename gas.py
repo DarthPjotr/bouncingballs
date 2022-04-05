@@ -2220,8 +2220,11 @@ def load_gas(data):
     """
     b = data["box"]
     box = Box(b["sizes"])
+    shape = box.onevector.shape
 
     box.gravity = numpy.array(b.get('gravity', box.nullvector.copy()), dtype=float)
+    if box.gravity.shape != shape:
+        raise ValueError(f'wrong shape for gravity: {box.gravity.shape}, should be {shape}')
     box.set_friction(float(b.get('friction', 0)))
     box.set_interaction(float(b.get('interaction', 0)))
     box.torus = bool(b.get('torus', False))
@@ -2237,7 +2240,11 @@ def load_gas(data):
         rotations = []
         for rotation in b.get('rotations', []):
             v1 = numpy.array(rotation.get('vector1', box.axis[0]), dtype=float)
+            if v1.shape != shape:
+                raise ValueError(f'wrong shape for vector1: {v1.shape}, should be {shape}')
             v2 = numpy.array(rotation.get('vector2', box.axis[1]), dtype=float)
+            if v2.shape != shape:
+                raise ValueError(f'wrong shape for vector2: {v2.shape}, should be {shape}')
             # v2 = numpy.array(rotation['vector2'])
             angle = float(rotation.get('angle', 0))
             rotations.append((v1, v2, angle))
@@ -2265,7 +2272,11 @@ def load_gas(data):
     if "planes" in b.keys():
         for p in b["planes"]:
             normal = numpy.array(p["normal"], dtype=float)
+            if normal.shape != shape:
+                raise ValueError(f'wrong shape for normal: {normal.shape}, should be {shape}')
             point = numpy.array(p["point"], dtype=float)
+            if point.shape != shape:
+                raise ValueError(f'wrong shape for point: {point.shape}, should be {shape}')
             color = p.get('color', None)
             reflect = bool(p.get('reflect', True))
             if 'pass_through_function' in p:
