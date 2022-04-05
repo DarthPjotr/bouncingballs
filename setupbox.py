@@ -1131,14 +1131,14 @@ class Setup():
         # self._setup_function = self._test_holes
         # self._setup_function = self._test_many_holes
         # self._setup_function = None
-        self._setup_function = self.arrangement.test_all
-        self._function_params = {"nplanes": 1,
-                                "nballs":  2,
-                                "nsprings":  1,
-                                "charge":  1,
-                                "extra_holes": 1,
-                                "reflect": True,
-                                "rotations": True}
+        # self._setup_function = self.arrangement.test_all
+        # self._function_params = {"nplanes": 1,
+        #                         "nballs":  2,
+        #                         "nsprings":  1,
+        #                         "charge":  1,
+        #                         "extra_holes": 1,
+        #                         "reflect": True,
+        #                         "rotations": True}
 
 
     def hole_on_plane(self, plane, point, radius):

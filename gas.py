@@ -306,7 +306,10 @@ class Box:
         #     self.interaction_radius = interaction_factor*(self.interaction**(1/self.interaction_power))
         # else:
         #     self.interaction_radius = max(self.box_sizes)
-        self.interaction_radius = interaction_factor * max(self.box_sizes) / (len(self.particles)**(1/self.dimensions))
+        nballs = 1
+        if self.particles:
+            nballs = len(self.particles)
+        self.interaction_radius = interaction_factor * max(self.box_sizes) / (nballs**(1/self.dimensions))
         if neighbor_count is None:
             neighbor_count = max(10, int(0.1*len(self.particles)))
 
@@ -2218,25 +2221,25 @@ def load_gas(data):
     b = data["box"]
     box = Box(b["sizes"])
 
-    box.gravity = numpy.array(b.get('gravity', box.nullvector.copy()))
-    box.set_friction(b.get('friction', 0))
-    box.set_interaction(b.get('interaction', 0))
-    box.torus = b.get('torus', False)
-    box.merge = b.get('merge', False)
-    box.trail = b.get('trail', 0)
+    box.gravity = numpy.array(b.get('gravity', box.nullvector.copy()), dtype=float)
+    box.set_friction(float(b.get('friction', 0)))
+    box.set_interaction(float(b.get('interaction', 0)))
+    box.torus = bool(b.get('torus', False))
+    box.merge = bool(b.get('merge', False))
+    box.trail = int(b.get('trail', 0))
     box.color = b.get('color', (200,200,200))
-    box.interaction_power = b.get("interaction_power", 2)
-    box.optimized_collisions = b.get("optimized_collisions", True)
-    box.optimized_interaction = b.get("optimized_interaction", True)
-    box.interaction_neighbors = b.get("neighbor_count",10)
-    box.simple_hole_bounce = b.get("simple_hole_bounce", False)
+    box.interaction_power = float(b.get("interaction_power", 2))
+    box.optimized_collisions = bool(b.get("optimized_collisions", True))
+    box.optimized_interaction = bool(b.get("optimized_interaction", True))
+    box.interaction_neighbors = int(b.get("neighbor_count",10))
+    box.simple_hole_bounce = bool(b.get("simple_hole_bounce", False))
     if box.dimensions > 1:
         rotations = []
         for rotation in b.get('rotations', []):
-            v1 = numpy.array(rotation.get('vector1', box.axis[0]))
-            v2 = numpy.array(rotation.get('vector2', box.axis[1]))
+            v1 = numpy.array(rotation.get('vector1', box.axis[0]), dtype=float)
+            v2 = numpy.array(rotation.get('vector2', box.axis[1]), dtype=float)
             # v2 = numpy.array(rotation['vector2'])
-            angle = rotation.get('angle', 0)
+            angle = float(rotation.get('angle', 0))
             rotations.append((v1, v2, angle))
         box.rotations = rotations
 
@@ -2244,8 +2247,8 @@ def load_gas(data):
 
     if "particles" in b:
         for p in b['particles']:
-            fixed = p.get('fixed', False)
-            charge = p.get('charge', 0)
+            fixed = bool(p.get('fixed', False))
+            charge = float(p.get('charge', 0))
             color = p.get('color', None)
             box.add_particle(p['mass'], p['radius'], p['position'], p['speed'], charge, fixed, color)
 
@@ -2254,17 +2257,17 @@ def load_gas(data):
             ps = s['particles']
             p1 = box.particles[ps[0]]
             p2 = box.particles[ps[1]]
-            damping = s.get('damping', 0)
+            damping = float(s.get('damping', 0))
 
             spring = Spring(s['length'], s['strength'], damping, p1, p2)
             box.springs.append(spring)
 
     if "planes" in b.keys():
         for p in b["planes"]:
-            normal = p["normal"]
-            point = p["point"]
+            normal = numpy.array(p["normal"], dtype=float)
+            point = numpy.array(p["point"], dtype=float)
             color = p.get('color', None)
-            reflect = p.get('reflect', 0)
+            reflect = bool(p.get('reflect', True))
             if 'pass_through_function' in p:
                 plane = _Membrane(box, normal, point)
                 plane.filter = getattr(plane, p['pass_through_function']) # pylint: disable=protected-access
