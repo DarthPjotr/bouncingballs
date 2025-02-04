@@ -14,7 +14,7 @@ from gas import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from gas import _Rod, _Membrane
 from pprint import pprint as pp # pylint: disable=unused-import
 
-from rotations import RotationMatrix
+# from rotations import RotationMatrix
 
 from p120cell import create_120cell
 
@@ -1331,7 +1331,7 @@ class Setup():
 
         self.box.get_radi(interaction_factor=self.interaction_factor, neighbor_count=self.neighbor_count)
         self.balls = self.box.particles
-        self.box.set_rotations()
+        # self.box.set_rotations()
 
         return balls
 

@@ -20,7 +20,7 @@ from scipy.spatial import ConvexHull # pylint: disable=no-name-in-module
 from scipy.spatial import KDTree
 # from numba import jit
 
-from rotations import Rotations
+# from rotations import Rotations
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -274,7 +274,7 @@ class Box:
         self.rotations = []
         self._rotation_matrix = numpy.eye(self.dimensions)
         # self._rotor = RotationMatrix(self.dimensions)
-        self._rotor = Rotations(self.dimensions)
+        # self._rotor = Rotations(self.dimensions)
         # other properties
         self.calculate_energies = False
         self.trail = 0
@@ -1296,6 +1296,7 @@ class Plane:
                 p1p2 = math.sqrt(p1@p1) * math.sqrt(p2@p2)
                 p1dp2 = p1@p2
 
+                cos_ = 0
                 if p1p2 != 0:
                     cos_ = p1dp2/p1p2
 
@@ -1855,6 +1856,7 @@ class Particle:
         else:
             mass = self.mass
 
+        distances = []
         if not self.box.optimized_interaction:
             particles = self.box.particles
         else:
@@ -2119,6 +2121,22 @@ class Spring:
         self.p1.speed += dv1
         self.p2.speed += dv2
 
+class Source():
+    """
+    Source or sink of charge
+    Exchanges charge with bouncing particle and moves this to other attached sources
+
+    Raises:
+        ValueError: _description_
+
+    Returns:
+        _type_: _description_
+    """
+    def __init__(self, dcharge, particle1, particle2):
+        self.p1 = particle1
+        self.p2 = particle2
+        self.dcharge = dcharge
+
 class _Rod(Spring):
     """
     A Rod is a Spring with a fixed length
@@ -2250,7 +2268,7 @@ def load_gas(data):
             rotations.append((v1, v2, angle))
         box.rotations = rotations
 
-    box.set_rotations(box.rotations)
+    # box.set_rotations(box.rotations)
 
     if "particles" in b:
         for p in b['particles']:
