@@ -15,7 +15,7 @@ import sys
 import numpy
 from numpy import linalg
 
-import clifford
+import kingdon
 
 
 class Rotations():
