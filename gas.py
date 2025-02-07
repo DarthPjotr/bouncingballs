@@ -20,7 +20,7 @@ from scipy.spatial import ConvexHull # pylint: disable=no-name-in-module
 from scipy.spatial import KDTree
 # from numba import jit
 
-# from rotations import Rotations
+from rotations import Rotations
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -274,7 +274,7 @@ class Box:
         self.rotations = []
         self._rotation_matrix = numpy.eye(self.dimensions)
         # self._rotor = RotationMatrix(self.dimensions)
-        # self._rotor = Rotations(self.dimensions)
+        self._rotor = Rotations(self.dimensions)
         # other properties
         self.calculate_energies = False
         self.trail = 0
@@ -512,7 +512,8 @@ class Box:
         """
         if rotations is None:
             rotations = self.rotations
-        rotor = self._rotor.blades[""]
+
+        rotor = self._rotor.identity
         for (v1, v2, angle) in rotations:
             V1 = self._rotor.to_ga_vector(v1)
             V2 = self._rotor.to_ga_vector(v2)
@@ -520,6 +521,7 @@ class Box:
             rotor = rotor*rotor_
 
         R = self._rotor.to_matrix(rotor)
+
         self._rotation_matrix = R
 
     def rotate(self):
@@ -534,6 +536,7 @@ class Box:
         """
         # R = self._rotor.combined_rotations(rotations)
         # rotor = self._rotor.blades[""]
+        # rotor = 1
         # for (v1, v2, angle) in rotations:
         #     V1 = self._rotor.to_ga_vector(v1)
         #     V2 = self._rotor.to_ga_vector(v2)
@@ -548,6 +551,7 @@ class Box:
             plane.point = self.center + cpos @ R
             normal = plane.unitnormal
             plane.unitnormal = normal @ R
+
             # pylint: disable=protected-access
             plane._set_params()
 
@@ -2268,7 +2272,7 @@ def load_gas(data):
             rotations.append((v1, v2, angle))
         box.rotations = rotations
 
-    # box.set_rotations(box.rotations)
+    box.set_rotations(box.rotations)
 
     if "particles" in b:
         for p in b['particles']:
